@@ -1,5 +1,6 @@
 // src/views/Login/Login.jsx
 import React from 'react';
+import marakameLogo from '../assets/marakame.jpeg';
 
 const Login = () => {
   return (
@@ -8,9 +9,13 @@ const Login = () => {
       <div className="bg-white p-8 md:p-12 rounded-xl shadow-2xl w-full max-w-md flex flex-col items-center">
         
         {/* Encabezado de Logos */}
-        <div className="mb-10 w-full flex flex-col items-center border border-gray-100 p-4 rounded-lg shadow-sm">
-           <h2 className="text-[#7E1D3B] font-bold text-xl">NAYARIT | MARAKAME</h2>
-           <p className="text-[10px] text-gray-400 uppercase tracking-widest">Gobierno del Estado</p>
+          <div className="mb-10 w-full flex flex-col items-center border border-gray-100 p-4 rounded-lg shadow-sm">
+            <img
+             src={marakameLogo}
+             alt="Logo Nayarit Marakame"
+             className="mb-3 h-auto w-full max-w-[380px] rounded-md"
+            />
+            <p className="text-[10px] text-gray-400 uppercase tracking-widest">Gobierno del Estado</p>
         </div>
 
         <h1 className="text-3xl font-bold text-gray-800 mb-1">Sistema de Gestión</h1>
