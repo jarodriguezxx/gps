@@ -27,6 +27,7 @@ const ValoracionDiagnostica = () => {
     criterioInternamiento: '',
     posibilidadesEconomicas: '',
     llamarPaciente: '',
+    fechaLlamada: '',
     estadoSeguimiento: '',
   });
 
@@ -280,40 +281,119 @@ const ValoracionDiagnostica = () => {
                   onChange={handleInputChange}
                   placeholder="Ej. Alcohol, Tabaco..."
                 />
+                
               </div>
-
-              {/* Criterios de Internamiento */}
+              <h3>Valoracion y Criterios de internamiento </h3>
               <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
+                <div className="space-y-3">
                   <p className="font-bold text-sm mb-4 text-slate-700 uppercase flex items-center gap-2">
                     <HeartPulse size={16} /> ¿Está dispuesto a internarse?
                   </p>
+                  <RadioOption
+                    label="si acepta"
+                    name="internamiento"
+                    value="acepta"
+                    checked={formData.internamiento === 'acepta'}
+                    onChange={handleInputChange}
+                  />
+                  <RadioOption
+                    label="no acepta"
+                    name="internamiento"
+                    value="no"
+                    checked={formData.internamiento === 'no'}
+                    onChange={handleInputChange}
+                  />
+                  <RadioOption
+                    label="duda"
+                    name="internamiento"
+                    value="duda"
+                    checked={formData.internamiento === 'duda'}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                {/* Mostrar a la derecha si no acepta o está en duda */}
+                {(formData.internamiento === 'no' || formData.internamiento === 'duda') && (
+                  <div className="space-y-3">
+                    <p className="font-bold text-sm mb-4 text-slate-700 uppercase flex items-center gap-2">
+                      <Activity size={16} /> Se requiere intervenir
+                    </p>
+                    <RadioOption
+                      label="Sí"
+                      name="criterioInternamiento"
+                      value="si"
+                      checked={formData.criterioInternamiento === 'si'}
+                      onChange={handleInputChange}
+                    />
+                    <RadioOption
+                      label="No"
+                      name="criterioInternamiento"
+                      value="no"
+                      checked={formData.criterioInternamiento === 'no'}
+                      onChange={handleInputChange}
+                    />
+                      <InputGroup
+                  label="Conclusion"
+                  name="criterioInternamiento"
+                  value={formData.Conclusion}
+                  onChange={handleInputChange}
+                  placeholder="..."
+                />
+                  </div>
+                )}
+                <InputGroup
+                label="Ha estado en tratamiento anteriormente"
+                name="tratamientoAnterior"
+                value={formData.tratamientoAnterior}
+                onChange={handleInputChange}
+                placeholder="...."
+              />
+                 <InputGroup
+                label="Posibilidades Económicas"
+                name="posibilidadesEconomicas"
+                value={formData.posibilidadesEconomicas}
+                onChange={handleInputChange}
+                placeholder="Ingreso mensual aproximado"
+              />
+              </div>
+              
+              {/* Criterios de Internamiento */}
+              <label htmlFor="">Seguimiento y Programacion </label>
+              <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <p className="font-bold text-sm mb-4 text-slate-700 uppercase">Llamar al paciente</p>
                   <div className="space-y-3">
                     <RadioOption
-                      label="Sí acepta"
-                      name="internamiento"
-                      value="acepta"
-                      checked={formData.internamiento === 'acepta'}
+                      label="Sí"
+                      name="llamarPaciente"
+                      value="si"
+                      checked={formData.llamarPaciente === 'si'}
                       onChange={handleInputChange}
                     />
                     <RadioOption
-                      label="No acepta"
-                      name="internamiento"
+                      label="No"
+                      name="llamarPaciente"
                       value="no"
-                      checked={formData.internamiento === 'no'}
+                      checked={formData.llamarPaciente === 'no'}
                       onChange={handleInputChange}
                     />
-                    <RadioOption
-                      label="Duda"
-                      name="internamiento"
-                      value="duda"
-                      checked={formData.internamiento === 'duda'}
-                      onChange={handleInputChange}
-                    />
+                    
+                  </div>
+                </div>
+                 <div className="space-y-4">
+                 
+                  <div className="space-y-3">
+                    <InputGroup
+                label="otro"
+                name="acuerdo"
+                value={formData.acuerdo}
+                onChange={handleInputChange}
+                placeholder="en que se acordó con el paciente para su  internamiento"
+              />
                   </div>
                 </div>
 
-                <div>
+                <div className="space-y-4">
                   <p className="font-bold text-sm mb-4 text-slate-700 uppercase flex items-center gap-2">
                     <Clipboard size={16} /> Estado de seguimiento
                   </p>
@@ -332,74 +412,72 @@ const ValoracionDiagnostica = () => {
                       checked={formData.estadoSeguimiento === 'espera_visita'}
                       onChange={handleInputChange}
                     />
+                    <RadioOption
+                      label="En espera de Posible Ingreso"
+                      name="estadoSeguimiento"
+                      value="Posible_Ingreso"
+                      checked={formData.estadoSeguimiento === 'Posible_Ingreso'}
+                      onChange={handleInputChange}
+                    />
                   </div>
+
+                  {/* Mostrar fecha solo si se llamara al paciente */}
+                  {formData.llamarPaciente === 'si'  && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fecha de llamada</label>
+                      <input
+                        type="datetime-local"
+                        name="fechaLlamada"
+                        value={formData.fechaLlamada}
+                        onChange={handleInputChange}
+                        className="w-full bg-white border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                      />
+                    </div>
+                  )}
+                  {/*llamda del pacinete hora */}
+                  {formData.estadoSeguimiento === 'espera_llamada' && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fecha de llamada del paciente</label>
+                      <input
+                        type="datetime-local"
+                        name="espera_llamada"
+                        value={formData.estadoSeguimiento}
+                        onChange={handleInputChange}
+                        className="w-full bg-white border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                      />
+                    </div>
+                  )}
+                  {/*llamda del pacinete hora */}
+                  {formData.estadoSeguimiento === 'espera_visita' && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fecha de visita del paciente</label>
+                      <input
+                        type="datetime-local"
+                        name="espera_visita"
+                        value={formData.estadoSeguimiento}
+                        onChange={handleInputChange}
+                        className="w-full bg-white border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                      />
+                    </div>
+                  )}
+                   {/*Posible ingreso */}
+                  {formData.estadoSeguimiento === 'Posible_Ingreso' && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fecha de Posible Ingreso</label>
+                      <input
+                        type="datetime-local"
+                        name="Posible_Ingreso"
+                        value={formData.estadoSeguimiento}
+                        onChange={handleInputChange}
+                        className="w-full bg-white border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Otros Criterios */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="font-bold text-sm mb-4 text-slate-700 uppercase">Si se requiere intervenir con el paciente</p>
-                  <div className="space-y-3">
-                    <RadioOption
-                      label="Sí"
-                      name="criterioInternamiento"
-                      value="si"
-                      checked={formData.criterioInternamiento === 'si'}
-                      onChange={handleInputChange}
-                    />
-                    <RadioOption
-                      label="No"
-                      name="criterioInternamiento"
-                      value="no"
-                      checked={formData.criterioInternamiento === 'no'}
-                      onChange={handleInputChange}
-                    />
-                    <RadioOption
-                      label="Conclusión"
-                      name="criterioInternamiento"
-                      value="conclusion"
-                      checked={formData.criterioInternamiento === 'conclusion'}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
 
-                <div>
-                  <p className="font-bold text-sm mb-4 text-slate-700 uppercase">Llamar al paciente</p>
-                  <div className="space-y-3">
-                    <RadioOption
-                      label="Sí"
-                      name="llamarPaciente"
-                      value="si"
-                      checked={formData.llamarPaciente === 'si'}
-                      onChange={handleInputChange}
-                    />
-                    <RadioOption
-                      label="No"
-                      name="llamarPaciente"
-                      value="no"
-                      checked={formData.llamarPaciente === 'no'}
-                      onChange={handleInputChange}
-                    />
-                    <RadioOption
-                      label="Otros"
-                      name="llamarPaciente"
-                      value="otros"
-                      checked={formData.llamarPaciente === 'otros'}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <InputGroup
-                label="Posibilidades Económicas"
-                name="posibilidadesEconomicas"
-                value={formData.posibilidadesEconomicas}
-                onChange={handleInputChange}
-                placeholder="Ingreso mensual aproximado"
-              />
+             
             </div>
           )}
         </div>
