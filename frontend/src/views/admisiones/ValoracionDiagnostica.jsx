@@ -8,6 +8,8 @@ const ValoracionDiagnostica = () => {
     fechaAtencion: '',
     diaSemanana: '',
     nombreQuienAtiende: '',
+    fuenteReferencia: '',
+    fuenteReferenciaOtro: '',
     nombreSolicitante: '',
     lugarVisita: '',
     domicilioSolicitante: '',
@@ -29,6 +31,8 @@ const ValoracionDiagnostica = () => {
     llamarPaciente: '',
     fechaLlamada: '',
     estadoSeguimiento: '',
+    nombreMedicoValoro: '',
+    conclusionMedica: '',
   });
 
   const handleInputChange = (e) => {
@@ -134,6 +138,34 @@ const ValoracionDiagnostica = () => {
                 <h3 className="text-rose-700 font-bold text-lg border-b border-slate-200 pb-3 flex items-center gap-2">
                   <Clipboard size={18} /> Información de Contacto
                 </h3>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fuente de referencia</label>
+                  <select
+                    name="fuenteReferencia"
+                    value={formData.fuenteReferencia}
+                    onChange={handleInputChange}
+                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                  >
+                    <option value="">Seleccionar fuente...</option>
+                    <option value="internet">Internet</option>
+                    <option value="expaciente">Ex paciente</option>
+                    <option value="familiar">Familiar</option>
+                    <option value="revista">Revista</option>
+                    <option value="anuncio_prof_salud">Anuncio prof./salud</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+
+                {formData.fuenteReferencia === 'otro' && (
+                  <InputGroup
+                    label="Otro: especifique"
+                    name="fuenteReferenciaOtro"
+                    value={formData.fuenteReferenciaOtro}
+                    onChange={handleInputChange}
+                    placeholder="Especifique la fuente"
+                  />
+                )}
+
                 <InputGroup
                   label="Nombre de quien solicita información"
                   name="nombreSolicitante"
@@ -261,6 +293,13 @@ const ValoracionDiagnostica = () => {
                   </select>
                 </div>
                 <InputGroup
+                  label="Origen"
+                  name="OrigenPaciente"
+                  value={formData.OrigenPaciente}
+                  onChange={handleInputChange}
+                  placeholder="Mexico"
+                />
+                <InputGroup
                   label="Domicilio particular"
                   name="domicilioPaciente"
                   value={formData.domicilioPaciente}
@@ -268,19 +307,55 @@ const ValoracionDiagnostica = () => {
                   placeholder="Calle, número, etc."
                 />
                 <InputGroup
-                  label="A qué se dedica el paciente"
+                  label="Telefono de contacto"
+                  name="telefonoPaciente"
+                  value={formData.telefonoPaciente}
+                  onChange={handleInputChange}
+                  placeholder="(123) 456-7890"
+                />
+                <InputGroup
+                  label="Ocupacion"
                   name="dedicacionPaciente"
                   value={formData.dedicacionPaciente}
                   onChange={handleInputChange}
                   placeholder="Profesión u ocupación"
                 />
-                <InputGroup
-                  label="Sustancias de consumo"
-                  name="sustanciaConsumo"
-                  value={formData.sustanciaConsumo}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Sustancia de consumo</label>
+                  <select
+                    name="SustanciaConsumo"
+                    value={formData.SustanciaConsumo}
+                    onChange={handleInputChange}
+                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                  >                    <option value="">Seleccionar...</option>
+                    <option value="alcohol">ALCOHOL</option>
+                    <option value="cocaina">COCAÍNA</option>
+                    <option value="marihuana">MARIHUANA</option>
+                    <option value="base">BASE</option>
+                    <option value="extasis">ÉXTASIS</option>
+                    <option value="cristal">CRISTAL</option>
+                    <option value="heroina">TABACO</option>
+                    <option value="metanfetaminas">BZD</option>
+                    <option value="solventes">INHALANTES</option>
+                    <option value="tca">TCA</option>
+                    <option value="ludopatia">LUDOPATIA</option>
+                    <option value=" acidos">ACIDOS</option>
+                    <option value="otros">OTROS</option>
+                    
+                  
+                  </select>
+                  {(formData.SustanciaConsumo === 'otros' ) && (
+                  <div className="space-y-3">
+                      <InputGroup
+                  label="especifique la sustancia"
+                  name="sustanciaEspecifica"
+                  value={formData.sustanciaEspecifica}
                   onChange={handleInputChange}
-                  placeholder="Ej. Alcohol, Tabaco..."
+                  placeholder="..."
                 />
+                  </div>
+                )}
+                </div>
                 
               </div>
               <h3>Valoracion y Criterios de internamiento </h3>
@@ -473,6 +548,25 @@ const ValoracionDiagnostica = () => {
                       />
                     </div>
                   )}
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InputGroup
+                    label="Nombre del medico que lo valoro"
+                    name="nombreMedicoValoro"
+                    value={formData.nombreMedicoValoro}
+                    onChange={handleInputChange}
+                    placeholder="Nombre completo del medico"
+                  />
+                  <InputGroup
+                    label=" Conclusion medica"
+                    name="conclusionMedica"
+                    value={formData.conclusionMedica}
+                    onChange={handleInputChange}
+                    placeholder="Escriba la conclusion medica"
+                  />
                 </div>
               </div>
 
