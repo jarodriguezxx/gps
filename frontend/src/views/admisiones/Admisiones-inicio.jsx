@@ -1,5 +1,5 @@
 import React from 'react';
-import marakameLogo from '../assets/marakame.jpeg';
+import marakameLogo from '../../assets/marakame.jpeg';
 
 const citasHoy = [
 	{
@@ -94,8 +94,10 @@ const barras = [
 const AdmisionesInicio = () => {
 	return (
 		<div className="min-h-screen bg-slate-100 text-slate-900">
-			<div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-8">
-				<header className="rounded-2xl border border-slate-200 bg-white/95 shadow-[0_10px_25px_rgba(15,23,42,0.08)]">
+			
+			<div className="mx-auto w-full max-w-8xl   ">
+								<header className="rounded-2xl border border-slate-200 bg-white/95 shadow-[0_10px_25px_rgba(15,23,42,0.08)]">
+
 					<div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
 						<div className="flex items-center gap-3">
 							<img

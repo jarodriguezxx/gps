@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Save, X, User, Phone, Activity, HeartPulse, Clipboard } from 'lucide-react';
-import marakameLogo from '../assets/marakame.jpeg';
+import marakameLogo from '../../assets/marakame.jpeg';
 
 const ValoracionDiagnostica = () => {
   const [tab, setTab] = useState('solicitante');

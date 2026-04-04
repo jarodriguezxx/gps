@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import AdmisionesInicio from './views/Admisiones-inicio';
+import AdmisionesInicio from './views/admisiones/Admisiones-inicio';
 import Login from './views/login';
-import ValoracionDiagnostica from './views/ValoracionDiagnostica';
+import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 
 function App() {
   const [currentView, setCurrentView] = useState('admisiones'); // 'login', 'admisiones', 'valoracion'
