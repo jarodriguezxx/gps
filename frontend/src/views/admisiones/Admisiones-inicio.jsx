@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const citasHoy = [
@@ -91,23 +92,38 @@ const barras = [
 	{ label: 'Sáb', valor: 35 },
 ];
 
-const AdmisionesInicio = () => {
+
+const AdmisionesInicio = ({ onOpenEstudio }) => {
+	const navigate = useNavigate();
+	const location = useLocation();
+	const openEstudio = () => {
+		if (onOpenEstudio) {
+			onOpenEstudio();
+			return;
+		}
+		navigate('/admisiones/estudio-socioeconomico');
+	};
+	const goInicio = () => navigate('/admisiones');
+	const isInicioActive = location.pathname === '/admisiones';
+	const isEstudioActive = location.pathname === '/admisiones/estudio-socioeconomico';
+
 	return (
 		<div className="min-h-screen bg-slate-100 text-slate-900">
 			
-			<div className="mx-auto w-full max-w-8xl   ">
-								<header className="rounded-2xl border border-slate-200 bg-white/95 shadow-[0_10px_25px_rgba(15,23,42,0.08)]">
+			<div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
+								<header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
 
 					<div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
 						<div className="flex items-center gap-3">
 							<img
 								src={marakameLogo}
 								alt="Logo Nayarit Marakame"
-								className="h-14 w-auto rounded-md border border-slate-200 bg-white p-1"
+								className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
 							/>
 							<div>
-								<p className="text-xs uppercase tracking-[0.25em] text-rose-700">Instituto Marakame</p>
-								<h1 className="text-xl font-black md:text-2xl">Sistema de Gestión Marakame</h1>
+								<p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
+								<h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema de Gestión Marakame</h1>
+								<p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo de admisiones</p>
 							</div>
 						</div>
 
@@ -122,49 +138,66 @@ const AdmisionesInicio = () => {
 
 					<div className="grid gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6">
 						<aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner">
-							<button className="mb-3 w-full rounded-xl bg-rose-700 px-3 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-rose-800">
+							<button
+								onClick={openEstudio}
+								className={`mb-3 w-full rounded-xl px-3 py-3 text-sm font-semibold shadow-md transition ${
+									isEstudioActive
+										? 'bg-[#7E1D3B] text-white hover:bg-[#63162e]'
+										: 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
+								}`}
+							>
 								Estudio Socioeconómico
 							</button>
-							<button className="mb-2 w-full rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800 transition hover:bg-rose-100">
+							<button
+								onClick={goInicio}
+								className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
+									isInicioActive
+										? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+										: 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+								}`}
+							>
+								Inicio
+							</button>
+							<button className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-3 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
 								Agendar Cita
 							</button>
-							<button className="w-full rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800 transition hover:bg-rose-100">
+							<button className="w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-3 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
 								Agregar Paciente
 							</button>
 
-							<div className="mt-5 rounded-xl border border-slate-200 bg-white p-3">
+							<div className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
 								<p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Indicadores</p>
-								<p className="mt-2 text-3xl font-black text-rose-700">78%</p>
+								<p className="mt-2 text-3xl font-black text-[#7E1D3B]">78%</p>
 								<p className="text-xs text-slate-500">Tasa de conversión semanal</p>
 							</div>
 						</aside>
 
 						<main className="space-y-5">
 							<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-								<article className="rounded-2xl border border-slate-200 bg-white p-4">
+								<article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 									<p className="text-xs uppercase tracking-widest text-slate-500">Citas hoy</p>
 									<p className="mt-2 text-3xl font-black text-slate-900">18</p>
 									<p className="text-sm text-emerald-700">+4 vs ayer</p>
 								</article>
-								<article className="rounded-2xl border border-slate-200 bg-white p-4">
+								<article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 									<p className="text-xs uppercase tracking-widest text-slate-500">Pacientes nuevos</p>
 									<p className="mt-2 text-3xl font-black text-slate-900">6</p>
 									<p className="text-sm text-sky-700">3 referidos</p>
 								</article>
-								<article className="rounded-2xl border border-slate-200 bg-white p-4">
+								<article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 									<p className="text-xs uppercase tracking-widest text-slate-500">Llamadas pendientes</p>
 									<p className="mt-2 text-3xl font-black text-slate-900">12</p>
 									<p className="text-sm text-amber-700">5 prioritarias</p>
 								</article>
-								<article className="rounded-2xl border border-slate-200 bg-white p-4">
+								<article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 									<p className="text-xs uppercase tracking-widest text-slate-500">Ingreso proyectado</p>
 									<p className="mt-2 text-3xl font-black text-slate-900">$184k</p>
-									<p className="text-sm text-rose-700">Meta mensual 82%</p>
+									<p className="text-sm text-[#7E1D3B]">Meta mensual 82%</p>
 								</article>
 							</section>
 
 							<section className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-								<article className="rounded-2xl border border-slate-200 bg-white p-4">
+								<article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 									<div className="mb-4 flex items-center justify-between">
 										<h2 className="text-xl font-black">Tendencia Semanal de Admisiones</h2>
 										<span className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -177,7 +210,7 @@ const AdmisionesInicio = () => {
 											<div key={item.label} className="flex flex-col items-center gap-2">
 												<div className="relative flex h-32 w-full items-end justify-center rounded-md bg-slate-200/60">
 													<div
-														className="w-full rounded-md bg-gradient-to-t from-rose-700 to-rose-500"
+														className="w-full rounded-md bg-gradient-to-t from-[#63162e] to-[#7E1D3B]"
 														style={{ height: `${item.valor}%` }}
 													/>
 												</div>
@@ -187,7 +220,7 @@ const AdmisionesInicio = () => {
 									</div>
 								</article>
 
-								<article className="rounded-2xl border border-slate-200 bg-white p-4">
+								<article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 									<div className="mb-4 flex items-center justify-between">
 										<h2 className="text-lg font-black">Estado de Gestión</h2>
 										<span className="text-xs text-slate-500">Hoy</span>
@@ -209,7 +242,7 @@ const AdmisionesInicio = () => {
 										</li>
 										<li className="flex items-center justify-between">
 											<span className="text-slate-600">Confirmados</span>
-											<strong className="text-rose-700">27%</strong>
+											<strong className="text-[#7E1D3B]">27%</strong>
 										</li>
 										<li className="flex items-center justify-between">
 											<span className="text-slate-600">Pendientes</span>
@@ -223,14 +256,14 @@ const AdmisionesInicio = () => {
 								</article>
 							</section>
 
-							<section className="rounded-2xl border border-slate-200 bg-white p-4">
+							<section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 								<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 									<h2 className="text-2xl font-black">Citas del Día</h2>
 									<div className="flex gap-2">
-										<button className="rounded-lg bg-rose-700 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-800">
+										<button className="rounded-lg bg-[#7E1D3B] px-3 py-2 text-sm font-semibold text-white hover:bg-[#63162e]">
 											Agendar Cita
 										</button>
-										<button className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800 hover:bg-rose-100">
+										<button className="rounded-lg border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-2 text-sm font-semibold text-[#7E1D3B] hover:bg-[#7E1D3B]/12">
 											Agregar Paciente
 										</button>
 									</div>
@@ -276,7 +309,7 @@ const AdmisionesInicio = () => {
 								</div>
 							</section>
 
-							<section className="rounded-2xl border border-slate-200 bg-white p-4">
+							<section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 								<h2 className="mb-4 text-2xl font-black">Llamadas en Seguimiento</h2>
 								<div className="overflow-x-auto">
 									<table className="min-w-full border-collapse text-left text-sm">

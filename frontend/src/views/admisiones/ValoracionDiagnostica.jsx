@@ -44,31 +44,32 @@ const ValoracionDiagnostica = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(126,29,59,0.10),_transparent_25%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] text-slate-900">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-40">
+      <header className="bg-white/95 border-b border-slate-200 px-4 py-4 md:px-6 flex justify-between items-center shadow-sm sticky top-0 z-40 backdrop-blur">
         <div className="flex items-center gap-4">
           <img
             src={marakameLogo}
             alt="Logo Nayarit Marakame"
-            className="h-14 w-auto rounded-md border border-slate-200 bg-white p-1"
+            className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
           />
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-rose-700">Instituto Marakame</p>
-            <h1 className="text-lg font-black text-slate-900">Registro de Valoración Diagnóstica</h1>
+            <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
+            <h1 className="text-lg md:text-xl font-black text-[#7E1D3B]">Registro de Valoración Diagnóstica</h1>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo de admisión clínica</p>
           </div>
         </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition-all font-semibold">
+        <div className="flex flex-wrap gap-3 justify-end">
+          <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all font-semibold shadow-sm">
             <X size={18} /> Cancelar
           </button>
-          <button className="flex items-center gap-2 px-6 py-2 bg-rose-700 text-white rounded-lg font-semibold hover:bg-rose-800 shadow-md transition-all">
+          <button className="flex items-center gap-2 px-6 py-2.5 bg-[#7E1D3B] text-white rounded-xl font-semibold hover:bg-[#63162e] shadow-sm transition-all">
             <Save size={18} /> Guardar Paciente
           </button>
         </div>
       </header>
 
-      <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
+      <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
         {/* Datos Generales */}
         <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
@@ -106,12 +107,22 @@ const ValoracionDiagnostica = () => {
         </section>
 
         {/* Selector de Secciones (TABS) */}
+        <div className="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <span>Secciones de valoración</span>
+            <span>{tab === 'solicitante' ? '1/2' : '2/2'}</span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-2 rounded-full bg-[#7E1D3B] transition-all duration-500" style={{ width: tab === 'solicitante' ? '50%' : '100%' }} />
+          </div>
+        </div>
+
         <div className="flex gap-4 mb-6">
           <button
             onClick={() => setTab('solicitante')}
-            className={`flex-1 py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm text-base ${
+            className={`flex-1 py-3.5 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm text-base ${
               tab === 'solicitante'
-                ? 'bg-rose-700 text-white'
+                ? 'bg-[#7E1D3B] text-white shadow-sm'
                 : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -119,9 +130,9 @@ const ValoracionDiagnostica = () => {
           </button>
           <button
             onClick={() => setTab('paciente')}
-            className={`flex-1 py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm text-base ${
+            className={`flex-1 py-3.5 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm text-base ${
               tab === 'paciente'
-                ? 'bg-rose-700 text-white'
+                ? 'bg-[#7E1D3B] text-white shadow-sm'
                 : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -130,21 +141,21 @@ const ValoracionDiagnostica = () => {
         </div>
 
         {/* Contenido Dinámico */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 min-h-[600px] animate-fadeIn">
+        <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 min-h-[600px] animate-fadeIn">
           {tab === 'solicitante' ? (
             // SECCIÓN: SOLICITANTE
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-5">
-                <h3 className="text-rose-700 font-bold text-lg border-b border-slate-200 pb-3 flex items-center gap-2">
+                <h3 className="text-[#7E1D3B] font-bold text-lg border-b border-slate-100 pb-3 flex items-center gap-2">
                   <Clipboard size={18} /> Información de Contacto
                 </h3>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fuente de referencia</label>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fuente de referencia</label>
                   <select
                     name="fuenteReferencia"
                     value={formData.fuenteReferencia}
                     onChange={handleInputChange}
-                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                   >
                     <option value="">Seleccionar fuente...</option>
                     <option value="internet">Internet</option>
@@ -199,7 +210,7 @@ const ValoracionDiagnostica = () => {
               </div>
 
               <div className="space-y-5">
-                <h3 className="text-rose-700 font-bold text-lg border-b border-slate-200 pb-3 flex items-center gap-2">
+                <h3 className="text-[#7E1D3B] font-bold text-lg border-b border-slate-100 pb-3 flex items-center gap-2">
                   <Activity size={18} /> Relación y Ocupación
                 </h3>
                 <InputGroup
@@ -217,12 +228,12 @@ const ValoracionDiagnostica = () => {
                   placeholder="Profesión u ocupación"
                 />
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Parentesco con el paciente</label>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Parentesco con el paciente</label>
                   <select
                     name="parentesco"
                     value={formData.parentesco}
                     onChange={handleInputChange}
-                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                   >
                     <option value="">Seleccionar parentesco...</option>
                     <option value="padre">Padre</option>
@@ -254,12 +265,12 @@ const ValoracionDiagnostica = () => {
                   type="number"
                 />
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Estado civil</label>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Estado civil</label>
                   <select
                     name="estadoCivilPaciente"
                     value={formData.estadoCivilPaciente}
                     onChange={handleInputChange}
-                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                   >
                     <option value="">Seleccionar...</option>
                     <option value="soltero">Soltero/a</option>
@@ -277,12 +288,12 @@ const ValoracionDiagnostica = () => {
                   type="number"
                 />
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Escolaridad</label>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Escolaridad</label>
                   <select
                     name="escolaridadPaciente"
                     value={formData.escolaridadPaciente}
                     onChange={handleInputChange}
-                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                   >
                     <option value="">Seleccionar...</option>
                     <option value="primaria">Primaria</option>
@@ -321,12 +332,12 @@ const ValoracionDiagnostica = () => {
                   placeholder="Profesión u ocupación"
                 />
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Sustancia de consumo</label>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Sustancia de consumo</label>
                   <select
                     name="SustanciaConsumo"
                     value={formData.SustanciaConsumo}
                     onChange={handleInputChange}
-                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                   >                    <option value="">Seleccionar...</option>
                     <option value="alcohol">ALCOHOL</option>
                     <option value="cocaina">COCAÍNA</option>
@@ -358,8 +369,8 @@ const ValoracionDiagnostica = () => {
                 </div>
                 
               </div>
-              <h3>Valoracion y Criterios de internamiento </h3>
-              <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8">
+              <h3 className="text-[#7E1D3B] font-bold text-lg border-b border-slate-100 pb-3">Valoración y Criterios de internamiento</h3>
+              <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8 shadow-sm">
                 <div className="space-y-3">
                   <p className="font-bold text-sm mb-4 text-slate-700 uppercase flex items-center gap-2">
                     <HeartPulse size={16} /> ¿Está dispuesto a internarse?
@@ -433,8 +444,8 @@ const ValoracionDiagnostica = () => {
               </div>
               
               {/* Criterios de Internamiento */}
-              <label htmlFor="">Seguimiento y Programacion </label>
-              <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8">
+              <label className="text-[#7E1D3B] font-bold text-lg border-b border-slate-100 pb-3">Seguimiento y Programación</label>
+              <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8 shadow-sm">
                 <div>
                   <p className="font-bold text-sm mb-4 text-slate-700 uppercase">Llamar al paciente</p>
                   <div className="space-y-3">
@@ -499,59 +510,59 @@ const ValoracionDiagnostica = () => {
                   {/* Mostrar fecha solo si se llamara al paciente */}
                   {formData.llamarPaciente === 'si'  && (
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fecha de llamada</label>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de llamada</label>
                       <input
                         type="datetime-local"
                         name="fechaLlamada"
                         value={formData.fechaLlamada}
                         onChange={handleInputChange}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                        className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
                   )}
                   {/*llamda del pacinete hora */}
                   {formData.estadoSeguimiento === 'espera_llamada' && (
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fecha de llamada del paciente</label>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de llamada del paciente</label>
                       <input
                         type="datetime-local"
                         name="espera_llamada"
                         value={formData.estadoSeguimiento}
                         onChange={handleInputChange}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                        className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
                   )}
                   {/*llamda del pacinete hora */}
                   {formData.estadoSeguimiento === 'espera_visita' && (
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fecha de visita del paciente</label>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de visita del paciente</label>
                       <input
                         type="datetime-local"
                         name="espera_visita"
                         value={formData.estadoSeguimiento}
                         onChange={handleInputChange}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                        className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
                   )}
                    {/*Posible ingreso */}
                   {formData.estadoSeguimiento === 'Posible_Ingreso' && (
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fecha de Posible Ingreso</label>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de Posible Ingreso</label>
                       <input
                         type="datetime-local"
                         name="Posible_Ingreso"
                         value={formData.estadoSeguimiento}
                         onChange={handleInputChange}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                        className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200">
+              <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <InputGroup
                     label="Nombre del medico que lo valoro"
@@ -577,11 +588,11 @@ const ValoracionDiagnostica = () => {
         </div>
 
         {/* Botones Finales */}
-        <div className="flex justify-end gap-2 mt-6">
-          <button className="flex items-center gap-2 px-6 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition-all font-semibold">
+        <div className="flex flex-wrap justify-end gap-3 mt-6">
+          <button className="flex items-center gap-2 px-6 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all font-semibold shadow-sm">
             <X size={18} /> Cancelar
           </button>
-          <button className="flex items-center gap-2 px-6 py-2 bg-rose-700 text-white rounded-lg font-semibold hover:bg-rose-800 shadow-md transition-all">
+          <button className="flex items-center gap-2 px-6 py-2.5 bg-[#7E1D3B] text-white rounded-xl font-semibold hover:bg-[#63162e] shadow-sm transition-all">
             <Save size={18} /> Guardar Paciente
           </button>
         </div>
@@ -593,13 +604,13 @@ const ValoracionDiagnostica = () => {
 // Componentes Reutilizables
 const InputGroup = ({ label, name, value, onChange, placeholder, type = 'text' }) => (
   <div>
-    <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{label}</label>
+    <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">{label}</label>
     <input
       type={type}
       name={name}
       value={value}
       onChange={onChange}
-      className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+      className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
       placeholder={placeholder}
     />
   </div>
@@ -613,7 +624,7 @@ const RadioOption = ({ label, name, value, checked, onChange }) => (
       value={value}
       checked={checked}
       onChange={onChange}
-      className="w-4 h-4 accent-rose-700"
+      className="w-4 h-4 accent-[#7E1D3B]"
     />
     <span className="text-sm text-slate-600 group-hover:text-slate-900">{label}</span>
   </label>
