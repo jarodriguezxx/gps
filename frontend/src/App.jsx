@@ -4,12 +4,15 @@ import AdmisionesInicio from './views/admisiones/Admisiones-inicio';
 import Login from './views/login';
 import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
+// Importaciones para Recursos Materiales
+import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
 
 const quickViews = [
   { label: 'Login', path: '/login', tone: 'slate' },
   { label: 'Admisiones', path: '/admisiones', tone: 'slate' },
   { label: 'Estudio', path: '/admisiones/estudio-socioeconomico', tone: 'rose' },
   { label: 'Valoración', path: '/admisiones/valoracion-diagnostica', tone: 'rose' },
+  { label: 'RecMateriales', path: '/rec-materiales', tone: 'rose' },
 ];
 
 const QuickNavigator = () => {
@@ -45,12 +48,17 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+
+        {/* Rutas para admisiones */}
         <Route path="/" element={<Navigate to="/admisiones" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admisiones" element={<AdmisionesInicio />} />
         <Route path="/admisiones/estudio-socioeconomico" element={<EstudioSocioeconomico />} />
         <Route path="/admisiones/valoracion-diagnostica" element={<ValoracionDiagnostica />} />
         <Route path="*" element={<Navigate to="/admisiones" replace />} />
+
+        {/* Rutas para rec Materiales */}
+        <Route path='/rec-materiales' element = {<RecMaterialesDashboard/>}/>
       </Routes>
       <QuickNavigator />
     </BrowserRouter>
