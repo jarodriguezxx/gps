@@ -13,6 +13,7 @@ const EstudioSocioeconomico = () => {
   const [activeHouseholdRow, setActiveHouseholdRow] = useState(0);
   const [activeContributorRow, setActiveContributorRow] = useState(0);
   const [activeVehicleRow, setActiveVehicleRow] = useState(0);
+  const [activeFamilyReferenceRow, setActiveFamilyReferenceRow] = useState(0);
   const [householdMembers, setHouseholdMembers] = useState([
     { nombre: '', parentesco: '', edad: '', sexo: '', estadoCivil: '', ocupacionLugar: '' },
   ]);
@@ -41,6 +42,22 @@ const EstudioSocioeconomico = () => {
     esparcimiento: '',
     otros: '',
   });
+  const [foodFrequency, setFoodFrequency] = useState({
+    carneRes: '',
+    carnePollo: '',
+    carneCerdo: '',
+    pescado: '',
+    leche: '',
+    cereales: '',
+    huevo: '',
+    frutas: '',
+    verduras: '',
+    leguminosas: '',
+  });
+  const [familyReferences, setFamilyReferences] = useState([
+    { nombre: '', telefono: '', relacion: '', tiempoConocer: '' },
+    { nombre: '', telefono: '', relacion: '', tiempoConocer: '' },
+  ]);
 
   const [formData, setFormData] = useState({
     nombreSolicitante: '',
@@ -87,6 +104,43 @@ const EstudioSocioeconomico = () => {
     patrimonioCantidad: '',
     vehiculoCategoria: '',
     vehiculoNumero: '',
+    saludAsistenciaOpciones: [],
+    saludMontoConsultas: '',
+    saludOtrosServicios: '',
+    saludMiembrosConAsistencia: '',
+    saludAdicAlcoholismoDetalle: '',
+    saludAdicAlcoholismoFrecuencia: '',
+    saludAdicAlcoholismoSeveridad: '',
+    saludAdicTcaLudopatiaDetalle: '',
+    saludAdicTcaLudopatiaFrecuencia: '',
+    saludAdicTcaLudopatiaSeveridad: '',
+    saludAdicDrogadiccionDetalle: '',
+    saludAdicDrogadiccionFrecuencia: '',
+    saludAdicDrogadiccionSeveridad: '',
+    saludAdicOtrosDetalle: '',
+    saludAdicOtrosFrecuencia: '',
+    saludAdicOtrosSeveridad: '',
+    saludRelacionFamiliar: '',
+    viviendaRegimen: '',
+    viviendaRegimenNumero: '',
+    viviendaTipo: '',
+    viviendaTipoNumero: '',
+    viviendaTotalHabitaciones: '',
+    viviendaTotalHabitacionesNumero: '',
+    viviendaConformacion: [],
+    viviendaBanos: '',
+    viviendaRecamaras: '',
+    viviendaEspecificarSinBanos: '',
+    viviendaOtrasCaracteristicas: '',
+    viviendaMaterialPiso: '',
+    viviendaMaterialPisoNumero: '',
+    viviendaMaterialMuros: '',
+    viviendaMaterialMurosNumero: '',
+    viviendaMaterialTecho: '',
+    viviendaMaterialTechoNumero: '',
+    familiarDiagnostico: '',
+    familiarObservacionesTrabajoSocial: '',
+    familiarObservacionesVisitaDomiciliaria: '',
   });
 
   // Pestañas basadas en tu boceto
@@ -133,9 +187,24 @@ const EstudioSocioeconomico = () => {
       'patrimonioCuentaAuto',
       'vehiculoCategoria',
     ],
-    salud: [],
-    vivienda: [],
-    familiar: [],
+    salud: [
+      'saludAsistenciaOpciones',
+      'saludMiembrosConAsistencia',
+    ],
+    vivienda: [
+      'viviendaRegimen',
+      'viviendaTipo',
+      'viviendaTotalHabitaciones',
+      'viviendaConformacion',
+      'viviendaMaterialPiso',
+      'viviendaMaterialMuros',
+      'viviendaMaterialTecho',
+    ],
+    familiar: [
+      'familiarDiagnostico',
+      'familiarObservacionesTrabajoSocial',
+      'familiarObservacionesVisitaDomiciliaria',
+    ],
   };
 
   const stepNumber = tabs.findIndex((tab) => tab.id === activeTab) + 1;
@@ -152,6 +221,58 @@ const EstudioSocioeconomico = () => {
     { value: 'ninguno', label: 'Ninguno', score: '0' },
     { value: 'uno_dos', label: '1-2 auto', score: '1' },
     { value: 'mas_dos', label: 'Mas de 2 autos', score: '2' },
+  ];
+
+  const housingRegimeScale = [
+    { value: 'sin_vivienda', label: 'Sin vivienda', score: '0' },
+    { value: 'rentada', label: 'Rentada', score: '0' },
+    { value: 'prestada', label: 'Prestada', score: '0' },
+    { value: 'familiar', label: 'Familiar', score: '0' },
+    { value: 'propia', label: 'Propia', score: '1' },
+    { value: 'mas_vivienda', label: 'Mas de 1 vivienda', score: '2' },
+  ];
+
+  const housingTypeScale = [
+    { value: 'vecindad', label: 'Vecindad', score: '0' },
+    { value: 'condominio', label: 'condominio', score: '0' },
+    { value: 'interes_social', label: 'Interés Social', score: '0' },
+    { value: 'casa_habitacion', label: 'Casa Habitacion', score: '0' },
+    { value: 'residencial_m', label: 'Residencial M.', score: '1' },
+    { value: 'residencial_a', label: 'Residencial A.', score: '2' },
+  ];
+
+  const roomsScale = [
+    { value: 'dos_uno', label: '1-2 dormitorios', score: '0' },
+    { value: 'tres_cuatro', label: '3-4 dormitorios', score: '1' },
+    { value: 'mas_cuatro', label: 'Mas de 4', score: '2' },
+  ];
+
+  const floorMaterialScale = [
+    { value: 'tierra', label: 'Tierra', score: '0' },
+    { value: 'concreto', label: 'Concreto', score: '0' },
+    { value: 'mosaico', label: 'Mosaico', score: '0' },
+    { value: 'vitropiso', label: 'Vitropiso', score: '1' },
+    { value: 'otros', label: 'Otros', score: '2' },
+  ];
+
+  const wallMaterialScale = [
+    { value: 'adobe_tabuique', label: 'Adobe/Tabique', score: '0' },
+    { value: 'concreto', label: 'Concreto', score: '1' },
+    { value: 'otros', label: 'Otros', score: '2' },
+  ];
+
+  const roofMaterialScale = [
+    { value: 'lamina_carton', label: 'Lámina cartón/asbesto', score: '0' },
+    { value: 'concreto', label: 'Concreto', score: '1' },
+    { value: 'otros', label: 'Otros', score: '2' },
+  ];
+
+  const foodFrequencyOptions = [
+    { value: 'diario', label: 'Diario' },
+    { value: 'cada_tercer_dia', label: 'C/tercer día' },
+    { value: 'semanal', label: '1 vez a la semana' },
+    { value: 'mensual', label: '1 vez al mes' },
+    { value: 'ocasional', label: 'Ocasionalmente' },
   ];
 
   const calculateAgeFromDate = (dateValue) => {
@@ -177,6 +298,14 @@ const EstudioSocioeconomico = () => {
       return '';
     }
 
+    if (name === 'saludAsistenciaOpciones' && (!Array.isArray(value) || value.length === 0)) {
+      return 'Selecciona al menos una opción.';
+    }
+
+    if (name === 'viviendaConformacion' && (!Array.isArray(value) || value.length === 0)) {
+      return 'Selecciona al menos una opción.';
+    }
+
     const requiredInCurrentTab = sectionRequiredFields[activeTab]?.includes(name);
     if (requiredInCurrentTab && !String(value || '').trim()) {
       return 'Este campo es obligatorio.';
@@ -193,6 +322,10 @@ const EstudioSocioeconomico = () => {
         'conyugeIngresoMensual',
         'numeroIntegrantesAportan',
         'patrimonioCantidad',
+        'saludMontoConsultas',
+        'saludMiembrosConAsistencia',
+        'viviendaBanos',
+        'viviendaRecamaras',
       ].includes(name) &&
       value &&
       Number(value) < 0
@@ -239,6 +372,36 @@ const EstudioSocioeconomico = () => {
         next.vehiculoNumero = selectedVehicle ? selectedVehicle.score : '';
       }
 
+      if (name === 'viviendaRegimen') {
+        const selected = housingRegimeScale.find((item) => item.value === value);
+        next.viviendaRegimenNumero = selected ? selected.score : '';
+      }
+
+      if (name === 'viviendaTipo') {
+        const selected = housingTypeScale.find((item) => item.value === value);
+        next.viviendaTipoNumero = selected ? selected.score : '';
+      }
+
+      if (name === 'viviendaTotalHabitaciones') {
+        const selected = roomsScale.find((item) => item.value === value);
+        next.viviendaTotalHabitacionesNumero = selected ? selected.score : '';
+      }
+
+      if (name === 'viviendaMaterialPiso') {
+        const selected = floorMaterialScale.find((item) => item.value === value);
+        next.viviendaMaterialPisoNumero = selected ? selected.score : '';
+      }
+
+      if (name === 'viviendaMaterialMuros') {
+        const selected = wallMaterialScale.find((item) => item.value === value);
+        next.viviendaMaterialMurosNumero = selected ? selected.score : '';
+      }
+
+      if (name === 'viviendaMaterialTecho') {
+        const selected = roofMaterialScale.find((item) => item.value === value);
+        next.viviendaMaterialTechoNumero = selected ? selected.score : '';
+      }
+
       if (name === 'patrimonioCuentaAuto' && value === 'no') {
         next.patrimonioCantidad = '0';
         next.vehiculoCategoria = '';
@@ -264,6 +427,48 @@ const EstudioSocioeconomico = () => {
     setTouched((prev) => ({ ...prev, [name]: true }));
     const msg = validateField(name, formData[name]);
     setErrors((prev) => ({ ...prev, [name]: msg }));
+  };
+
+  const handleMedicalAssistanceToggle = (option) => {
+    setIsDirty(true);
+    setFormData((prev) => {
+      const current = Array.isArray(prev.saludAsistenciaOpciones) ? prev.saludAsistenciaOpciones : [];
+      const nextOptions = current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option];
+
+      return { ...prev, saludAsistenciaOpciones: nextOptions };
+    });
+
+    if (touched.saludAsistenciaOpciones) {
+      const current = Array.isArray(formData.saludAsistenciaOpciones) ? formData.saludAsistenciaOpciones : [];
+      const nextOptions = current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option];
+      const msg = validateField('saludAsistenciaOpciones', nextOptions);
+      setErrors((prev) => ({ ...prev, saludAsistenciaOpciones: msg }));
+    }
+  };
+
+  const handleHousingCompositionToggle = (option) => {
+    setIsDirty(true);
+    setFormData((prev) => {
+      const current = Array.isArray(prev.viviendaConformacion) ? prev.viviendaConformacion : [];
+      const nextOptions = current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option];
+
+      return { ...prev, viviendaConformacion: nextOptions };
+    });
+
+    if (touched.viviendaConformacion) {
+      const current = Array.isArray(formData.viviendaConformacion) ? formData.viviendaConformacion : [];
+      const nextOptions = current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option];
+      const msg = validateField('viviendaConformacion', nextOptions);
+      setErrors((prev) => ({ ...prev, viviendaConformacion: msg }));
+    }
   };
 
   const handleHouseholdMemberChange = (index, field, value) => {
@@ -333,6 +538,41 @@ const EstudioSocioeconomico = () => {
     setMonthlyExpenses((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleFoodFrequencyChange = (foodKey, value) => {
+    setIsDirty(true);
+    setFoodFrequency((prev) => ({ ...prev, [foodKey]: value }));
+  };
+
+  const handleFamilyReferenceChange = (index, field, value) => {
+    setIsDirty(true);
+    setFamilyReferences((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
+    );
+    setActiveFamilyReferenceRow(index);
+
+    if (touched.familiarReferencias) {
+      setErrors((prev) => ({ ...prev, familiarReferencias: '' }));
+    }
+  };
+
+  const handleAddFamilyReference = () => {
+    setIsDirty(true);
+    setFamilyReferences((prev) => [...prev, { nombre: '', telefono: '', relacion: '', tiempoConocer: '' }]);
+    setActiveFamilyReferenceRow(familyReferences.length);
+  };
+
+  const handleRemoveFamilyReference = (index) => {
+    setIsDirty(true);
+    setFamilyReferences((prev) => {
+      if (prev.length <= 2) {
+        return prev;
+      }
+      const next = prev.filter((_, i) => i !== index);
+      setActiveFamilyReferenceRow((current) => Math.max(0, Math.min(current, next.length - 1)));
+      return next;
+    });
+  };
+
   const handleVehicleAssetChange = (index, field, value) => {
     setIsDirty(true);
     setVehicleAssets((prev) =>
@@ -364,6 +604,26 @@ const EstudioSocioeconomico = () => {
   const totalExpenses = Object.values(monthlyExpenses).reduce((acc, value) => acc + (Number(value) || 0), 0);
   const economicResult = totalIncomes - totalExpenses;
   const hasVehicle = formData.patrimonioCuentaAuto === 'si';
+  const validFamilyReferences = familyReferences.filter(
+    (row) =>
+      String(row.nombre || '').trim() &&
+      String(row.telefono || '').trim() &&
+      String(row.relacion || '').trim() &&
+      String(row.tiempoConocer || '').trim()
+  ).length;
+  const hasMinimumFamilyReferences = validFamilyReferences >= 2;
+
+  const isTabCompleted = (tabId) => {
+    const fields = sectionRequiredFields[tabId] || [];
+    if (fields.length === 0) return false;
+
+    const requiredFieldsDone = fields.every((name) => String(formData[name] || '').trim() !== '');
+    if (tabId === 'familiar') {
+      return requiredFieldsDone && hasMinimumFamilyReferences;
+    }
+
+    return requiredFieldsDone;
+  };
 
   const validateCurrentTab = () => {
     const reqFields = sectionRequiredFields[activeTab] || [];
@@ -382,16 +642,17 @@ const EstudioSocioeconomico = () => {
       return updates;
     });
 
+    if (activeTab === 'familiar' && !hasMinimumFamilyReferences) {
+      newErrors.familiarReferencias = 'Captura al menos 2 referencias completas (nombre, teléfono, relación y tiempo de conocerse).';
+      setTouched((prev) => ({ ...prev, familiarReferencias: true }));
+    }
+
     setErrors((prev) => ({ ...prev, ...newErrors }));
     return Object.keys(newErrors).length === 0;
   };
 
   const completedTabs = tabs.reduce((acc, tab) => {
-    const fields = sectionRequiredFields[tab.id] || [];
-    if (fields.length === 0) return acc;
-
-    const done = fields.every((name) => String(formData[name] || '').trim() !== '');
-    return done ? acc + 1 : acc;
+    return isTabCompleted(tab.id) ? acc + 1 : acc;
   }, 0);
 
   const progressPercent = Math.round((completedTabs / tabs.length) * 100);
@@ -446,6 +707,43 @@ const EstudioSocioeconomico = () => {
       patrimonioCantidad: '',
       vehiculoCategoria: '',
       vehiculoNumero: '',
+      saludAsistenciaOpciones: [],
+      saludMontoConsultas: '',
+      saludOtrosServicios: '',
+      saludMiembrosConAsistencia: '',
+      saludAdicAlcoholismoDetalle: '',
+      saludAdicAlcoholismoFrecuencia: '',
+      saludAdicAlcoholismoSeveridad: '',
+      saludAdicTcaLudopatiaDetalle: '',
+      saludAdicTcaLudopatiaFrecuencia: '',
+      saludAdicTcaLudopatiaSeveridad: '',
+      saludAdicDrogadiccionDetalle: '',
+      saludAdicDrogadiccionFrecuencia: '',
+      saludAdicDrogadiccionSeveridad: '',
+      saludAdicOtrosDetalle: '',
+      saludAdicOtrosFrecuencia: '',
+      saludAdicOtrosSeveridad: '',
+      saludRelacionFamiliar: '',
+      viviendaRegimen: '',
+      viviendaRegimenNumero: '',
+      viviendaTipo: '',
+      viviendaTipoNumero: '',
+      viviendaTotalHabitaciones: '',
+      viviendaTotalHabitacionesNumero: '',
+      viviendaConformacion: [],
+      viviendaBanos: '',
+      viviendaRecamaras: '',
+      viviendaEspecificarSinBanos: '',
+      viviendaOtrasCaracteristicas: '',
+      viviendaMaterialPiso: '',
+      viviendaMaterialPisoNumero: '',
+      viviendaMaterialMuros: '',
+      viviendaMaterialMurosNumero: '',
+      viviendaMaterialTecho: '',
+      viviendaMaterialTechoNumero: '',
+      familiarDiagnostico: '',
+      familiarObservacionesTrabajoSocial: '',
+      familiarObservacionesVisitaDomiciliaria: '',
     });
     setHouseholdMembers([{ nombre: '', parentesco: '', edad: '', sexo: '', estadoCivil: '', ocupacionLugar: '' }]);
     setIncomeContributors([{ parentesco: '', cantidadMensual: '' }]);
@@ -464,6 +762,23 @@ const EstudioSocioeconomico = () => {
       esparcimiento: '',
       otros: '',
     });
+    setFoodFrequency({
+      carneRes: '',
+      carnePollo: '',
+      carneCerdo: '',
+      pescado: '',
+      leche: '',
+      cereales: '',
+      huevo: '',
+      frutas: '',
+      verduras: '',
+      leguminosas: '',
+    });
+    setFamilyReferences([
+      { nombre: '', telefono: '', relacion: '', tiempoConocer: '' },
+      { nombre: '', telefono: '', relacion: '', tiempoConocer: '' },
+    ]);
+    setActiveFamilyReferenceRow(0);
     setTouched({});
     setErrors({});
     setIsDirty(false);
@@ -580,7 +895,7 @@ const EstudioSocioeconomico = () => {
                   ? 'bg-[#7E1D3B] text-white shadow-sm scale-[1.01]' 
                   : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
             >
-              {(sectionRequiredFields[tab.id]?.length ?? 0) > 0 && sectionRequiredFields[tab.id].every((field) => String(formData[field] || '').trim() !== '') ? (
+              {isTabCompleted(tab.id) ? (
                 <CheckCircle2 size={14} />
               ) : (
                 <Circle size={14} />
@@ -1232,7 +1547,390 @@ const EstudioSocioeconomico = () => {
             </div>
           )}
 
-          {activeTab !== 'solicitante' && activeTab !== 'paciente' && activeTab !== 'laboral' && activeTab !== 'economico' && (
+          {activeTab === 'salud' && (
+            <div className="relative p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-3 mb-8 border-b border-slate-100 pb-4">
+                <div className="bg-[#7E1D3B]/10 p-2 rounded-lg text-[#7E1D3B]">
+                  <Heart size={24}/>
+                </div>
+                <div>
+                  <h2 className="text-xl font-extrabold text-[#7E1D3B]">Asistencia Médica</h2>
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400 font-semibold">Condiciones de salud y entorno familiar</p>
+                </div>
+              </div>
+
+              <section className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div>
+                  <label className="block text-[11px] font-black uppercase text-slate-600 mb-2 ml-1 tracking-widest">
+                    Donde recibe asistencia médica <span className="text-[#7E1D3B]">*</span>
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    {['IMSS', 'Seguro Popular', 'ISSSTE', 'Consulta particular', 'Seguro Privado', 'Centro de salud'].map((option) => (
+                      <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={Array.isArray(formData.saludAsistenciaOpciones) && formData.saludAsistenciaOpciones.includes(option)}
+                          onChange={() => handleMedicalAssistanceToggle(option)}
+                          onBlur={() => {
+                            setTouched((prev) => ({ ...prev, saludAsistenciaOpciones: true }));
+                            const msg = validateField('saludAsistenciaOpciones', formData.saludAsistenciaOpciones);
+                            setErrors((prev) => ({ ...prev, saludAsistenciaOpciones: msg }));
+                          }}
+                          className="accent-[#7E1D3B]"
+                        />
+                        <span>{option}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors.saludAsistenciaOpciones && <p className="mt-1 text-xs font-semibold text-rose-700">{errors.saludAsistenciaOpciones}</p>}
+                </div>
+
+                <InputGroup
+                  label="Monto mensual en consultas particulares"
+                  name="saludMontoConsultas"
+                  value={formData.saludMontoConsultas}
+                  error={errors.saludMontoConsultas}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  type="number"
+                  placeholder="0"
+                />
+
+                <InputGroup
+                  label="Otros servicios médicos"
+                  name="saludOtrosServicios"
+                  value={formData.saludOtrosServicios}
+                  error={errors.saludOtrosServicios}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Ej. terapias, especialistas"
+                />
+
+                <InputGroup
+                  label="Cuántos miembros de la familia cuentan con asistencia médica"
+                  name="saludMiembrosConAsistencia"
+                  value={formData.saludMiembrosConAsistencia}
+                  error={errors.saludMiembrosConAsistencia}
+                  required
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  type="number"
+                  placeholder="0"
+                />
+              </section>
+
+              <section className="mt-10 grid grid-cols-1 gap-6">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/40 p-4 md:p-5">
+                  <h3 className="mb-4 text-sm font-black uppercase tracking-wide text-slate-700">Adicciones</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <AdiccionLineItem
+                      title="Alcoholismo"
+                      detailName="saludAdicAlcoholismoDetalle"
+                      detailValue={formData.saludAdicAlcoholismoDetalle}
+                      freqName="saludAdicAlcoholismoFrecuencia"
+                      freqValue={formData.saludAdicAlcoholismoFrecuencia}
+                      severityName="saludAdicAlcoholismoSeveridad"
+                      severityValue={formData.saludAdicAlcoholismoSeveridad}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                    <AdiccionLineItem
+                      title="TCA/Ludopatía"
+                      detailName="saludAdicTcaLudopatiaDetalle"
+                      detailValue={formData.saludAdicTcaLudopatiaDetalle}
+                      freqName="saludAdicTcaLudopatiaFrecuencia"
+                      freqValue={formData.saludAdicTcaLudopatiaFrecuencia}
+                      severityName="saludAdicTcaLudopatiaSeveridad"
+                      severityValue={formData.saludAdicTcaLudopatiaSeveridad}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                    <AdiccionLineItem
+                      title="Drogadicción"
+                      detailName="saludAdicDrogadiccionDetalle"
+                      detailValue={formData.saludAdicDrogadiccionDetalle}
+                      freqName="saludAdicDrogadiccionFrecuencia"
+                      freqValue={formData.saludAdicDrogadiccionFrecuencia}
+                      severityName="saludAdicDrogadiccionSeveridad"
+                      severityValue={formData.saludAdicDrogadiccionSeveridad}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                    <AdiccionLineItem
+                      title="Otros"
+                      detailName="saludAdicOtrosDetalle"
+                      detailValue={formData.saludAdicOtrosDetalle}
+                      freqName="saludAdicOtrosFrecuencia"
+                      freqValue={formData.saludAdicOtrosFrecuencia}
+                      severityName="saludAdicOtrosSeveridad"
+                      severityValue={formData.saludAdicOtrosSeveridad}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                  </div>
+                </div>
+
+                <TextAreaGroup
+                  label="Relación familiar"
+                  name="saludRelacionFamiliar"
+                  value={formData.saludRelacionFamiliar}
+                  error={errors.saludRelacionFamiliar}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  rows={4}
+                />
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'vivienda' && (
+            <div className="relative p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-3 mb-8 border-b border-slate-100 pb-4">
+                <div className="bg-[#7E1D3B]/10 p-2 rounded-lg text-[#7E1D3B]">
+                  <Home size={24}/>
+                </div>
+                <div>
+                  <h2 className="text-xl font-extrabold text-[#7E1D3B]">Características de la Vivienda</h2>
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400 font-semibold">Condiciones de habitabilidad y alimentación</p>
+                </div>
+              </div>
+
+              <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ScaleSelectorWithScore
+                  label="Régimen de Vivienda"
+                  name="viviendaRegimen"
+                  value={formData.viviendaRegimen}
+                  score={formData.viviendaRegimenNumero}
+                  options={housingRegimeScale}
+                  required
+                  error={errors.viviendaRegimen}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+
+                <ScaleSelectorWithScore
+                  label="Tipo de Vivienda"
+                  name="viviendaTipo"
+                  value={formData.viviendaTipo}
+                  score={formData.viviendaTipoNumero}
+                  options={housingTypeScale}
+                  required
+                  error={errors.viviendaTipo}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+
+                <ScaleSelectorWithScore
+                  label="Total de habitaciones"
+                  name="viviendaTotalHabitaciones"
+                  value={formData.viviendaTotalHabitaciones}
+                  score={formData.viviendaTotalHabitacionesNumero}
+                  options={roomsScale}
+                  required
+                  error={errors.viviendaTotalHabitaciones}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/40 p-4 md:p-5">
+                  <label className="block text-[11px] font-black uppercase text-slate-600 mb-2 ml-1 tracking-widest">
+                    ¿Cómo está conformada su vivienda? <span className="text-[#7E1D3B]">*</span>
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-white p-3">
+                    {['Sala', 'Comedor', 'Cocina'].map((item) => (
+                      <label key={item} className="flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={Array.isArray(formData.viviendaConformacion) && formData.viviendaConformacion.includes(item)}
+                          onChange={() => handleHousingCompositionToggle(item)}
+                          onBlur={() => {
+                            setTouched((prev) => ({ ...prev, viviendaConformacion: true }));
+                            const msg = validateField('viviendaConformacion', formData.viviendaConformacion);
+                            setErrors((prev) => ({ ...prev, viviendaConformacion: msg }));
+                          }}
+                          className="accent-[#7E1D3B]"
+                        />
+                        <span>{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors.viviendaConformacion && <p className="mt-1 text-xs font-semibold text-rose-700">{errors.viviendaConformacion}</p>}
+
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <InputGroup
+                      label="Baños"
+                      name="viviendaBanos"
+                      value={formData.viviendaBanos}
+                      error={errors.viviendaBanos}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      type="number"
+                      placeholder="0"
+                    />
+                    <InputGroup
+                      label="Recámaras"
+                      name="viviendaRecamaras"
+                      value={formData.viviendaRecamaras}
+                      error={errors.viviendaRecamaras}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      type="number"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputGroup
+                  label="En caso de no contar con baños, especificar"
+                  name="viviendaEspecificarSinBanos"
+                  value={formData.viviendaEspecificarSinBanos}
+                  error={errors.viviendaEspecificarSinBanos}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Descripción"
+                />
+                <InputGroup
+                  label="Otras características de la vivienda"
+                  name="viviendaOtrasCaracteristicas"
+                  value={formData.viviendaOtrasCaracteristicas}
+                  error={errors.viviendaOtrasCaracteristicas}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Observaciones"
+                />
+              </section>
+
+              <section className="mt-10">
+                <h3 className="mb-4 text-sm font-black uppercase tracking-wide text-slate-700">Material de construcción</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <ScaleSelectorWithScore
+                    label="Material del piso"
+                    name="viviendaMaterialPiso"
+                    value={formData.viviendaMaterialPiso}
+                    score={formData.viviendaMaterialPisoNumero}
+                    options={floorMaterialScale}
+                    required
+                    error={errors.viviendaMaterialPiso}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    compact
+                  />
+                  <ScaleSelectorWithScore
+                    label="Material de los muros"
+                    name="viviendaMaterialMuros"
+                    value={formData.viviendaMaterialMuros}
+                    score={formData.viviendaMaterialMurosNumero}
+                    options={wallMaterialScale}
+                    required
+                    error={errors.viviendaMaterialMuros}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    compact
+                  />
+                  <ScaleSelectorWithScore
+                    label="Material del techo"
+                    name="viviendaMaterialTecho"
+                    value={formData.viviendaMaterialTecho}
+                    score={formData.viviendaMaterialTechoNumero}
+                    options={roofMaterialScale}
+                    required
+                    error={errors.viviendaMaterialTecho}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    compact
+                  />
+                </div>
+              </section>
+
+              <section className="mt-10 rounded-2xl border border-slate-200 bg-slate-50/40 p-4 md:p-5">
+                <h3 className="mb-4 text-sm font-black uppercase tracking-wide text-slate-700">Tipo y Frecuencia de Alimentos</h3>
+                <FoodFrequencyTable
+                  data={foodFrequency}
+                  onChange={handleFoodFrequencyChange}
+                  options={foodFrequencyOptions}
+                />
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'familiar' && (
+            <div className="relative p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-3 mb-8 border-b border-slate-100 pb-4">
+                <div className="bg-[#7E1D3B]/10 p-2 rounded-lg text-[#7E1D3B]">
+                  <Users size={24}/>
+                </div>
+                <div>
+                  <h2 className="text-xl font-extrabold text-[#7E1D3B]">Referencias Personales y Conclusiones</h2>
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400 font-semibold">Entorno, soporte y evaluación social</p>
+                </div>
+              </div>
+
+              <section className="rounded-2xl border border-slate-200 bg-slate-50/40 p-4 md:p-5">
+                <div className="mb-4">
+                  <h3 className="text-sm font-black uppercase tracking-wide text-slate-700">Referencias personales (2 mínimo)</h3>
+                  <p className="text-xs text-slate-500 mt-1">Registra al menos 2 referencias completas para validar esta sección.</p>
+                </div>
+
+                <FamilyReferencesTable
+                  rows={familyReferences}
+                  onChange={handleFamilyReferenceChange}
+                  onAddRow={handleAddFamilyReference}
+                  onRemoveRow={handleRemoveFamilyReference}
+                  activeRow={activeFamilyReferenceRow}
+                  onRowFocus={setActiveFamilyReferenceRow}
+                />
+
+                {errors.familiarReferencias && (
+                  <p className="mt-2 text-xs font-semibold text-rose-700">{errors.familiarReferencias}</p>
+                )}
+              </section>
+
+              <section className="mt-8 grid grid-cols-1 gap-6">
+                <TextAreaGroup
+                  label="Diagnóstico"
+                  name="familiarDiagnostico"
+                  value={formData.familiarDiagnostico}
+                  required
+                  error={errors.familiarDiagnostico}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  rows={4}
+                />
+
+                <TextAreaGroup
+                  label="Observaciones del trabajador social"
+                  name="familiarObservacionesTrabajoSocial"
+                  value={formData.familiarObservacionesTrabajoSocial}
+                  required
+                  error={errors.familiarObservacionesTrabajoSocial}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  rows={4}
+                />
+
+                <TextAreaGroup
+                  label="Observaciones de la visita domiciliaria"
+                  name="familiarObservacionesVisitaDomiciliaria"
+                  value={formData.familiarObservacionesVisitaDomiciliaria}
+                  required
+                  error={errors.familiarObservacionesVisitaDomiciliaria}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  rows={4}
+                />
+              </section>
+
+              <section className="mt-8 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                <p className="text-sm font-semibold text-amber-900 leading-relaxed">
+                  El proporcionar información falsa es motivo suficiente para anular el trámite; Marakame se reserva el derecho de investigar la veracidad de lo antes declarado.
+                </p>
+              </section>
+            </div>
+          )}
+
+          {activeTab !== 'solicitante' && activeTab !== 'paciente' && activeTab !== 'laboral' && activeTab !== 'economico' && activeTab !== 'salud' && activeTab !== 'vivienda' && activeTab !== 'familiar' && (
             <div className="p-20 text-center flex flex-col items-center justify-center text-slate-300 bg-slate-50/40">
               <div className="bg-slate-50 p-6 rounded-full mb-4">
                 <ClipboardList size={48}/>
@@ -1311,6 +2009,277 @@ const SelectGroup = ({ label, options, name, value, required = false, error, onC
         {error}
       </p>
     )}
+  </div>
+);
+
+const TextAreaGroup = ({ label, name, value, required = false, error, onChange, onBlur, rows = 4 }) => (
+  <div className="flex flex-col">
+    <label className="block text-[11px] font-black uppercase text-slate-600 mb-1.5 ml-1 tracking-widest" htmlFor={name}>
+      {label} {required && <span className="text-[#7E1D3B]">*</span>}
+    </label>
+    <textarea
+      id={name}
+      name={name}
+      rows={rows}
+      value={value}
+      onChange={(e) => onChange(name, e.target.value)}
+      onBlur={() => onBlur(name)}
+      aria-invalid={Boolean(error)}
+      aria-describedby={error ? `${name}-error` : undefined}
+      className={`w-full bg-slate-50 border p-3.5 rounded-xl text-sm outline-none focus:bg-white focus:ring-2 transition-all font-medium resize-y min-h-[120px] ${
+        error
+          ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-200'
+          : 'border-slate-200 focus:ring-[#7E1D3B]/10 focus:border-[#7E1D3B]'
+      }`}
+    />
+    {error && (
+      <p id={`${name}-error`} className="mt-1 text-xs font-semibold text-rose-700">
+        {error}
+      </p>
+    )}
+  </div>
+);
+
+const AdiccionLineItem = ({ title, detailName, detailValue, freqName, freqValue, severityName, severityValue, onChange, onBlur }) => (
+  <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
+    <div className="mb-2 flex items-center gap-2 text-slate-700">
+      <span className="text-[18px] font-medium">{title}</span>
+      <div className="flex-1 border-b border-slate-300" />
+      <input
+        name={detailName}
+        value={detailValue}
+        onChange={(e) => onChange(detailName, e.target.value)}
+        onBlur={() => onBlur(detailName)}
+        placeholder="Detalle"
+        className="w-36 border-0 border-b border-slate-300 bg-transparent px-1 py-0.5 text-sm font-semibold text-slate-700 outline-none focus:border-[#7E1D3B]"
+      />
+    </div>
+
+    <div className="flex items-center gap-2">
+      <span className="text-xs font-black uppercase tracking-wide text-slate-500">Cantidad y Frecuencia</span>
+      <input
+        name={freqName}
+        value={freqValue}
+        onChange={(e) => onChange(freqName, e.target.value)}
+        onBlur={() => onBlur(freqName)}
+        placeholder="Ej. 3 veces por semana"
+        className="flex-1 border-0 border-b border-slate-300 bg-transparent px-1 py-0.5 text-sm text-slate-700 outline-none focus:border-[#7E1D3B]"
+      />
+    </div>
+
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <span className="text-xs font-black uppercase tracking-wide text-slate-500">Severidad</span>
+      {[
+        { value: 'leve', label: 'Leve', activeClass: 'bg-emerald-100 border-emerald-300 text-emerald-800' },
+        { value: 'moderada', label: 'Moderada', activeClass: 'bg-amber-100 border-amber-300 text-amber-800' },
+        { value: 'alta', label: 'Alta', activeClass: 'bg-rose-100 border-rose-300 text-rose-800' },
+      ].map((option) => (
+        <label
+          key={`${severityName}-${option.value}`}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold cursor-pointer transition-colors ${
+            severityValue === option.value
+              ? option.activeClass
+              : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-white'
+          }`}
+        >
+          <input
+            type="radio"
+            name={severityName}
+            value={option.value}
+            checked={severityValue === option.value}
+            onChange={(e) => onChange(severityName, e.target.value)}
+            onBlur={() => onBlur(severityName)}
+            className="accent-[#7E1D3B]"
+          />
+          <span>{option.label}</span>
+        </label>
+      ))}
+    </div>
+  </div>
+);
+
+const ScaleSelectorWithScore = ({
+  label,
+  name,
+  value,
+  score,
+  options,
+  required = false,
+  error,
+  onChange,
+  onBlur,
+}) => (
+  <div>
+    <label className="block text-[11px] font-black uppercase text-slate-600 mb-2 ml-1 tracking-widest">
+      {label} {required && <span className="text-[#7E1D3B]">*</span>}
+    </label>
+
+    <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-3 items-start">
+      <select
+        id={name}
+        name={name}
+        value={value}
+        onChange={(e) => onChange(name, e.target.value)}
+        onBlur={() => onBlur(name)}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${name}-error` : undefined}
+        className={`w-full bg-white border p-3 rounded-xl text-sm outline-none focus:ring-2 transition-all font-medium appearance-none cursor-pointer ${
+          error
+            ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-200'
+            : 'border-slate-200 focus:ring-[#7E1D3B]/10 focus:border-[#7E1D3B]'
+        }`}
+      >
+        <option value="">Seleccionar...</option>
+        {options.map((option) => (
+          <option key={`${name}-${option.value}`} value={option.value}>{option.label}</option>
+        ))}
+      </select>
+
+      <div className="h-[44px] rounded-xl border border-[#7E1D3B]/30 bg-[#7E1D3B]/5 flex items-center justify-between px-3">
+        <span className="text-[11px] font-black uppercase tracking-wide text-slate-500">Número</span>
+        <span className="text-base font-black text-[#7E1D3B] leading-none">{score || '-'}</span>
+      </div>
+    </div>
+
+    {error && (
+      <p id={`${name}-error`} className="mt-1 text-xs font-semibold text-rose-700">
+        {error}
+      </p>
+    )}
+  </div>
+);
+
+const FoodFrequencyTable = ({ data, onChange, options }) => {
+  const foodRows = [
+    { key: 'carneRes', label: 'Carne de res' },
+    { key: 'carnePollo', label: 'Carne de pollo' },
+    { key: 'carneCerdo', label: 'Carne de cerdo' },
+    { key: 'pescado', label: 'Pescado' },
+    { key: 'leche', label: 'Leche' },
+    { key: 'cereales', label: 'Cereales' },
+    { key: 'huevo', label: 'Huevo' },
+    { key: 'frutas', label: 'Frutas' },
+    { key: 'verduras', label: 'Verduras' },
+    { key: 'leguminosas', label: 'Leguminosas' },
+  ];
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <table className="min-w-[960px] w-full text-xs">
+        <thead className="bg-slate-100 text-slate-700 uppercase tracking-wide">
+          <tr>
+            <th className="px-3 py-2 text-left">Tipo de Alimento</th>
+            <th className="px-3 py-2 text-left">Frecuencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          {foodRows.map((row, idx) => (
+            <tr key={row.key} className={`border-t border-slate-200 ${idx % 2 === 1 ? 'bg-slate-50/70' : ''}`}>
+              <td className="px-3 py-2 font-medium text-slate-700">{row.label}</td>
+              <td className="p-1.5">
+                <select
+                  value={data[row.key] || ''}
+                  onChange={(e) => onChange(row.key, e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+                >
+                  <option value="">Seleccionar...</option>
+                  {options.map((opt) => (
+                    <option key={`${row.key}-${opt.value}`} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const FamilyReferencesTable = ({ rows, onChange, onAddRow, onRemoveRow, activeRow, onRowFocus }) => (
+  <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <table className="min-w-[760px] w-full text-xs">
+      <thead className="bg-slate-100 text-slate-700 uppercase tracking-wide">
+        <tr>
+          <th className="px-3 py-2 text-left">Nombre</th>
+          <th className="px-3 py-2 text-left">Teléfono</th>
+          <th className="px-3 py-2 text-left">Relación</th>
+          <th className="px-3 py-2 text-left">Tiempo de conocerse</th>
+          <th className="px-3 py-2 text-center">Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, index) => (
+          <tr
+            key={`familiar-reference-row-${index}`}
+            className={`border-t border-slate-200 transition-colors ${
+              index === activeRow ? 'bg-rose-50/90' : index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'
+            }`}
+          >
+            <td className="p-2">
+              <input
+                value={row.nombre}
+                onChange={(e) => onChange(index, 'nombre', e.target.value)}
+                onFocus={() => onRowFocus(index)}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+              />
+            </td>
+            <td className="p-2">
+              <input
+                value={row.telefono}
+                onChange={(e) => onChange(index, 'telefono', e.target.value)}
+                onFocus={() => onRowFocus(index)}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+              />
+            </td>
+            <td className="p-2">
+              <input
+                value={row.relacion}
+                onChange={(e) => onChange(index, 'relacion', e.target.value)}
+                onFocus={() => onRowFocus(index)}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+              />
+            </td>
+            <td className="p-2">
+              <input
+                value={row.tiempoConocer}
+                onChange={(e) => onChange(index, 'tiempoConocer', e.target.value)}
+                onFocus={() => onRowFocus(index)}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+              />
+            </td>
+            <td className="p-2 text-center">
+              <button
+                type="button"
+                onClick={() => onRemoveRow(index)}
+                disabled={rows.length <= 2}
+                className={`inline-flex items-center rounded-lg p-2 ${
+                  rows.length <= 2
+                    ? 'border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                    : 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
+                }`}
+                aria-label="Eliminar referencia"
+              >
+                <Trash2 size={14} />
+              </button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-3 py-2">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        Referencias capturadas: {rows.length}
+      </p>
+      <button
+        type="button"
+        onClick={onAddRow}
+        className="inline-flex items-center gap-2 rounded-lg border border-[#7E1D3B]/20 bg-white px-3 py-1.5 text-xs font-bold text-[#7E1D3B] hover:bg-[#7E1D3B]/5"
+      >
+        <Plus size={14} /> Agregar referencia
+      </button>
+    </div>
   </div>
 );
 
