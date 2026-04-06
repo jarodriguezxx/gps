@@ -6,6 +6,10 @@ import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
 // Importaciones para Recursos Materiales
 import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
+import Proveedores from './views/rec-materiales/Proveedores';
+import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
+import Historial from './views/rec-materiales/Historial';
+
 
 const quickViews = [
   { label: 'Login', path: '/login', tone: 'slate' },
@@ -58,7 +62,13 @@ function App() {
         <Route path="*" element={<Navigate to="/admisiones" replace />} />
 
         {/* Rutas para rec Materiales */}
-        <Route path='/rec-materiales' element = {<RecMaterialesDashboard/>}/>
+        <Route path='/rec-materiales' element = {<RecMaterialesDashboard/>}>
+
+          {/* Estas son las rutas hijas  */}
+          <Route index element={<ListaRequisiciones/>}/>
+          <Route path='proveedores' element = {<Proveedores/>}/>
+          <Route path='historial' element = {<Historial/>}/>
+        </Route>
       </Routes>
       <QuickNavigator />
     </BrowserRouter>

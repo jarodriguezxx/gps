@@ -1,11 +1,23 @@
 import React from "react";
 import { colors, typography, spacing, borders, shadows } from "@/config/theme";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import marakameLogo from "../../assets/marakame.jpeg";
 
 const RecMaterialesDashboard = () => {
   //devuelve la ruta sobre la que está esta pantalla
   const location = useLocation();
+
+  //
+  const navigate = useNavigate();
+  const goInicio = () => navigate("/rec-materiales");
+  const goProveedores = () => navigate("/rec-materiales/proveedores");
+  const goHistorial = () => navigate("/rec-materiales/historial");
+
+  const isRequisicionesActive = location.pathname === "/rec-materiales";
+  const isProveedoresActive =
+    location.pathname === "/rec-materiales/proveedores";
+  const isHistorialActive = location.pathname === "/rec-materiales/historial";
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
@@ -41,15 +53,41 @@ const RecMaterialesDashboard = () => {
 
           <div className="grid gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6">
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner">
-              <button className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-3 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
-                Agendar Cita
+              <button
+                onClick={goInicio}
+                className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                  isRequisicionesActive
+                    ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
+                    : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Requisiciones
               </button>
-              <button className="w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-3 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
-                Agregar Paciente
+              <button
+                onClick={goProveedores}
+                className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                  isProveedoresActive
+                    ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
+                    : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Proveedores
+              </button>
+              <button
+                onClick={goHistorial}
+                className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                  isHistorialActive
+                    ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
+                    : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Historial
               </button>
             </aside>
 
-            <main className="space-y-5"></main>
+            <main className="space-y-5">
+              <Outlet />
+            </main>
           </div>
         </header>
       </div>
