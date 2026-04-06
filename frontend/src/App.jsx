@@ -4,10 +4,14 @@ import AdmisionesInicio from './views/admisiones/Admisiones-inicio';
 import Login from './views/login';
 import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
+import MedicoInicio from './views/Medico/Medico-inicio';
+import InventarioPertenencias from './views/Medico/InventarioPertenencias';
 
 const quickViews = [
   { label: 'Login', path: '/login', tone: 'slate' },
   { label: 'Admisiones', path: '/admisiones', tone: 'slate' },
+  { label: 'Médico', path: '/medico', tone: 'rose' },
+  { label: 'Inventario', path: '/medico/inventario-pertenencias', tone: 'rose' },
   { label: 'Estudio', path: '/admisiones/estudio-socioeconomico', tone: 'rose' },
   { label: 'Valoración', path: '/admisiones/valoracion-diagnostica', tone: 'rose' },
 ];
@@ -50,6 +54,8 @@ function App() {
         <Route path="/admisiones" element={<AdmisionesInicio />} />
         <Route path="/admisiones/estudio-socioeconomico" element={<EstudioSocioeconomico />} />
         <Route path="/admisiones/valoracion-diagnostica" element={<ValoracionDiagnostica />} />
+        <Route path="/medico" element={<MedicoInicio />} />
+        <Route path="/medico/inventario-pertenencias" element={<InventarioPertenencias />} />
         <Route path="*" element={<Navigate to="/admisiones" replace />} />
       </Routes>
       <QuickNavigator />
