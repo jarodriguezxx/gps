@@ -1,5 +1,4 @@
 import React from "react";
-import { colors, typography, spacing, borders, shadows } from "@/config/theme";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import marakameLogo from "../../assets/marakame.jpeg";
 
@@ -7,7 +6,7 @@ const RecMaterialesDashboard = () => {
   //devuelve la ruta sobre la que está esta pantalla
   const location = useLocation();
 
-  //
+  //mapeo de las rutas
   const navigate = useNavigate();
   const goInicio = () => navigate("/rec-materiales");
   const goProveedores = () => navigate("/rec-materiales/proveedores");
