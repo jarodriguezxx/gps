@@ -4,12 +4,20 @@ import AdmisionesInicio from './views/admisiones/Admisiones-inicio';
 import Login from './views/login';
 import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
+import AltaPersonal from './views/rh/AltaPersonal';
+import BajaPersonal from './views/rh/BajaPersonal';
+import CatalogoRoles from './views/rh/CatalogoRoles';
+import AsignacionRoles from './views/rh/AsignacionRoles';
 
 const quickViews = [
   { label: 'Login', path: '/login', tone: 'slate' },
   { label: 'Admisiones', path: '/admisiones', tone: 'slate' },
   { label: 'Estudio', path: '/admisiones/estudio-socioeconomico', tone: 'rose' },
   { label: 'Valoración', path: '/admisiones/valoracion-diagnostica', tone: 'rose' },
+  { label: 'RH - Alta', path: '/rh/alta-personal', tone: 'slate' },
+  { label: 'RH - Baja', path: '/rh/baja-personal', tone: 'slate' },
+  { label: 'RH - Catalogos Roles', path: '/rh/catalogo-roles', tone: 'slate' },
+  { label: 'RH - Asignacion Roles', path: '/rh/asignacion-roles', tone: 'slate' },
 ];
 
 const QuickNavigator = () => {
@@ -50,6 +58,10 @@ function App() {
         <Route path="/admisiones" element={<AdmisionesInicio />} />
         <Route path="/admisiones/estudio-socioeconomico" element={<EstudioSocioeconomico />} />
         <Route path="/admisiones/valoracion-diagnostica" element={<ValoracionDiagnostica />} />
+        <Route path="/rh/alta-personal" element={<AltaPersonal />} />
+        <Route path="/rh/baja-personal" element={<BajaPersonal />} />
+        <Route path="/rh/catalogo-roles" element={<CatalogoRoles />} />
+        <Route path="/rh/asignacion-roles" element={<AsignacionRoles />} />
         <Route path="*" element={<Navigate to="/admisiones" replace />} />
       </Routes>
       <QuickNavigator />
