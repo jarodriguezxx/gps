@@ -12,6 +12,8 @@ import AsignacionRoles from './views/rh/AsignacionRoles';
 import MedicoInicio from './views/Medico/Medico-inicio';
 import InventarioPertenencias from './views/Medico/InventarioPertenencias';
 import HistoriaMedica from './views/Medico/HistoriaMedica';
+import ExpedienteAdmisiones from './views/admisiones/ExpedienteAdmisiones';
+import ExpedienteMedico from './views/Medico/ExpedienteMedico';
 // Importaciones para Recursos Materiales
 import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
 import Proveedores from './views/rec-materiales/Proveedores';
@@ -25,6 +27,8 @@ const quickViews = [
   { label: 'Médico', path: '/medico', tone: 'rose' },
   { label: 'Historia', path: '/medico/historia-medica', tone: 'rose' },
   { label: 'Inventario', path: '/medico/inventario-pertenencias', tone: 'rose' },
+  { label: 'Exp. Admisiones', path: '/admisiones/expediente', tone: 'rose' },
+  { label: 'Exp. Médico', path: '/medico/expediente', tone: 'rose' },
   { label: 'Estudio', path: '/admisiones/estudio-socioeconomico', tone: 'rose' },
   { label: 'Valoración', path: '/admisiones/valoracion-diagnostica', tone: 'rose' },
   { label: 'RecMateriales', path: '/rec-materiales', tone: 'rose' },
@@ -74,9 +78,11 @@ function App() {
         <Route path="/" element={<Navigate to="/admisiones" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admisiones" element={<AdmisionesInicio />} />
+        <Route path="/admisiones/expediente" element={<ExpedienteAdmisiones />} />
         <Route path="/admisiones/estudio-socioeconomico" element={<EstudioSocioeconomico />} />
         <Route path="/admisiones/valoracion-diagnostica" element={<ValoracionDiagnostica />} />
         <Route path="/medico" element={<MedicoInicio />} />
+        <Route path="/medico/expediente" element={<ExpedienteMedico />} />
         <Route path="/medico/historia-medica" element={<HistoriaMedica />} />
         <Route path="/medico/inventario-pertenencias" element={<InventarioPertenencias />} />
 

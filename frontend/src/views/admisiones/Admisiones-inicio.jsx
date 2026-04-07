@@ -173,6 +173,12 @@ const AdmisionesInicio = ({ onOpenEstudio }) => {
 						>
 							Inicio
 						</button>
+						<button
+							onClick={() => navigate('/admisiones/expediente')}
+							className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B] px-3 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[#63162e]"
+						>
+							Expediente
+						</button>
 						<button className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-3 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
 							Prueba 1
 						</button>
@@ -188,6 +194,9 @@ const AdmisionesInicio = ({ onOpenEstudio }) => {
 							<p className="mt-2 text-3xl font-black text-[#7E1D3B]">78%</p>
 							<p className="text-xs text-slate-500">Tasa de conversión semanal</p>
 						</div>
+						<button onClick={() => navigate('/admisiones/expediente')} className="mt-3 w-full rounded-xl bg-[#7E1D3B] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#63162e]">
+							Abrir expediente
+						</button>
 					</aside>
 					<div className="space-y-5">
 							<section className="rounded-[28px] border border-[#7E1D3B]/12 bg-white p-5 shadow-sm md:p-6">
