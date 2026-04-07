@@ -14,6 +14,7 @@ const MedicoInicio = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const isInicioActive = location.pathname === '/medico';
+	const isHistoriaActiva = location.pathname === '/medico/historia-medica';
 	const isInventarioActive = location.pathname === '/medico/inventario-pertenencias';
 
 	return (
@@ -73,7 +74,14 @@ const MedicoInicio = () => {
 						>
 							Inicio
 						</button>
-						<button className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-3 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
+						<button
+							onClick={() => navigate('/medico/historia-medica')}
+							className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
+								isHistoriaActiva
+									? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+									: 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
+							}`}
+						>
 							Historia médica
 						</button>
 						<button
@@ -123,7 +131,7 @@ const MedicoInicio = () => {
 						<section className="grid gap-4 md:grid-cols-3">
 					<button
 						type="button"
-						onClick={() => navigate('/medico/inventario-pertenencias')}
+						onClick={() => navigate('/medico/historia-medica')}
 						className="group rounded-[24px] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[#7E1D3B]/25 hover:bg-[#7E1D3B]/5"
 					>
 						<div className="mb-3 inline-flex rounded-xl bg-slate-100 p-2 text-[#7E1D3B]">
@@ -135,7 +143,7 @@ const MedicoInicio = () => {
 
 					<button
 						type="button"
-						onClick={() => navigate('/medico')}
+						onClick={() => navigate('/medico/inventario-pertenencias')}
 						className="group rounded-[24px] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[#7E1D3B]/25 hover:bg-[#7E1D3B]/5"
 					>
 						<div className="mb-3 inline-flex rounded-xl bg-slate-100 p-2 text-[#7E1D3B]">

@@ -11,6 +11,7 @@ import AsignacionRoles from './views/rh/AsignacionRoles';
 
 import MedicoInicio from './views/Medico/Medico-inicio';
 import InventarioPertenencias from './views/Medico/InventarioPertenencias';
+import HistoriaMedica from './views/Medico/HistoriaMedica';
 // Importaciones para Recursos Materiales
 import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
 import Proveedores from './views/rec-materiales/Proveedores';
@@ -22,6 +23,7 @@ const quickViews = [
   { label: 'Login', path: '/login', tone: 'slate' },
   { label: 'Admisiones', path: '/admisiones', tone: 'slate' },
   { label: 'Médico', path: '/medico', tone: 'rose' },
+  { label: 'Historia', path: '/medico/historia-medica', tone: 'rose' },
   { label: 'Inventario', path: '/medico/inventario-pertenencias', tone: 'rose' },
   { label: 'Estudio', path: '/admisiones/estudio-socioeconomico', tone: 'rose' },
   { label: 'Valoración', path: '/admisiones/valoracion-diagnostica', tone: 'rose' },
@@ -75,8 +77,9 @@ function App() {
         <Route path="/admisiones/estudio-socioeconomico" element={<EstudioSocioeconomico />} />
         <Route path="/admisiones/valoracion-diagnostica" element={<ValoracionDiagnostica />} />
         <Route path="/medico" element={<MedicoInicio />} />
+        <Route path="/medico/historia-medica" element={<HistoriaMedica />} />
         <Route path="/medico/inventario-pertenencias" element={<InventarioPertenencias />} />
-=
+
         <Route path="/rh/alta-personal" element={<AltaPersonal />} />
         <Route path="/rh/baja-personal" element={<BajaPersonal />} />
         <Route path="/rh/catalogo-roles" element={<CatalogoRoles />} />
