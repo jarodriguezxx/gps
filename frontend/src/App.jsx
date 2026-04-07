@@ -4,8 +4,15 @@ import AdmisionesInicio from './views/admisiones/Admisiones-inicio';
 import Login from './views/login';
 import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
+
 import MedicoInicio from './views/Medico/Medico-inicio';
 import InventarioPertenencias from './views/Medico/InventarioPertenencias';
+// Importaciones para Recursos Materiales
+import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
+import Proveedores from './views/rec-materiales/Proveedores';
+import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
+import Historial from './views/rec-materiales/Historial';
+
 
 const quickViews = [
   { label: 'Login', path: '/login', tone: 'slate' },
@@ -14,6 +21,7 @@ const quickViews = [
   { label: 'Inventario', path: '/medico/inventario-pertenencias', tone: 'rose' },
   { label: 'Estudio', path: '/admisiones/estudio-socioeconomico', tone: 'rose' },
   { label: 'Valoración', path: '/admisiones/valoracion-diagnostica', tone: 'rose' },
+  { label: 'RecMateriales', path: '/rec-materiales', tone: 'rose' },
 ];
 
 const QuickNavigator = () => {
@@ -49,6 +57,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+
+        {/* Rutas para admisiones */}
         <Route path="/" element={<Navigate to="/admisiones" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admisiones" element={<AdmisionesInicio />} />
@@ -57,6 +67,15 @@ function App() {
         <Route path="/medico" element={<MedicoInicio />} />
         <Route path="/medico/inventario-pertenencias" element={<InventarioPertenencias />} />
         <Route path="*" element={<Navigate to="/admisiones" replace />} />
+
+        {/* Rutas para rec Materiales */}
+        <Route path='/rec-materiales' element = {<RecMaterialesDashboard/>}>
+
+          {/* Estas son las rutas hijas  */}
+          <Route index element={<ListaRequisiciones/>}/>
+          <Route path='proveedores' element = {<Proveedores/>}/>
+          <Route path='historial' element = {<Historial/>}/>
+        </Route>
       </Routes>
       <QuickNavigator />
     </BrowserRouter>
