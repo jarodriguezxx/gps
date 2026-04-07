@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, FileText, FolderOpen, Search, Sparkles } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
@@ -18,6 +18,7 @@ const notasInterArea = [
 const ExpedienteAdmisiones = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
+	const [tab, setTab] = useState('general');
 	const isAdmisiones = location.pathname === '/admisiones/expediente';
 
 	return (
@@ -64,81 +65,62 @@ const ExpedienteAdmisiones = () => {
 					</aside>
 
 					<div className="space-y-5">
-						<section className="rounded-[28px] border border-[#7E1D3B]/12 bg-white p-5 shadow-sm md:p-6">
-							<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-								<div>
-									<p className="text-xs font-black uppercase tracking-[0.25em] text-[#7E1D3B]">Resumen general</p>
-									<h2 className="mt-1 text-2xl font-black text-slate-900 md:text-3xl">Expediente individual de admisiones</h2>
-								</div>
-								<div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-									Conecta estudio socioeconómico y valoración diagnóstica.
-								</div>
+						<section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+							<div className="mb-3 flex items-center justify-between gap-3">
+								<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Vista sugerida</p>
+								<p className="text-xs font-semibold text-slate-500">Pestaña activa: {tab === 'general' ? 'General' : tab === 'docs' ? 'Documentos' : 'Notas'}</p>
+							</div>
+							<div className="grid gap-2 md:grid-cols-3">
+								<button type="button" onClick={() => setTab('general')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'general' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
+									General
+								</button>
+								<button type="button" onClick={() => setTab('docs')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'docs' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
+									Documentos
+								</button>
+								<button type="button" onClick={() => setTab('notes')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'notes' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
+									Notas entre áreas
+								</button>
 							</div>
 						</section>
 
-						<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-							{[
-								{ label: 'Paciente', value: 'María García López' },
-								{ label: 'Clave', value: '02641' },
-								{ label: 'Ingreso', value: '26/04/2026' },
-								{ label: 'Estado', value: 'En valoración' },
-							].map((item) => (
-								<article key={item.label} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-									<p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{item.label}</p>
-									<p className="mt-3 text-2xl font-black text-slate-900">{item.value}</p>
-								</article>
-							))}
-						</section>
-
-						<section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-							<article className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-								<div className="mb-4 flex items-center justify-between gap-3">
-									<div>
-										<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Datos generales</p>
-										<h3 className="text-2xl font-black text-slate-900">Información base del expediente</h3>
-									</div>
-									<FolderOpen className="text-[#7E1D3B]" size={22} />
-								</div>
-
-								<div className="grid gap-4 md:grid-cols-2">
-									{[
-										{ label: 'Nombre completo', value: 'María García López' },
-										{ label: 'Expediente', value: 'ADM-02641' },
-										{ label: 'Edad / Sexo', value: '34 años · Femenino' },
-										{ label: 'Escolaridad / Ocupación', value: 'Secundaria · Comerciante' },
-										{ label: 'Residencia / Origen', value: 'Tepic, Nayarit · Ruiz, Nayarit' },
-									].map((item) => (
-										<div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-											<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{item.label}</p>
-											<p className="mt-2 text-sm font-bold text-slate-900">{item.value}</p>
+						{tab === 'general' && (
+							<>
+								<section className="rounded-[28px] border border-[#7E1D3B]/12 bg-white p-5 shadow-sm md:p-6">
+									<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+										<div>
+											<p className="text-xs font-black uppercase tracking-[0.25em] text-[#7E1D3B]">Resumen general</p>
+											<h2 className="mt-1 text-2xl font-black text-slate-900 md:text-3xl">Expediente individual de admisiones</h2>
 										</div>
-									))}
-								</div>
-
-								<div className="mt-4 rounded-2xl border border-[#7E1D3B]/15 bg-[#7E1D3B]/5 p-4">
-									<p className="text-xs font-bold uppercase tracking-[0.2em] text-[#7E1D3B]">Observación de área</p>
-									<p className="mt-2 text-sm leading-6 text-slate-700">Paciente con estudio socioeconómico y valoración diagnóstica en curso. El expediente debe conservar PDF individual y referencia clínica del ingreso.</p>
-								</div>
-
-								<div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-									<p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-slate-500">Notas establecidas entre áreas</p>
-									<div className="space-y-3">
-										{notasInterArea.map((nota) => (
-											<div key={nota} className="rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700 shadow-sm">{nota}</div>
-										))}
+										<div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+											Conecta estudio socioeconómico y valoración diagnóstica.
+										</div>
 									</div>
-								</div>
-							</article>
+								</section>
 
-							<aside className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+								<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+									{[
+										{ label: 'Paciente', value: 'María García López' },
+										{ label: 'Clave', value: '02641' },
+										{ label: 'Ingreso', value: '26/04/2026' },
+										{ label: 'Estado', value: 'En valoración' },
+									].map((item) => (
+										<article key={item.label} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+											<p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{item.label}</p>
+											<p className="mt-3 text-2xl font-black text-slate-900">{item.value}</p>
+										</article>
+									))}
+								</section>
+							</>
+						)}
+							{tab === 'docs' && (
+							<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
 								<div className="mb-4 flex items-center justify-between gap-3">
 									<div>
-										<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Documentos ligados</p>
+										<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Documentos</p>
 										<h3 className="text-2xl font-black text-slate-900">PDFs y registros del expediente</h3>
 									</div>
 									<FileText className="text-[#7E1D3B]" size={22} />
 								</div>
-
 								<div className="space-y-3">
 									{documentos.map((doc) => (
 										<div key={doc.nombre} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
@@ -153,13 +135,33 @@ const ExpedienteAdmisiones = () => {
 										</div>
 									))}
 								</div>
-
 								<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Sugerencia</p>
-									<p className="mt-2 text-sm leading-6 text-slate-700">Si más adelante quieres evitar tablas grandes en la base de datos, aquí encaja perfecto el PDF individual del estudio socioeconómico y el PDF de valoración diagnóstica por paciente.</p>
+									<p className="mt-2 text-sm leading-6 text-slate-700">Aquí puedes subir el PDF individual del estudio socioeconómico y dejar la valoración diagnóstica como documento ligado al expediente.</p>
 								</div>
-							</aside>
-						</section>
+							</section>
+							)}
+
+							{tab === 'notes' && (
+							<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+								<div className="mb-4 flex items-center justify-between gap-3">
+									<div>
+										<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Notas entre áreas</p>
+										<h3 className="text-2xl font-black text-slate-900">Seguimiento cruzado</h3>
+									</div>
+									<Sparkles className="text-[#7E1D3B]" size={22} />
+								</div>
+								<div className="space-y-3">
+									{notasInterArea.map((nota) => (
+										<div key={nota} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 text-slate-700">{nota}</div>
+									))}
+								</div>
+								<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Sugerencia</p>
+									<p className="mt-2 text-sm leading-6 text-slate-700">Este bloque sirve para notas de Admisiones hacia Médico y de Médico hacia Admisiones sin mezclar datos sensibles.</p>
+								</div>
+							</section>
+							)}
 
 						<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
 							<div className="mb-4 flex items-center justify-between gap-3">
