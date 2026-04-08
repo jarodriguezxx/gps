@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Activity, ArrowRight, ClipboardList, FileText, HeartPulse, Search, Sparkles } from 'lucide-react';
+import { Activity, ArrowRight, ClipboardList, HeartPulse, Search } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const indicadores = [
@@ -14,6 +14,7 @@ const MedicoInicio = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const isInicioActive = location.pathname === '/medico';
+	const isCuestionarioActive = location.pathname === '/medico/cuestionario-salud';
 	const isHistoriaActiva = location.pathname === '/medico/historia-medica';
 	const isInventarioActive = location.pathname === '/medico/inventario-pertenencias';
 
@@ -79,6 +80,16 @@ const MedicoInicio = () => {
 							className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B] px-3 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[#63162e]"
 						>
 							Expediente
+						</button>
+						<button
+							onClick={() => navigate('/medico/cuestionario-salud')}
+							className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
+								isCuestionarioActive
+									? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+									: 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
+							}`}
+						>
+							Cuestionario de salud
 						</button>
 						<button
 							onClick={() => navigate('/medico/historia-medica')}
@@ -147,8 +158,20 @@ const MedicoInicio = () => {
 							<HeartPulse size={20} />
 						</div>
 						<p className="text-sm font-black text-slate-900">Historia médica</p>
-						<p className="mt-2 text-sm leading-6 text-slate-600">Captura antecedentes, signos vitales y plan inicial.</p>
+							<p className="mt-2 text-sm leading-6 text-slate-600">Captura antecedentes, signos vitales y plan inicial.</p>
 					</button>
+
+						<button
+							type="button"
+							onClick={() => navigate('/medico/cuestionario-salud')}
+							className="group rounded-[24px] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[#7E1D3B]/25 hover:bg-[#7E1D3B]/5"
+						>
+							<div className="mb-3 inline-flex rounded-xl bg-slate-100 p-2 text-[#7E1D3B]">
+								<ClipboardList size={20} />
+							</div>
+							<p className="text-sm font-black text-slate-900">Cuestionario de salud</p>
+							<p className="mt-2 text-sm leading-6 text-slate-600">Captura identificación, antecedentes y exploración inicial.</p>
+						</button>
 
 					<button
 						type="button"
@@ -171,23 +194,6 @@ const MedicoInicio = () => {
 					</div>
 						</section>
 
-						<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-					<div className="mb-4 flex items-center justify-between gap-3">
-						<div>
-							<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Sugerencia</p>
-							<h3 className="text-2xl font-black text-slate-900">Siguiente mejora recomendada</h3>
-						</div>
-						<span className="inline-flex items-center gap-2 rounded-full bg-[#7E1D3B]/8 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-[#7E1D3B]">
-							<Sparkles size={14} /> Prioridad
-						</span>
-					</div>
-					<p className="text-sm leading-6 text-slate-700">
-						Conecta esta pantalla con rutas dedicadas para Inventario de Pertenencias e Historia Médica para cerrar el flujo de ingreso clínico.
-					</p>
-					<div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
-						<FileText size={14} /> Esto evita errores de carga por módulos vacíos.
-					</div>
-						</section>
 					</div>
 				</div>
 			</main>

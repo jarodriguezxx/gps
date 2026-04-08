@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, FolderOpen, Search, Sparkles } from 'lucide-react';
+import { ArrowRight, FileText, Search, Sparkles } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const documentos = [
@@ -67,19 +67,13 @@ const ExpedienteAdmisiones = () => {
 					<div className="space-y-5">
 						<section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
 							<div className="mb-3 flex items-center justify-between gap-3">
-								<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Vista sugerida</p>
+								<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Navegación</p>
 								<p className="text-xs font-semibold text-slate-500">Pestaña activa: {tab === 'general' ? 'General' : tab === 'docs' ? 'Documentos' : 'Notas'}</p>
 							</div>
 							<div className="grid gap-2 md:grid-cols-3">
-								<button type="button" onClick={() => setTab('general')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'general' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
-									General
-								</button>
-								<button type="button" onClick={() => setTab('docs')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'docs' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
-									Documentos
-								</button>
-								<button type="button" onClick={() => setTab('notes')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'notes' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
-									Notas entre áreas
-								</button>
+								<button type="button" onClick={() => setTab('general')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'general' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>General</button>
+								<button type="button" onClick={() => setTab('docs')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'docs' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>Documentos</button>
+								<button type="button" onClick={() => setTab('notes')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'notes' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>Notas entre áreas</button>
 							</div>
 						</section>
 
@@ -91,9 +85,7 @@ const ExpedienteAdmisiones = () => {
 											<p className="text-xs font-black uppercase tracking-[0.25em] text-[#7E1D3B]">Resumen general</p>
 											<h2 className="mt-1 text-2xl font-black text-slate-900 md:text-3xl">Expediente individual de admisiones</h2>
 										</div>
-										<div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-											Conecta estudio socioeconómico y valoración diagnóstica.
-										</div>
+										<div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">Conecta estudio socioeconómico y valoración diagnóstica.</div>
 									</div>
 								</section>
 
@@ -112,7 +104,8 @@ const ExpedienteAdmisiones = () => {
 								</section>
 							</>
 						)}
-							{tab === 'docs' && (
+
+						{tab === 'docs' && (
 							<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
 								<div className="mb-4 flex items-center justify-between gap-3">
 									<div>
@@ -135,33 +128,27 @@ const ExpedienteAdmisiones = () => {
 										</div>
 									))}
 								</div>
-								<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Sugerencia</p>
-									<p className="mt-2 text-sm leading-6 text-slate-700">Aquí puedes subir el PDF individual del estudio socioeconómico y dejar la valoración diagnóstica como documento ligado al expediente.</p>
-								</div>
 							</section>
-							)}
+						)}
 
-							{tab === 'notes' && (
-							<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-								<div className="mb-4 flex items-center justify-between gap-3">
-									<div>
-										<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Notas entre áreas</p>
-										<h3 className="text-2xl font-black text-slate-900">Seguimiento cruzado</h3>
+						{tab === 'notes' && (
+							<>
+								<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+									<div className="mb-4 flex items-center justify-between gap-3">
+										<div>
+											<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Notas entre áreas</p>
+											<h3 className="text-2xl font-black text-slate-900">Seguimiento cruzado</h3>
+										</div>
+										<Sparkles className="text-[#7E1D3B]" size={22} />
 									</div>
-									<Sparkles className="text-[#7E1D3B]" size={22} />
-								</div>
-								<div className="space-y-3">
-									{notasInterArea.map((nota) => (
-										<div key={nota} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 text-slate-700">{nota}</div>
-									))}
-								</div>
-								<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Sugerencia</p>
-									<p className="mt-2 text-sm leading-6 text-slate-700">Este bloque sirve para notas de Admisiones hacia Médico y de Médico hacia Admisiones sin mezclar datos sensibles.</p>
-								</div>
-							</section>
-							)}
+									<div className="space-y-3">
+										{notasInterArea.map((nota) => (
+											<div key={nota} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 text-slate-700">{nota}</div>
+										))}
+									</div>
+								</section>
+							</>
+						)}
 
 						<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
 							<div className="mb-4 flex items-center justify-between gap-3">

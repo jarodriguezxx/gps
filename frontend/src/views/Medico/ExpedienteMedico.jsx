@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, FolderOpen, Search, Sparkles } from 'lucide-react';
+import { ArrowRight, FileText, Search, Sparkles } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const notasInterArea = [
@@ -66,124 +66,94 @@ const ExpedienteMedico = () => {
 					<div className="space-y-5">
 						<section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
 							<div className="mb-3 flex items-center justify-between gap-3">
-								<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Vista sugerida</p>
+								<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Navegación</p>
 								<p className="text-xs font-semibold text-slate-500">Pestaña activa: {tab === 'general' ? 'General' : tab === 'notes' ? 'Notas' : 'Acciones'}</p>
 							</div>
 							<div className="grid gap-2 md:grid-cols-3">
-								<button type="button" onClick={() => setTab('general')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'general' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
-									General
-								</button>
-								<button type="button" onClick={() => setTab('notes')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'notes' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
-									Notas entre áreas
-								</button>
-								<button type="button" onClick={() => setTab('actions')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'actions' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
-									Acciones
-								</button>
+								<button type="button" onClick={() => setTab('general')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'general' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>General</button>
+								<button type="button" onClick={() => setTab('notes')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'notes' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>Notas entre áreas</button>
+								<button type="button" onClick={() => setTab('actions')} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === 'actions' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>Acciones</button>
 							</div>
 						</section>
 
 						{tab === 'general' && (
-						<>
-						<section className="rounded-[28px] border border-[#7E1D3B]/12 bg-white p-5 shadow-sm md:p-6">
-							<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-								<div>
-									<p className="text-xs font-black uppercase tracking-[0.25em] text-[#7E1D3B]">Resumen clínico</p>
-									<h2 className="mt-1 text-2xl font-black text-slate-900 md:text-3xl">Expediente individual del paciente</h2>
-								</div>
-								<div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">Notas y evolución médica compartidas entre áreas.</div>
-							</div>
-						</section>
+							<>
+								<section className="rounded-[28px] border border-[#7E1D3B]/12 bg-white p-5 shadow-sm md:p-6">
+									<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+										<div>
+											<p className="text-xs font-black uppercase tracking-[0.25em] text-[#7E1D3B]">Resumen clínico</p>
+											<h2 className="mt-1 text-2xl font-black text-slate-900 md:text-3xl">Expediente individual del paciente</h2>
+										</div>
+										<div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">Notas y evolución médica compartidas entre áreas.</div>
+									</div>
+								</section>
 
-						<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-							{[
-								{ label: 'Paciente', value: 'María García López' },
-								{ label: 'Folio clínico', value: 'MED-02641' },
-								{ label: 'Área actual', value: 'Médico' },
-								{ label: 'Seguimiento', value: 'En evolución' },
-							].map((item) => (
-								<article key={item.label} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-									<p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{item.label}</p>
-									<p className="mt-3 text-2xl font-black text-slate-900">{item.value}</p>
-								</article>
-							))}
-						</section>
-						</>
+								<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+									{[
+										{ label: 'Paciente', value: 'María García López' },
+										{ label: 'Folio clínico', value: 'MED-02641' },
+										{ label: 'Área actual', value: 'Médico' },
+										{ label: 'Seguimiento', value: 'En evolución' },
+									].map((item) => (
+										<article key={item.label} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+											<p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{item.label}</p>
+											<p className="mt-3 text-2xl font-black text-slate-900">{item.value}</p>
+										</article>
+									))}
+								</section>
+							</>
 						)}
 
 						{tab === 'notes' && (
-						<>
-						<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-							<div className="mb-4 flex items-center justify-between gap-3">
-								<div>
-									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Notas compartidas</p>
-									<h3 className="text-2xl font-black text-slate-900">Seguimiento entre áreas</h3>
-								</div>
-								<FileText className="text-[#7E1D3B]" size={22} />
-							</div>
-							<div className="space-y-3">
-								{notasInterArea.map((nota) => (
-									<div key={nota} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 text-slate-700">{nota}</div>
-								))}
-							</div>
-							<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-								<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Sugerencia</p>
-								<p className="mt-2 text-sm leading-6 text-slate-700">Aquí conviene dejar el resumen clínico inter-áreas para no mezclar información de admisiones con el seguimiento médico.</p>
-							</div>
-						</section>
-
-						<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-							<div className="mb-4 flex items-center justify-between gap-3">
-								<div>
-									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Bitácora</p>
-									<h3 className="text-2xl font-black text-slate-900">Notas de áreas internas</h3>
-								</div>
-								<Sparkles className="text-[#7E1D3B]" size={22} />
-							</div>
-							<div className="grid gap-3 md:grid-cols-3">
-								{bitacora.map((item) => (
-									<div key={item.area} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-										<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{item.area}</p>
-										<p className="mt-2 text-sm leading-6 text-slate-700">{item.nota}</p>
+							<>
+								<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+									<div className="mb-4 flex items-center justify-between gap-3">
+										<div>
+											<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Notas compartidas</p>
+											<h3 className="text-2xl font-black text-slate-900">Seguimiento entre áreas</h3>
+										</div>
+										<FileText className="text-[#7E1D3B]" size={22} />
 									</div>
-								))}
-							</div>
-						</section>
-						</>
+									<div className="space-y-3">
+										{notasInterArea.map((nota) => (
+											<div key={nota} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 text-slate-700">{nota}</div>
+										))}
+									</div>
+								</section>
+
+								<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+									<div className="mb-4 flex items-center justify-between gap-3">
+										<div>
+											<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Bitácora</p>
+											<h3 className="text-2xl font-black text-slate-900">Notas de áreas internas</h3>
+										</div>
+										<Sparkles className="text-[#7E1D3B]" size={22} />
+									</div>
+									<div className="grid gap-3 md:grid-cols-3">
+										{bitacora.map((item) => (
+											<div key={item.area} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 text-slate-700">{item.nota}</div>
+										))}
+									</div>
+								</section>
+							</>
 						)}
 
 						{tab === 'actions' && (
-						<>
-						<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-							<div className="mb-4 flex items-center justify-between gap-3">
-								<div>
-									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Acceso rápido</p>
-									<h3 className="text-2xl font-black text-slate-900">Abrir vistas del paciente</h3>
+							<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+								<div className="mb-4 flex items-center justify-between gap-3">
+									<div>
+										<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Acceso rápido</p>
+										<h3 className="text-2xl font-black text-slate-900">Abrir vistas del paciente</h3>
+									</div>
+									<Sparkles className="text-[#7E1D3B]" size={22} />
 								</div>
-								<Sparkles className="text-[#7E1D3B]" size={22} />
-							</div>
-							<div className="grid gap-3 md:grid-cols-3">
-								<button type="button" onClick={() => navigate('/medico/historia-medica')} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Historia médica</button>
-								<button type="button" onClick={() => navigate('/medico/inventario-pertenencias')} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Inventario de pertenencias</button>
-								<button type="button" onClick={() => navigate('/medico')} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Volver a Médico</button>
-							</div>
-						</section>
-						</>
+								<div className="grid gap-3 md:grid-cols-3">
+									<button type="button" onClick={() => navigate('/medico/historia-medica')} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Historia médica</button>
+									<button type="button" onClick={() => navigate('/medico/inventario-pertenencias')} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Inventario de pertenencias</button>
+									<button type="button" onClick={() => navigate('/medico')} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Volver a Médico</button>
+								</div>
+							</section>
 						)}
-
-						<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-							<div className="mb-4 flex items-center justify-between gap-3">
-								<div>
-									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Acceso rápido</p>
-									<h3 className="text-2xl font-black text-slate-900">Abrir vistas del paciente</h3>
-								</div>
-								<Sparkles className="text-[#7E1D3B]" size={22} />
-							</div>
-							<div className="grid gap-3 md:grid-cols-3">
-								<button type="button" onClick={() => navigate('/medico/historia-medica')} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Historia médica</button>
-								<button type="button" onClick={() => navigate('/medico/inventario-pertenencias')} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Inventario de pertenencias</button>
-								<button type="button" onClick={() => navigate('/medico')} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Volver a Médico</button>
-							</div>
-						</section>
 					</div>
 				</div>
 			</main>

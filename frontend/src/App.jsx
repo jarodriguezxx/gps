@@ -10,6 +10,7 @@ import CatalogoRoles from './views/rh/CatalogoRoles';
 import AsignacionRoles from './views/rh/AsignacionRoles';
 
 import MedicoInicio from './views/Medico/Medico-inicio';
+import CuestionarioSalud from './views/Medico/CuestionarioSalud';
 import InventarioPertenencias from './views/Medico/InventarioPertenencias';
 import HistoriaMedica from './views/Medico/HistoriaMedica';
 import ExpedienteAdmisiones from './views/admisiones/ExpedienteAdmisiones';
@@ -25,6 +26,7 @@ const quickViews = [
   { label: 'Login', path: '/login', tone: 'slate' },
   { label: 'Admisiones', path: '/admisiones', tone: 'slate' },
   { label: 'Médico', path: '/medico', tone: 'rose' },
+  { label: 'Cuestionario', path: '/medico/cuestionario-salud', tone: 'rose' },
   { label: 'Historia', path: '/medico/historia-medica', tone: 'rose' },
   { label: 'Inventario', path: '/medico/inventario-pertenencias', tone: 'rose' },
   { label: 'Exp. Admisiones', path: '/admisiones/expediente', tone: 'rose' },
@@ -82,6 +84,7 @@ function App() {
         <Route path="/admisiones/estudio-socioeconomico" element={<EstudioSocioeconomico />} />
         <Route path="/admisiones/valoracion-diagnostica" element={<ValoracionDiagnostica />} />
         <Route path="/medico" element={<MedicoInicio />} />
+        <Route path="/medico/cuestionario-salud" element={<CuestionarioSalud />} />
         <Route path="/medico/expediente" element={<ExpedienteMedico />} />
         <Route path="/medico/historia-medica" element={<HistoriaMedica />} />
         <Route path="/medico/inventario-pertenencias" element={<InventarioPertenencias />} />
