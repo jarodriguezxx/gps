@@ -20,12 +20,12 @@ const RecMaterialesDashboard = () => {
 
   return (
     // 1. min-h-screen asegura que el fondo gris cubra todo
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col">
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col select-none">
       <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6 flex-1 flex flex-col">
         {/* Contenedor Blanco Principal */}
         <div className="flex-1 flex flex-col rounded-2xl border border-slate-200 bg-white/95 shadow-sm overflow-hidden">
           {/* HEADER SUPERIOR (Logo y Usuario) */}
-          <header className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6 bg-white">
+          <header className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6 bg-white ">
             <div className="flex items-center gap-3">
               <img
                 src={marakameLogo}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { ui } from "../../config/theme";
 
 // Zona de variables de prueba
@@ -54,6 +54,78 @@ export const REQUISICIONES_PRUEBA: RequisicionesCampos[] = [
     tamanio: "MAYOR",
     tipo: "ORDINARIA",
   },
+  {
+    id: "REQ-005",
+    fecha: new Date(), // Fecha actual
+    area: "MEDICA",
+    solicitante: "Enf. Clara Sosa",
+    estado: "PENDIENTE",
+    tamanio: "MAYOR",
+    tipo: "ORDINARIA",
+  },
+  {
+    id: "REQ-006",
+    fecha: new Date(), // Fecha actual
+    area: "MEDICA",
+    solicitante: "Enf. Clara Sosa",
+    estado: "PENDIENTE",
+    tamanio: "MAYOR",
+    tipo: "ORDINARIA",
+  },
+  {
+    id: "REQ-007",
+    fecha: new Date(), // Fecha actual
+    area: "MEDICA",
+    solicitante: "Enf. Clara Sosa",
+    estado: "PENDIENTE",
+    tamanio: "MAYOR",
+    tipo: "ORDINARIA",
+  },
+  {
+    id: "REQ-008",
+    fecha: new Date(), // Fecha actual
+    area: "MEDICA",
+    solicitante: "Enf. Clara Sosa",
+    estado: "PENDIENTE",
+    tamanio: "MAYOR",
+    tipo: "ORDINARIA",
+  },
+  {
+    id: "REQ-009",
+    fecha: new Date(), // Fecha actual
+    area: "MEDICA",
+    solicitante: "Enf. Clara Sosa",
+    estado: "PENDIENTE",
+    tamanio: "MAYOR",
+    tipo: "ORDINARIA",
+  },
+  {
+    id: "REQ-0010",
+    fecha: new Date(), // Fecha actual
+    area: "MEDICA",
+    solicitante: "Enf. Clara Sosa",
+    estado: "PENDIENTE",
+    tamanio: "MAYOR",
+    tipo: "ORDINARIA",
+  },
+  {
+    id: "REQ-0011",
+    fecha: new Date(), // Fecha actual
+    area: "MEDICA",
+    solicitante: "Enf. Clara Sosa",
+    estado: "PENDIENTE",
+    tamanio: "MAYOR",
+    tipo: "ORDINARIA",
+  },
+  {
+    id: "REQ-0012",
+    fecha: new Date(), // Fecha actual
+    area: "MEDICA",
+    solicitante: "Enf. Clara Sosa",
+    estado: "PENDIENTE",
+    tamanio: "MAYOR",
+    tipo: "ORDINARIA",
+  },
 ];
 
 interface Props {
@@ -61,6 +133,15 @@ interface Props {
 }
 
 const ListaRequisiciones = ({ requisiciones }: Props) => {
+  // Constantes de estado
+  // Para seleccionar filas
+  const [selectedId, setSelected] = useState<string | null>(null);
+
+  // HandleSelect
+  const handleRowClick = (id: string) => {
+    setSelected(selectedId === id ? null : id);
+  };
+
   return (
     // Contenedor principal
     <div className="flex flex-col gap-4 min-w-full">
@@ -85,27 +166,53 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
           <tbody>
             {/* Se mapean todos los elementos recibidos */}
             {/* Entre llaves es para insertar código js */}
-            {requisiciones.map((item: RequisicionesCampos) => (
-              <tr key={item.id} className={ui.table.row}>
-                <td>
-                  {item.fecha.toLocaleDateString("es-MX", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </td>
-                <td className={ui.table.cell + ' text-center'}>{item.area}</td>
-                <td className={ui.table.cell + ' text-center'}>{item.solicitante}</td>
-                <td className={ui.table.cell + ' text-center'}>{item.estado}</td>
-                <td className={ui.table.cell + ' text-center'}>{item.tamanio}</td>
-                <td className={ui.table.cell + ' text-center'}>{item.tipo}</td>
-              </tr>
-            ))}
+            {requisiciones.map((item: RequisicionesCampos) => {
+              // Checar si la fila es la seleccionada
+              const isSelected = selectedId === item.id;
+              const textColor = isSelected ? "text-white" : "text-slate-700";
+              return (
+                <tr
+                  onClick={() => {
+                    handleRowClick(item.id);
+                  }}
+                  key={item.id}
+                  className={`
+  ${ui.table.row} cursor-pointer 
+  ${isSelected ? ui.states.selected : ui.states.default}
+`}
+                >
+                  <td className="pl-4">
+                    {item.fecha.toLocaleDateString("es-MX", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </td>
+                  <td className={ui.table.cell + " text-center " + textColor}>
+                    {item.area}
+                  </td>
+                  <td className={ui.table.cell + " text-center " + textColor}>
+                    {item.solicitante}
+                  </td>
+                  <td className={ui.table.cell + " text-center " + textColor}>
+                    {item.estado}
+                  </td>
+                  <td className={ui.table.cell + " text-center " + textColor}>
+                    {item.tamanio}
+                  </td>
+                  <td className={ui.table.cell + " text-center " + textColor}>
+                    {item.tipo}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+      {/* Este es el contenedor de los botones de acción */}
+
       <div></div>
     </div>
   );
