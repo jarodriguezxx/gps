@@ -36,7 +36,7 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
         className={`${ui.table.wrapper} flex-1 overflow-auto border border-slate-200 rounded-xl`}
       >
         <table className="w-full border-collapse">
-          <thead className="sticky top-0 z-10 bg-white shadow-sm">
+          <thead className="sticky top-0 z-10 bg-white  ">
             <tr>
               <th className={ui.table.header}>Fecha</th>
               <th className={ui.table.header}>Área</th>
