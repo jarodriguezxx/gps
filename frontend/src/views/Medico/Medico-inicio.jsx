@@ -14,55 +14,50 @@ const MedicoInicio = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const isInicioActive = location.pathname === '/medico';
-	const isCuestionarioActive = location.pathname === '/medico/cuestionario-salud';
+	const isNutricionActive = location.pathname === '/medico/nutriologia/evaluacion-nutricional' || location.pathname === '/medico/cuestionario-salud';
 	const isHistoriaActiva = location.pathname === '/medico/historia-medica';
 	const isInventarioActive = location.pathname === '/medico/inventario-pertenencias';
 
 	return (
-		<div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(126,29,59,0.10),_transparent_25%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] text-slate-900">
-			<header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-4 py-4 shadow-sm backdrop-blur md:px-6">
-				<div className="mx-auto flex max-w-7xl flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-					<div className="flex items-center gap-4">
-						<img
-							src={marakameLogo}
-							alt="Logo Nayarit Marakame"
-							className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
-						/>
-						<div>
-							<p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
-							<h1 className="text-xl font-black uppercase tracking-tight text-[#7E1D3B]">Inicio del módulo médico</h1>
-							<p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Base visual para seguimiento clínico</p>
+		<div className="min-h-screen bg-slate-100 text-slate-900">
+			<div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
+				<header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
+					<div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+						<div className="flex items-center gap-3">
+							<img src={marakameLogo} alt="Logo Nayarit Marakame" className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" />
+							<div>
+								<p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
+								<h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema Integral Marakame</h1>
+								<p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo Médico</p>
+								<p className="mt-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Área responsable: Médico</p>
+							</div>
+						</div>
+						<div className="flex items-center gap-3 self-end md:self-auto">
+							<div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center" aria-hidden="true" />
+							<div className="text-right md:text-left">
+								<p className="text-xs text-slate-500">Sesión activa</p>
+								<p className="font-semibold text-slate-700">Médico</p>
+							</div>
 						</div>
 					</div>
 
-					<div className="flex flex-wrap items-center gap-3">
-						<div className="relative min-w-[240px] flex-1 xl:flex-none xl:w-[320px]">
+					<div className="flex flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+						<div className="relative min-w-[240px] flex-1 md:max-w-[420px]">
 							<Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-							<input
-								type="text"
-								placeholder="Buscar paciente, expediente o cita..."
-								className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-							/>
+							<input type="text" placeholder="Buscar paciente, expediente o cita..." className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
 						</div>
-						<button
-							type="button"
-							onClick={() => navigate('/admisiones')}
-							className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-						>
-							Alertas
-						</button>
-						<button
-							type="button"
-							onClick={() => navigate('/medico')}
-							className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-3 text-sm font-bold text-white shadow-md shadow-rose-900/15 transition hover:bg-[#63162e]"
-						>
-							Abrir expediente <ArrowRight size={18} />
-						</button>
+						<div className="flex flex-wrap items-center gap-3">
+							<button type="button" onClick={() => navigate('/admisiones')} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
+								Alertas
+							</button>
+							<button type="button" onClick={() => navigate('/medico')} className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-3 text-sm font-bold text-white shadow-md shadow-rose-900/15 transition hover:bg-[#63162e]">
+								Abrir expediente <ArrowRight size={18} />
+							</button>
+						</div>
 					</div>
-				</div>
-			</header>
+				</header>
 
-			<main className="mx-auto w-full max-w-7xl px-4 py-5 md:px-6 md:py-6">
+				<main className="space-y-5">
 				<div className="grid gap-4 md:grid-cols-[220px_1fr]">
 					<aside className="rounded-3xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner">
 						<button
@@ -82,14 +77,14 @@ const MedicoInicio = () => {
 							Expediente
 						</button>
 						<button
-							onClick={() => navigate('/medico/cuestionario-salud')}
+							onClick={() => navigate('/medico/nutriologia/evaluacion-nutricional')}
 							className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
-								isCuestionarioActive
+								isNutricionActive
 									? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
 									: 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
 							}`}
 						>
-							Cuestionario de salud
+							Nutriología
 						</button>
 						<button
 							onClick={() => navigate('/medico/historia-medica')}
@@ -163,14 +158,14 @@ const MedicoInicio = () => {
 
 						<button
 							type="button"
-							onClick={() => navigate('/medico/cuestionario-salud')}
+							onClick={() => navigate('/medico/nutriologia/evaluacion-nutricional')}
 							className="group rounded-[24px] border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[#7E1D3B]/25 hover:bg-[#7E1D3B]/5"
 						>
 							<div className="mb-3 inline-flex rounded-xl bg-slate-100 p-2 text-[#7E1D3B]">
 								<ClipboardList size={20} />
 							</div>
-							<p className="text-sm font-black text-slate-900">Cuestionario de salud</p>
-							<p className="mt-2 text-sm leading-6 text-slate-600">Captura identificación, antecedentes y exploración inicial.</p>
+							<p className="text-sm font-black text-slate-900">Nutriología</p>
+							<p className="mt-2 text-sm leading-6 text-slate-600">Captura antropometría, hábitos alimentarios y plan nutricional.</p>
 						</button>
 
 					<button
@@ -198,6 +193,7 @@ const MedicoInicio = () => {
 				</div>
 			</main>
 		</div>
+	</div>
 	);
 };
 

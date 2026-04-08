@@ -10,9 +10,10 @@ import CatalogoRoles from './views/rh/CatalogoRoles';
 import AsignacionRoles from './views/rh/AsignacionRoles';
 
 import MedicoInicio from './views/Medico/Medico-inicio';
-import CuestionarioSalud from './views/Medico/CuestionarioSalud';
+import EvaluacionNutricional from './views/Medico/Nutriologia/EvaluacionNutricional';
 import InventarioPertenencias from './views/Medico/InventarioPertenencias';
 import HistoriaMedica from './views/Medico/HistoriaMedica';
+import NutriologiaInicio from './views/Nutriologia/Nutriologia-inicio';
 import ExpedienteAdmisiones from './views/admisiones/ExpedienteAdmisiones';
 import ExpedienteMedico from './views/Medico/ExpedienteMedico';
 // Importaciones para Recursos Materiales
@@ -26,7 +27,7 @@ const quickViews = [
   { label: 'Login', path: '/login', tone: 'slate' },
   { label: 'Admisiones', path: '/admisiones', tone: 'slate' },
   { label: 'Médico', path: '/medico', tone: 'rose' },
-  { label: 'Cuestionario', path: '/medico/cuestionario-salud', tone: 'rose' },
+  { label: 'Nutriología', path: '/nutriologia', tone: 'rose' },
   { label: 'Historia', path: '/medico/historia-medica', tone: 'rose' },
   { label: 'Inventario', path: '/medico/inventario-pertenencias', tone: 'rose' },
   { label: 'Exp. Admisiones', path: '/admisiones/expediente', tone: 'rose' },
@@ -84,7 +85,10 @@ function App() {
         <Route path="/admisiones/estudio-socioeconomico" element={<EstudioSocioeconomico />} />
         <Route path="/admisiones/valoracion-diagnostica" element={<ValoracionDiagnostica />} />
         <Route path="/medico" element={<MedicoInicio />} />
-        <Route path="/medico/cuestionario-salud" element={<CuestionarioSalud />} />
+        <Route path="/nutriologia" element={<NutriologiaInicio />} />
+        <Route path="/nutriologia/evaluacion-nutricional" element={<EvaluacionNutricional />} />
+        <Route path="/medico/nutriologia/evaluacion-nutricional" element={<EvaluacionNutricional />} />
+        <Route path="/medico/cuestionario-salud" element={<EvaluacionNutricional />} />
         <Route path="/medico/expediente" element={<ExpedienteMedico />} />
         <Route path="/medico/historia-medica" element={<HistoriaMedica />} />
         <Route path="/medico/inventario-pertenencias" element={<InventarioPertenencias />} />
