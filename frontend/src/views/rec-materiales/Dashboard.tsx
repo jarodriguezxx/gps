@@ -12,8 +12,11 @@ const RecMaterialesDashboard = () => {
   const goInicio = () => navigate("/rec-materiales");
   const goProveedores = () => navigate("/rec-materiales/proveedores");
   const goHistorial = () => navigate("/rec-materiales/historial");
+  const goDetalleRequisicion = () =>
+    navigate("/rec-materiales/det-requisicion");
 
-  const isRequisicionesActive = location.pathname === "/rec-materiales";
+  const isRequisicionesActive =
+    location.pathname === "/rec-materiales" || "/rec-materiales/requisicion:id";
   const isProveedoresActive =
     location.pathname === "/rec-materiales/proveedores";
   const isHistorialActive = location.pathname === "/rec-materiales/historial";

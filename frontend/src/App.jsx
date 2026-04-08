@@ -8,8 +8,9 @@ import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
 import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
 import Proveedores from './views/rec-materiales/Proveedores';
 import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
+import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion';
 import Historial from './views/rec-materiales/Historial';
-import { REQUISICIONES_COMPLETO } from './views/rec-materiales/ListaRequisiciones';
+import { REQUISICIONES_COMPLETO } from '../src/types/requisicion.ts'
 
 
 
@@ -70,6 +71,7 @@ function App() {
           <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
           <Route path='proveedores' element = {<Proveedores/>}/>
           <Route path='historial' element = {<Historial/>}/>
+          <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
         </Route>
       </Routes>
       <QuickNavigator />
