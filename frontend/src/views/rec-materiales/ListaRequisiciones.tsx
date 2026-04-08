@@ -144,16 +144,18 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
 
   return (
     // Contenedor principal
-    <div className="flex flex-col gap-4 min-w-full">
+    <div className="flex-1 flex flex-col gap-4 min-h-0">
       {/* Contenedor del titulo de la pantalla */}
-      <div className=" flex">
+      <div className="flex shrink-0">
         <h1 className={ui.text.h1}>Requisiciones recibidas</h1>
       </div>
 
       {/* Contenedor de la tabla en sí */}
-      <div className={ui.table.wrapper}>
-        <table className="w-full">
-          <thead>
+      <div
+        className={`${ui.table.wrapper} flex-1 overflow-auto border border-slate-200 rounded-xl`}
+      >
+        <table className="w-full border-collapse">
+          <thead className="sticky top-0 z-10 bg-white shadow-sm">
             <tr>
               <th className={ui.table.header}>Fecha</th>
               <th className={ui.table.header}>Área</th>
@@ -163,7 +165,7 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
               <th className={ui.table.header}>tipo</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="overflow-auto">
             {/* Se mapean todos los elementos recibidos */}
             {/* Entre llaves es para insertar código js */}
             {requisiciones.map((item: RequisicionesCampos) => {
@@ -213,7 +215,23 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
       </div>
       {/* Este es el contenedor de los botones de acción */}
 
-      <div></div>
+      <div className="flex gap-10 justify-center items-center">
+        <button
+          disabled={!selectedId}
+          className={ui.buttons.primary + " w-50 disabled:pointer-events-none"}
+        >
+          Ver
+        </button>
+        <button
+          disabled={!selectedId}
+          className={
+            ui.buttons.primary +
+            " w-50 not-visited:disabled:pointer-events-none"
+          }
+        >
+          Enviar
+        </button>
+      </div>
     </div>
   );
 };

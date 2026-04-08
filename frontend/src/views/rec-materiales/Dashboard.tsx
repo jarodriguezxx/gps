@@ -20,8 +20,8 @@ const RecMaterialesDashboard = () => {
 
   return (
     // 1. min-h-screen asegura que el fondo gris cubra todo
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col select-none">
-      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6 flex-1 flex flex-col">
+    <div className="h-screen bg-slate-100 text-slate-900 flex flex-col select-none overflow-hidden">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6 flex-1 flex flex-col min-h-0">
         {/* Contenedor Blanco Principal */}
         <div className="flex-1 flex flex-col rounded-2xl border border-slate-200 bg-white/95 shadow-sm overflow-hidden">
           {/* HEADER SUPERIOR (Logo y Usuario) */}
@@ -52,7 +52,7 @@ const RecMaterialesDashboard = () => {
 
           {/* CUERPO DEL DASHBOARD (Sidebar + Contenido) */}
           {/* h-full o flex-1 aquí es clave para que crezca hasta el borde inferior del contenedor blanco */}
-          <div className="grid flex-1 gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6 bg-white">
+          <div className="grid flex-1 gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6 bg-white min-h-0 h-full">
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner h-fit md:h-full">
               <button
                 onClick={() => navigate("/rec-materiales")}
@@ -87,7 +87,7 @@ const RecMaterialesDashboard = () => {
             </aside>
 
             {/* Este es el contenedor que se estirará */}
-            <main className="min-h-[60vh] md:min-h-full">
+            <main className="flex-1 overflow-hidden flex flex-col">
               <Outlet />
             </main>
           </div>
