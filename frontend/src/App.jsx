@@ -9,7 +9,7 @@ import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
 import Proveedores from './views/rec-materiales/Proveedores';
 import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
 import Historial from './views/rec-materiales/Historial';
-import { REQUISICIONES_PRUEBA } from './views/rec-materiales/ListaRequisiciones';
+import { REQUISICIONES_COMPLETO } from './views/rec-materiales/ListaRequisiciones';
 
 
 
@@ -67,7 +67,7 @@ function App() {
         <Route path='/rec-materiales' element = {<RecMaterialesDashboard/>}>
 
           {/* Estas son las rutas hijas  */}
-          <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_PRUEBA}/>}/>
+          <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
           <Route path='proveedores' element = {<Proveedores/>}/>
           <Route path='historial' element = {<Historial/>}/>
         </Route>

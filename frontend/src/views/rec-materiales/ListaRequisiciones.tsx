@@ -1,44 +1,8 @@
 import React, { useState } from "react";
 import { ui } from "../../config/theme";
-
-// Zona de variables de prueba
-type Estado = "PENDIENTE" | "AUTORIZADA" | "FINALIZADA";
-type TamanioCompra = "MAYOR" | "MENOR";
-type TipoCompra = "ORDINARIA" | "EXTRAORDINARIA";
-// TODO: Investigar bien todas las unidades que se manejan
-type UnidadesArticulos = "PIEZA" | "CAJA" | "PAQUETE";
-
-type RequisicionesCamposTabla = {
-  id: string;
-  fecha: Date;
-  area: string;
-  solicitante: string;
-  estado: Estado;
-  tamanio: TamanioCompra;
-  tipo: TipoCompra;
-};
-
-type Articulos = {
-  id: string;
-  articuloRequisitado: string;
-  unidad: UnidadesArticulos;
-  articulosSolicitados: Number;
-  articulosEntregados: Number;
-  articulosPendientes: Number;
-};
-type RequisicionesContenido = {
-  articulos: Articulos[];
-  justificacion: string;
-  responsableArea: string;
-  selloRecibido: Boolean;
-  firmadoResponsableArea: Boolean;
-  firmaAdminsitradora: Boolean;
-  firmaDirectoraGral: Boolean;
-};
-
-type Requisicion = RequisicionesCamposTabla & RequisicionesContenido;
+import * as tipos from '../../types/requisicion.ts';
 //   Constantes de prueba
-export const REQUISICIONES_COMPLETO: Requisicion[] = [
+export const REQUISICIONES_COMPLETO: tipos.Requisicion[] = [
   {
     id: "REQ-2026-001",
     fecha: new Date("2026-04-01T08:30:00"),
@@ -417,7 +381,7 @@ export const REQUISICIONES_COMPLETO: Requisicion[] = [
 ];
 
 interface Props {
-  requisiciones: Requisicion[];
+  requisiciones: tipos.Requisicion[];
 }
 
 const ListaRequisiciones = ({ requisiciones }: Props) => {
@@ -456,7 +420,7 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
           <tbody className="overflow-auto">
             {/* Se mapean todos los elementos recibidos */}
             {/* Entre llaves es para insertar código js */}
-            {requisiciones.map((item: Requisicion) => {
+            {requisiciones.map((item: tipos.Requisicion) => {
               // Checar si la fila es la seleccionada
               const isSelected = selectedId === item.id;
               const textColor = isSelected ? "text-white" : "text-slate-700";
