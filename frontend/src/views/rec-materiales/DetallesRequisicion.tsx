@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { ui } from "../../config/theme";
+import { ui,colors } from "../../config/theme";
 import * as tipos from "../../types/requisicion.ts";
 import { useParams } from "react-router-dom";
+import { createPortal } from "react-dom";
 
 // TODO manejar cuando la url no existe
 const DetallesRequisicion = () => {
@@ -10,6 +11,7 @@ const DetallesRequisicion = () => {
 
   // Setear los datos cada que haya un cambio
   const [datos, setDatos] = useState<tipos.Requisicion | null>(null);
+  const [modal, setModal] = useState(true);
 
   // Una vez que se tiene el id, consultar en la base de datos ese id
   useEffect(
@@ -19,7 +21,16 @@ const DetallesRequisicion = () => {
         const datos = tipos.REQUISICIONES_COMPLETO.find(
           (item) => item.id === id,
         );
-        setDatos(datos!);
+        // Valida que realmente el id regrese algo
+        if (datos) {
+          setDatos(datos);
+
+          // Valido si realmente se puede activar el boton para cargar cotizaciones
+        //  datos.tipo === "EXTRAORDINARIA" ? setModal(true) : setModal(false);
+        } else {
+          // TODO hacer la página de error 404
+          console.log("Página no encontrada");
+        }
       }
     },
     [id],
@@ -176,12 +187,12 @@ const DetallesRequisicion = () => {
           </div>
         </div>
         {/* Div para la parte del sello */}
-        <div className="mt-6 flex flex-col gap-4 bg-green-200 w-full border-2 justify-start items-start p-4">
+        <div className="mt-6 flex flex-col gap-4 bg-green-100 w-full border-2 justify-start items-start p-4">
           <p className={ui.text.body + " font-bold text-start"}>
             Sello de recibido por el área encargada:
           </p>
           <div className="flex flex-row w-full h-[150px]">
-            <div className="w-1/5 border-2 border-dotted bg-green-100"></div>
+            <div className="w-1/5 border-2 border-dotted bg-green-50"></div>
             {/* Es el div de los textos */}
             <div className="w-full pl-4 gap-6 h-full flex flex-col items-start justify-start">
               <p className={ui.text.body + " font-bold"}>
@@ -198,32 +209,59 @@ const DetallesRequisicion = () => {
           </div>
         </div>
         <div className="flex flex-row mx-2 p-2 gap-14">
-            <div className="flex flex-col gap-4 w-full">
-              <div className="flex flex-col gap-4">
-                <p className={ui.text.body + " font-bold"}>Firma de la administradora del Instituto:</p>
-                {/* TODO consulta a la bd para siempre saber quién es */}
-                <p className={ui.text.body}>Por definir aún</p>
-              </div>
-              {/* Div para la parte de la firma */}
-              <div className="flex bg-white border-t-2 mt-6">
-                <p className={ui.text.body + " text-center w-full"}>Firma</p>
-              </div>
+          <div className="flex flex-col gap-4 w-full">
+            <div className="flex flex-col gap-4">
+              <p className={ui.text.body + " font-bold"}>
+                Firma de la administradora del Instituto:
+              </p>
+              {/* TODO consulta a la bd para siempre saber quién es */}
+              <p className={ui.text.body}>Por definir aún</p>
             </div>
-            <div className="flex flex-col gap-4   w-full">
-              <div className="flex flex-col gap-4">
-                <p className={ui.text.body + " font-bold"}>
-                  Firma de autorización de la Directora General del Instituto:
-                </p>
-                {/* TODO consulta a la bd para obtener el dato o que venga impreso  */}
-                <p className={ui.text.body}>Por definir aún </p>
-              </div>
-              <div className="flex border-t-2 mt-6">
-                <p className={ui.text.body + "  w-full text-center"}>Firma</p>
-              </div>
+            {/* Div para la parte de la firma */}
+            <div className="flex bg-white border-t-2 mt-6">
+              <p className={ui.text.body + " text-center w-full"}>Firma</p>
             </div>
           </div>
+          <div className="flex flex-col gap-4   w-full">
+            <div className="flex flex-col gap-4">
+              <p className={ui.text.body + " font-bold"}>
+                Firma de autorización de la Directora General del Instituto:
+              </p>
+              {/* TODO consulta a la bd para obtener el dato o que venga impreso  */}
+              <p className={ui.text.body}>Por definir aún </p>
+            </div>
+            <div className="flex border-t-2 mt-6">
+              <p className={ui.text.body + "  w-full text-center"}>Firma</p>
+            </div>
+          </div>
+        </div>
       </div>
       {/* Cierre del segundo div */}
+
+      {/* Implementación de la ventana modal */}
+      {modal &&
+        createPortal(
+          <div className="fixed inset-0 z-30 flex items-center justify-center">
+            {/* Fondo oscuro */}
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setModal(false)}
+            />
+
+            {/* Cuerpo del modal */}
+            <div className="relative bg-white w-full max-w-[70%] p-6 rounded-2xl shadow-2xl z-40 mx-4">
+             <div className="flex flex-col items-center justify-start gap-4">
+               <h2 className={`${ui.text.h2} text-start w-full`}
+               style={{color:colors.primary.main}} >Gestión de cotizaciones</h2>
+               <p className={ui.text.body + ' text-start w-full'}>
+                Cargue las 3 cotizaciones requeridas y consulte los proveedores autorizados
+               </p>
+             </div>
+             <div></div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div> //fin div principal
   );
 };
