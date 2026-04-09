@@ -328,6 +328,10 @@ const DetallesRequisicion = () => {
                   <TarjetaCotizacion numero="3" titulo="Cotización 3" />
                 </div>
                 <div className="w-full flex bg-slate-200 h-px" />
+                {/* Contenedor para la tabla */}
+                <div>
+                  <p>Proveedores autorizados </p>
+                </div>
               </div>
             </div>
           </div>,
