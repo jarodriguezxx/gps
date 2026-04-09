@@ -3,7 +3,7 @@ import { ui, colors } from "../../config/theme";
 import * as tipos from "../../types/requisicion.ts";
 import { useParams } from "react-router-dom";
 import { createPortal } from "react-dom";
-
+import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
 // Componentes
 
 interface TarjetaCotizacionProps {
@@ -27,11 +27,9 @@ const TarjetaCotizacion = ({ numero, titulo }: TarjetaCotizacionProps) => {
             <p className="text-white font-bold text-xs">{numero}</p>
           </div>
           <div className=" w-full h-full flex  flex-col justify-center  gap-2">
-            <p className={ui.text.body + " font-bold text-[12px]"}>
-              {titulo}
-            </p>
+            <p className={ui.text.body + " font-bold text-[12px]"}>{titulo}</p>
 
-            {/* TODO agregarle la condicional para mostrar este badge cuando se cargue un archivo */}
+            {/* TODO agregarle la condicional para mostrar este badge cuando se cargue un archivo, cuando el archivo se cambie, reemplazarlo por el nombre de este y agregarle boton para quitar */}
             <div
               className={`flex border border-amber-950 w-fit px-2 text-center bg-amber-100 justify-center rounded-full`}
             >
@@ -303,21 +301,29 @@ const DetallesRequisicion = () => {
             />
 
             {/* Cuerpo del modal */}
-            <div className="flex flex-col relative bg-white w-full max-w-[85%] h-[90%] p-4 rounded-2xl shadow-2xl z-40">
-              <div className="flex flex-col items-center justify-start pb-2 border-b border-slate-200">
-                <h2
-                  className={`${ui.text.h2} text-start w-full`}
-                  style={{ color: colors.primary.main }}
-                >
-                  Gestión de cotizaciones
-                </h2>
-                <p className={ui.text.body + " text-start w-full"}>
-                  Cargue las 3 cotizaciones requeridas y consulte los
-                  proveedores autorizados
-                </p>
+            <div className="flex flex-col relative bg-white w-full max-w-[85%] h-[90vh] p-4 rounded-2xl shadow-2xl z-40">
+              <div className="flex flex-row justify-between items-center">
+                <div className="flex flex-col items-center justify-start pb-2 border-b border-slate-200">
+                  <h2
+                    className={`${ui.text.h2} text-start w-full`}
+                    style={{ color: colors.primary.main }}
+                  >
+                    Gestión de cotizaciones
+                  </h2>
+                  <p className={ui.text.body + " text-start w-full"}>
+                    Cargue las 3 cotizaciones requeridas y consulte los
+                    proveedores autorizados
+                  </p>
+                </div>
+                <div className="flex gap-4">
+                  <button className={ui.buttons.primary}>
+                    Guardar cotizaciones
+                  </button>
+                  <button className={ui.buttons.secondary}>Cancelar</button>
+                </div>
               </div>
 
-              <div className="flex h-full flex-col items-start justify-start pt-1 gap-2">
+              <div className="flex flex-1 min-h-0 flex-col items-start justify-start pt-1 gap-2">
                 <p className={ui.text.body + " font-bold"}>
                   Cotizaciones requeridas ({cotizaciones}){" "}
                 </p>
@@ -329,13 +335,81 @@ const DetallesRequisicion = () => {
                 </div>
                 <div className="w-full flex bg-slate-200 h-px" />
                 {/* Contenedor padre de la tabla */}
-                <div className={`w-full flex-col border-4 p-2 h-full`}>
+                <div className={`w-full flex-col  p-2 flex-1 min-h-0 flex `}>
                   <p className={ui.text.body + " font-bold"}>
                     Proveedores autorizados
                   </p>
                   {/* Contenedor de la tabla */}
-                  <div className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto p-4"></div>
-                  
+                  <div className="w-full flex-col min-h-0 flex-1  overflow-auto mt-2 border border-slate-200 rounded-xl">
+                    <table className=" w-full border-collapse ">
+                      <thead className="sticky top-0 bg-green-700 z-10 shadow-sm">
+                        <tr className={ui.table.row + " w-full"}>
+                          <th
+                            className={
+                              ui.table.header + " bg-green-700! text-white"
+                            }
+                          >
+                            ID
+                          </th>
+                          <th
+                            className={
+                              ui.table.header + " bg-green-700! text-white"
+                            }
+                          >
+                            PROVEEDOR
+                          </th>
+                          <th
+                            className={
+                              ui.table.header + " bg-green-700! text-white"
+                            }
+                          >
+                            TELÉFONO
+                          </th>
+                          <th
+                            className={
+                              ui.table.header + " bg-green-700! text-white"
+                            }
+                          >
+                            correo
+                          </th>
+                          <th
+                            className={
+                              ui.table.header + " bg-green-700! text-white"
+                            }
+                          >
+                            especialidad
+                          </th>
+                          <th
+                            className={
+                              ui.table.header + " bg-green-700! text-white"
+                            }
+                          >
+                            Estatus
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-center overflow-auto select-text">
+                        {DATA_PROVEEDORES.map((prov) => {
+                          return (
+                            <tr key={prov.id} className={ui.table.row}>
+                              <td className={ui.table.cell}>{prov.id}</td>
+                              <td className={ui.table.cell}>{prov.nombre}</td>
+                              <td className={ui.table.cell}>
+                                {prov.contacto.telefono}
+                              </td>
+                              <td className={ui.table.cell}>
+                                {prov.contacto.correo}
+                              </td>
+                              <td className={ui.table.cell}>
+                                {prov.especialidad}
+                              </td>
+                              <td className={ui.table.cell}>{prov.estatus}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
