@@ -37,6 +37,12 @@ export const colors = {
 // ============= COMPONENTES UI (CLASES TAILWIND) =============
 // Usa estas propiedades en tus className={ui.text.h1}
 export const ui = {
+  states: {
+    selected: "bg-[#7E1D3B] text-white shadow-md",
+    default:
+      "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+  },
+
   text: {
     // Títulos
     h1: "text-xl font-black text-slate-800 md:text-2xl tracking-tight",
@@ -84,7 +90,7 @@ export const ui = {
     wrapper: "overflow-x-auto rounded-xl border border-slate-200",
     header:
       "border-y border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 font-bold px-4 py-3",
-    row: "border-b border-slate-100 hover:bg-slate-50/80 transition-colors",
+    row: "border-b border-slate-100 transition-colors",
     cell: "px-4 py-3 text-sm text-slate-700",
   },
 };

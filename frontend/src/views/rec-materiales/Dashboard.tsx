@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import marakameLogo from "../../assets/marakame.jpeg";
+import { ui } from "../../config/theme";
 
 const RecMaterialesDashboard = () => {
   //devuelve la ruta sobre la que está esta pantalla
@@ -11,31 +12,33 @@ const RecMaterialesDashboard = () => {
   const goInicio = () => navigate("/rec-materiales");
   const goProveedores = () => navigate("/rec-materiales/proveedores");
   const goHistorial = () => navigate("/rec-materiales/historial");
+  const goDetalleRequisicion = () =>
+    navigate("/rec-materiales/det-requisicion");
 
-  const isRequisicionesActive = location.pathname === "/rec-materiales";
+  const isRequisicionesActive =
+    location.pathname === "/rec-materiales" || "/rec-materiales/requisicion:id";
   const isProveedoresActive =
     location.pathname === "/rec-materiales/proveedores";
   const isHistorialActive = location.pathname === "/rec-materiales/historial";
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
-      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
-        <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+    // 1. min-h-screen asegura que el fondo gris cubra todo
+    <div className="h-screen bg-slate-100 text-slate-900 flex flex-col select-none overflow-hidden">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6 flex-1 flex flex-col min-h-0">
+        {/* Contenedor Blanco Principal */}
+        <div className="flex-1 flex flex-col rounded-2xl border border-slate-200 bg-white/95 shadow-sm overflow-hidden">
+          {/* HEADER SUPERIOR (Logo y Usuario) */}
+          <header className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6 bg-white ">
             <div className="flex items-center gap-3">
               <img
                 src={marakameLogo}
-                alt="Logo Nayarit Marakame"
+                alt="Logo"
                 className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
               />
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">
-                  Instituto Marakame
-                </p>
-                <h1 className="text-xl font-black md:text-2xl text-slate-800">
-                  Sistema de Gestión Marakame
-                </h1>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">
+                <p className={ui.text.labelGuinda}>Instituto Marakame</p>
+                <h1 className={ui.text.h1}>Sistema de Gestión Marakame</h1>
+                <p className={ui.text.labelGris}>
                   Módulo de Recursos Materiales
                 </p>
               </div>
@@ -45,15 +48,17 @@ const RecMaterialesDashboard = () => {
               <div className="h-10 w-10 rounded-full border-2 border-slate-300 bg-slate-100" />
               <div className="text-right md:text-left">
                 <p className="text-xs text-slate-500">Sesión activa</p>
-                <p className="font-semibold">Rec. Materiales</p>
+                <p className="font-semibold text-sm">Rec. Materiales</p>
               </div>
             </div>
-          </div>
+          </header>
 
-          <div className="grid gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6">
-            <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner">
+          {/* CUERPO DEL DASHBOARD (Sidebar + Contenido) */}
+          {/* h-full o flex-1 aquí es clave para que crezca hasta el borde inferior del contenedor blanco */}
+          <div className="grid flex-1 gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6 bg-white min-h-0 h-full">
+            <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner h-fit md:h-full">
               <button
-                onClick={goInicio}
+                onClick={() => navigate("/rec-materiales")}
                 className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
                   isRequisicionesActive
                     ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
@@ -63,7 +68,7 @@ const RecMaterialesDashboard = () => {
                 Requisiciones
               </button>
               <button
-                onClick={goProveedores}
+                onClick={() => navigate("/rec-materiales/proveedores")}
                 className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
                   isProveedoresActive
                     ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
@@ -73,7 +78,7 @@ const RecMaterialesDashboard = () => {
                 Proveedores
               </button>
               <button
-                onClick={goHistorial}
+                onClick={() => navigate("/rec-materiales/historial")}
                 className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
                   isHistorialActive
                     ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
@@ -84,11 +89,12 @@ const RecMaterialesDashboard = () => {
               </button>
             </aside>
 
-            <main className="space-y-5">
+            {/* Este es el contenedor que se estirará */}
+            <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
               <Outlet />
             </main>
           </div>
-        </header>
+        </div>
       </div>
     </div>
   );
