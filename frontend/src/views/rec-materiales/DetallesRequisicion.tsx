@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ui, colors } from "../../config/theme";
 import * as tipos from "../../types/requisicion.ts";
 import { useParams } from "react-router-dom";
@@ -11,7 +11,32 @@ interface TarjetaCotizacionProps {
   titulo: string;
 }
 const TarjetaCotizacion = ({ numero, titulo }: TarjetaCotizacionProps) => {
-  const [mostrarEtiqueta, setMostrarEtiqueta] = useState(false);
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Método para majear el archivo
+  const manejarCambioArchivo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validaciones extras
+    const tiposPermitidos = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    if (!tiposPermitidos.includes(file.type)) {
+      alert("Solo se permiten archivos PDF o Word");
+      return;
+    }
+    setArchivo(file); //se guarda el objeto file
+    if (inputRef.current) {
+      inputRef.current.value = ""; //limpiar la referencia al archivo
+    }
+    console.log(file.name);
+  };
+
   return (
     <div className=" w-full flex gap-6 flex-row justify-between items-center">
       <div
@@ -42,8 +67,18 @@ const TarjetaCotizacion = ({ numero, titulo }: TarjetaCotizacionProps) => {
         {/* contenedor de la parte derecha */}
 
         <div className=" flex w-full items-end justify-end  h-full mr-2">
+          <input
+            type="file"
+            ref={inputRef}
+            hidden
+            onChange={manejarCambioArchivo}
+            accept=".pdf,.doc,.docx"
+          />
           <button
             // TODO agregarle el método para cargar el archivo
+            onClick={() => {
+              inputRef.current?.click();
+            }}
             className={
               ui.buttons.primary + " bg-green-700 hover:bg-green-700/80! p-0!"
             }
@@ -55,7 +90,6 @@ const TarjetaCotizacion = ({ numero, titulo }: TarjetaCotizacionProps) => {
     </div>
   );
 };
-
 // TODO manejar cuando la url no existe
 const DetallesRequisicion = () => {
   // Recuperar el id que está incrustado en la URL
