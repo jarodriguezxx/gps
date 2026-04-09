@@ -90,7 +90,7 @@ const RecMaterialesDashboard = () => {
             </aside>
 
             {/* Este es el contenedor que se estirará */}
-            <main className="flex-1 overflow-hidden flex flex-col">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
               <Outlet />
             </main>
           </div>
