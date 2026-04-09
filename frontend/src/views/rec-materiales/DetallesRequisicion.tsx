@@ -16,26 +16,26 @@ const TarjetaCotizacion = ({ numero, titulo }: TarjetaCotizacionProps) => {
     <div className=" w-full flex gap-6 flex-row justify-between items-center">
       <div
         className={
-          "border-slate-400 border-2 bg-gray-200 flex flex-row w-full justify-between items-center rounded-2xl p-2"
+          "border-slate-400 border bg-gray-200 flex flex-row w-full justify-between items-center rounded-xl p-2"
         }
       >
         {/* Contenedor de la parte izq */}
-        <div className="flex flex-row  p-2 gap-4 h-25">
+        <div className="flex w-full flex-row  py-2 gap-4 h-12">
           <div
             className={`h-full aspect-square flex justify-center items-center rounded-full bg-[${colors.primary.main}]`}
           >
-            <p className="text-white font-bold text-2xl">{numero}</p>
+            <p className="text-white font-bold text-xs">{numero}</p>
           </div>
-          <div className=" h-full flex  flex-col justify-between">
-            <p className={ui.text.body + " font-bold  p-2 text-xl!"}>
+          <div className=" w-full h-full flex  flex-col justify-center  gap-2">
+            <p className={ui.text.body + " font-bold text-[12px]"}>
               {titulo}
             </p>
 
             {/* TODO agregarle la condicional para mostrar este badge cuando se cargue un archivo */}
             <div
-              className={`flex border border-amber-950 w-full text-center bg-amber-100 h-10 justify-center rounded-full`}
+              className={`flex border border-amber-950 w-fit px-2 text-center bg-amber-100 justify-center rounded-full`}
             >
-              <p className="text-center self-center text-amber-900">
+              <p className="text-center self-center text-amber-900 text-[9px]">
                 Pendiente
               </p>
             </div>
@@ -43,14 +43,14 @@ const TarjetaCotizacion = ({ numero, titulo }: TarjetaCotizacionProps) => {
         </div>
         {/* contenedor de la parte derecha */}
 
-        <div className=" flex  h-full mr-4">
+        <div className=" flex w-full items-end justify-end  h-full mr-2">
           <button
             // TODO agregarle el método para cargar el archivo
             className={
-              ui.buttons.primary + " bg-green-700 hover:bg-green-700/80!"
+              ui.buttons.primary + " bg-green-700 hover:bg-green-700/80! p-0!"
             }
           >
-            Cargar archivo
+            <p className="px-4 py-1 text-[12px] ">Subir</p>
           </button>
         </div>
       </div>
@@ -303,22 +303,22 @@ const DetallesRequisicion = () => {
             />
 
             {/* Cuerpo del modal */}
-            <div className="relative bg-white w-full max-w-[80%] h-[90%] p-6 rounded-2xl shadow-2xl z-40 mx-4">
-              <div className="flex flex-col items-center justify-start gap-4 border-b pb-4 border-slate-200">
+            <div className="flex flex-col relative bg-white w-full max-w-[85%] h-[90%] p-4 rounded-2xl shadow-2xl z-40">
+              <div className="flex flex-col items-center justify-start pb-2 border-b border-slate-200">
                 <h2
-                  className={`${ui.text.h2} text-start w-full text-4xl!`}
+                  className={`${ui.text.h2} text-start w-full`}
                   style={{ color: colors.primary.main }}
                 >
                   Gestión de cotizaciones
                 </h2>
-                <p className={ui.text.body + " text-start w-full text-xl!"}>
+                <p className={ui.text.body + " text-start w-full"}>
                   Cargue las 3 cotizaciones requeridas y consulte los
                   proveedores autorizados
                 </p>
               </div>
 
-              <div className="flex flex-col items-start justify-start py-4 gap-6">
-                <p className={ui.text.body + " font-bold text-xl"}>
+              <div className="flex h-full flex-col items-start justify-start pt-1 gap-2">
+                <p className={ui.text.body + " font-bold"}>
                   Cotizaciones requeridas ({cotizaciones}){" "}
                 </p>
                 {/* Contenedor de las tarjetas */}
@@ -328,9 +328,14 @@ const DetallesRequisicion = () => {
                   <TarjetaCotizacion numero="3" titulo="Cotización 3" />
                 </div>
                 <div className="w-full flex bg-slate-200 h-px" />
-                {/* Contenedor para la tabla */}
-                <div>
-                  <p>Proveedores autorizados </p>
+                {/* Contenedor padre de la tabla */}
+                <div className={`w-full flex-col border-4 p-2 h-full`}>
+                  <p className={ui.text.body + " font-bold"}>
+                    Proveedores autorizados
+                  </p>
+                  {/* Contenedor de la tabla */}
+                  <div className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto p-4"></div>
+                  
                 </div>
               </div>
             </div>
