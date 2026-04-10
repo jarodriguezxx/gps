@@ -117,6 +117,7 @@ const NutriologiaInicio = () => {
 				</div>
 			</main>
 		</div>
+	</div>
 	);
 };
 
