@@ -1,0 +1,244 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Home, ClipboardList, ShieldAlert, Users, Stethoscope, BookOpen, Save, Plus, Trash2 } from 'lucide-react';
+import marakameLogo from '../../assets/marakame.jpeg';
+
+const navItems = [
+  { label: 'Inicio',                       icon: Home,          key: 'inicio',          path: '/medico' },
+  { label: 'Evaluación médica',            icon: Stethoscope,   key: 'evaluacion',      path: '/medico/evaluacion-medica' },
+  { label: 'Protocolo de desintoxicación', icon: ShieldAlert,   key: 'protocolo',       path: '/medico/protocolo-desintoxicacion' },
+  { label: 'Pacientes activos',            icon: Users,         key: 'pacientes',       path: '/medico/pacientes-activos' },
+  { label: 'Historial de evaluaciones',    icon: ClipboardList, key: 'historial-eval',  path: '/medico/historial-evaluaciones' },
+  { label: 'Historial de protocolos',      icon: BookOpen,      key: 'historial-proto', path: '/medico/historial-protocolos' },
+];
+
+const filaVacia = () => ({
+  id: Date.now() + Math.random(),
+  dia: '',
+  fecha: '',
+  am7: '',
+  pm12: '',
+  pm6: '',
+  pm9: '',
+  total: '',
+});
+
+const ProtocoloDesintoxicacion = () => {
+  const navigate  = useNavigate();
+  const [activeNav, setActiveNav]           = useState('protocolo');
+  const [clavePaciente, setClavePaciente]   = useState('HGU-18');
+  const [tipoMed, setTipoMed]               = useState('');
+  const [duracion, setDuracion]             = useState('');
+  const [filas, setFilas]                   = useState(
+    Array.from({ length: 8 }, filaVacia)
+  );
+
+  const handleNavClick = (item) => { setActiveNav(item.key); navigate(item.path); };
+
+  const updateFila = (id, campo, valor) => {
+    setFilas(prev => prev.map(f => {
+      if (f.id !== id) return f;
+      const updated = { ...f, [campo]: valor };
+      // Calcular dosis diaria total sumando las 4 tomas si son números
+      const tomas = [updated.am7, updated.pm12, updated.pm6, updated.pm9];
+      const suma = tomas.reduce((acc, v) => acc + (parseFloat(v) || 0), 0);
+      updated.total = suma > 0 ? suma.toString() : '';
+      return updated;
+    }));
+  };
+
+  const agregarFila = () => setFilas(prev => [...prev, filaVacia()]);
+
+  const eliminarFila = (id) => {
+    if (filas.length === 1) return;
+    setFilas(prev => prev.filter(f => f.id !== id));
+  };
+
+  const cellClass = `w-full h-full px-2 py-2 text-sm text-slate-700 bg-transparent
+                     focus:outline-none focus:bg-[#7E1D3B]/5 transition-all text-center`;
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
+
+        {/* ── Header ── */}
+        <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
+          <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+            <div className="flex items-center gap-3">
+              <img src={marakameLogo} alt="Logo Marakame" className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
+                <h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema Integral Marakame</h1>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo Médico</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 self-end md:self-auto">
+              <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center">
+                <Stethoscope size={16} className="text-[#7E1D3B]" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Sesión activa</p>
+                <p className="font-semibold text-slate-700">Enfermero</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6">
+
+            {/* ── Sidebar ── */}
+            <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+              {navItems.map(({ label, icon: Icon, key, path }) => (
+                <button key={key} onClick={() => handleNavClick({ key, path })}
+                  className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition flex items-center gap-2.5 text-left ${
+                    activeNav === key
+                      ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+                      : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
+                  }`}>
+                  <Icon size={15} className="shrink-0" />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </aside>
+
+            {/* ── Main ── */}
+            <main className="space-y-5">
+
+              {/* Título + clave */}
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-black text-slate-800">Módulo Médico</h2>
+                  <p className="text-sm text-slate-400 font-medium tracking-wide">Protocolo de desintoxicación</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-slate-600 uppercase tracking-wide">Clave del paciente:</span>
+                  <input
+                    type="text"
+                    value={clavePaciente}
+                    onChange={e => setClavePaciente(e.target.value)}
+                    className="px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold
+                               text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30
+                               focus:border-[#7E1D3B]/50 transition-all w-32"
+                  />
+                </div>
+              </div>
+
+              {/* Tipo de medicamento + duración */}
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-[0.15em] mb-1.5 ml-0.5">
+                      Tipo de medicamento<span className="text-[#7E1D3B] ml-0.5">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={tipoMed}
+                      onChange={e => setTipoMed(e.target.value)}
+                      placeholder="Ej. Diazepam..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30 focus:border-[#7E1D3B]/50
+                                 placeholder:text-slate-300 transition-all"
+                    />
+                  </div>
+                  <div className="md:w-64">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-[0.15em] mb-1.5 ml-0.5">
+                      Duración del protocolo (días)<span className="text-[#7E1D3B] ml-0.5">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={duracion}
+                      onChange={e => setDuracion(e.target.value)}
+                      min={1}
+                      placeholder="Ej. 7"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30 focus:border-[#7E1D3B]/50
+                                 placeholder:text-slate-300 transition-all"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* ── Tabla de protocolo ── */}
+              <section className="bg-white rounded-2xl border-2 border-[#7E1D3B]/30 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b-2 border-[#7E1D3B]/20">
+                        {['Día','Fecha','7 A.M','12 P.M','6 P.M','9 P.M','Dósis Diaria Total',''].map((h, i) => (
+                          <th key={i}
+                            className="px-3 py-3 text-xs font-black uppercase tracking-[0.15em] text-slate-600 border-r border-slate-200 last:border-r-0 text-center">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filas.map((fila, idx) => (
+                        <tr key={fila.id}
+                          className={`border-b border-slate-100 hover:bg-[#7E1D3B]/3 transition ${
+                            idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
+                          }`}>
+                          {/* Día */}
+                          <td className="border-r border-slate-200 p-0 w-14">
+                            <input type="number" value={fila.dia}
+                              onChange={e => updateFila(fila.id, 'dia', e.target.value)}
+                              className={cellClass} min={1} />
+                          </td>
+                          {/* Fecha */}
+                          <td className="border-r border-slate-200 p-0 w-32">
+                            <input type="date" value={fila.fecha}
+                              onChange={e => updateFila(fila.id, 'fecha', e.target.value)}
+                              className={`${cellClass} text-xs`} />
+                          </td>
+                          {/* Tomas */}
+                          {[['am7','7 AM'],['pm12','12 PM'],['pm6','6 PM'],['pm9','9 PM']].map(([campo]) => (
+                            <td key={campo} className="border-r border-slate-200 p-0">
+                              <input type="number" value={fila[campo]}
+                                onChange={e => updateFila(fila.id, campo, e.target.value)}
+                                className={cellClass} min={0} step={0.5} placeholder="—" />
+                            </td>
+                          ))}
+                          {/* Total — solo lectura */}
+                          <td className="border-r border-slate-200 px-3 py-2 text-center">
+                            <span className={`text-sm font-bold ${fila.total ? 'text-[#7E1D3B]' : 'text-slate-300'}`}>
+                              {fila.total || '—'}
+                            </span>
+                          </td>
+                          {/* Eliminar fila */}
+                          <td className="px-2 py-2 text-center w-10">
+                            <button onClick={() => eliminarFila(fila.id)}
+                              className="text-slate-300 hover:text-rose-500 transition">
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Agregar fila */}
+                <div className="px-4 py-3 border-t border-slate-100">
+                  <button onClick={agregarFila}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-[#7E1D3B] hover:underline transition">
+                    <Plus size={13} /> Agregar día
+                  </button>
+                </div>
+              </section>
+
+              {/* ── Guardar ── */}
+              <div className="flex justify-end pb-2">
+                <button className="flex items-center gap-2 px-7 py-2.5 bg-[#7E1D3B] text-white rounded-xl
+                                   font-semibold hover:bg-[#63162e] shadow-sm transition-all text-sm">
+                  <Save size={16} /> Guardar protocolo
+                </button>
+              </div>
+
+            </main>
+          </div>
+        </header>
+      </div>
+    </div>
+  );
+};
+
+export default ProtocoloDesintoxicacion;
