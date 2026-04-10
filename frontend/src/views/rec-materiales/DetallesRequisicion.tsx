@@ -67,22 +67,24 @@ const TarjetaCotizacion = ({
           >
             <p className="text-white font-bold text-xs">{numero}</p>
           </div>
-          <div className=" w-full h-full flex  flex-col justify-center  gap-2">
+          <div className=" w-full  h-full flex flex-col justify-center  gap-2">
             <p className={ui.text.body + " font-bold text-[12px]"}>{titulo}</p>
 
             {/* TODO agregarle la condicional para mostrar este badge cuando se cargue un archivo, cuando el archivo se cambie, reemplazarlo por el nombre de este y agregarle boton para quitar */}
             <div
-              className={`flex border border-amber-950 w-fit px-2 text-center bg-amber-100 justify-center rounded-full`}
+              className={`flex w-fit  text-center ${!archivo && 'bg-amber-100 border-amber-950 border px-2 '}justify-center rounded-full`}
             >
-              <p className="text-center self-center text-amber-900 text-[9px]">
-                Pendiente
+              <p className={`max-w-26 truncate max-h-4 text-center self-center text-[9px] ${!archivo && 'text-amber-900 '}`}>
+                {
+                  archivo ? archivo.name:'Pendiente'
+                }
               </p>
             </div>
           </div>
         </div>
         {/* contenedor de la parte derecha */}
 
-        <div className=" flex w-full items-end justify-end  h-full mr-2">
+        <div className=" flex w-[30%] items-end justify-end  h-full mr-2">
           <input
             type="file"
             ref={inputRef}
@@ -379,7 +381,8 @@ const DetallesRequisicion = () => {
                   <button className={ui.buttons.primary}>
                     Guardar cotizaciones
                   </button>
-                  <button className={ui.buttons.secondary}>Cancelar</button>
+                  {/* TODO el botón de cancelar lo que hace es cerrar el modal, nada más */}
+                  <button  className={ui.buttons.secondary}>Cancelar</button>
                 </div>
               </div>
 
