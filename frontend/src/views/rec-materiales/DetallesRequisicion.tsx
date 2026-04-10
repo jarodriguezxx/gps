@@ -9,10 +9,26 @@ import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
 interface TarjetaCotizacionProps {
   numero: string;
   titulo: string;
+  setCotizaciones: (cantidad: number) => void;
+  numCotizaciones: number;
 }
-const TarjetaCotizacion = ({ numero, titulo }: TarjetaCotizacionProps) => {
+const TarjetaCotizacion = ({
+  numero,
+  titulo,
+  setCotizaciones,
+  numCotizaciones,
+}: TarjetaCotizacionProps) => {
   const [archivo, setArchivo] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (archivo === null) {
+      console.log("El estado ahora es nulo oficialmente");
+    } else {
+      console.log("Se ha cargado un archivo nuevo:", archivo.name);
+      setCotizaciones(numCotizaciones - 1);
+    }
+  }, [archivo]); // Este efecto corre cada vez que 'archivo' cambia
 
   // Método para majear el archivo
   const manejarCambioArchivo = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,13 +93,22 @@ const TarjetaCotizacion = ({ numero, titulo }: TarjetaCotizacionProps) => {
           <button
             // TODO agregarle el método para cargar el archivo
             onClick={() => {
+              if (archivo) {
+                setCotizaciones(numCotizaciones + 1);
+                setArchivo(null);
+                return;
+              }
               inputRef.current?.click();
             }}
             className={
-              ui.buttons.primary + " bg-green-700 hover:bg-green-700/80! p-0!"
+              //si no hay archivo, significa que se puede subir
+              ui.buttons.primary +
+              ` p-0! ${archivo === null ? " bg-green-700 hover:bg-green-700/80!" : " bg-red-700 hover:bg-red-600"}`
             }
           >
-            <p className="px-4 py-1 text-[12px] ">Subir</p>
+            <p className="px-4 py-1 text-[12px] ">
+              {archivo ? "Cancelar" : "Subir"}
+            </p>
           </button>
         </div>
       </div>
@@ -122,6 +147,7 @@ const DetallesRequisicion = () => {
     [id],
     //Si el id cambia, se vuelve a consultar
   );
+
   const articulos = datos?.articulos;
   let i = 0;
 
@@ -359,13 +385,28 @@ const DetallesRequisicion = () => {
 
               <div className="flex flex-1 min-h-0 flex-col items-start justify-start pt-1 gap-2">
                 <p className={ui.text.body + " font-bold"}>
-                  Cotizaciones requeridas ({cotizaciones}){" "}
+                  Cotizaciones requeridas ({cotizaciones})
                 </p>
                 {/* Contenedor de las tarjetas */}
                 <div className=" w-full flex gap-6 flex-row justify-between items-center">
-                  <TarjetaCotizacion numero="1" titulo="Cotización 1" />
-                  <TarjetaCotizacion numero="2" titulo="Cotización 2" />
-                  <TarjetaCotizacion numero="3" titulo="Cotización 3" />
+                  <TarjetaCotizacion
+                    numero="1"
+                    titulo="Cotización 1"
+                    setCotizaciones={setCotizacion}
+                    numCotizaciones={cotizaciones}
+                  />
+                  <TarjetaCotizacion
+                    numero="2"
+                    titulo="Cotización 2"
+                    setCotizaciones={setCotizacion}
+                    numCotizaciones={cotizaciones}
+                  />
+                  <TarjetaCotizacion
+                    numero="3"
+                    titulo="Cotización 3"
+                    setCotizaciones={setCotizacion}
+                    numCotizaciones={cotizaciones}
+                  />
                 </div>
                 <div className="w-full flex bg-slate-200 h-px" />
                 {/* Contenedor padre de la tabla */}
