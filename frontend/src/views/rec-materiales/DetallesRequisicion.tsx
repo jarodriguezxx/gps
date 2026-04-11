@@ -126,7 +126,14 @@ const DetallesRequisicion = () => {
     "2": null,
     "3": null,
   });
-  const [btnEnviar, activateBtnEnviar] = useState(true);
+  const [archivosCotizacionesGuardadas, setArchivosCotizacionesGuardadas] =
+    useState<{
+      [key: string]: File | null;
+    }>({
+      "1": null,
+      "2": null,
+      "3": null,
+    });
 
   const [activarSubirCotizacion, setSubirCotizacion] = useState(false);
 
@@ -148,9 +155,7 @@ const DetallesRequisicion = () => {
         formData.append(`cotizacion_${key}`, file);
       }
     });
-    totalCargados === totalNecesarios
-      ? activateBtnEnviar(!false)
-      : activateBtnEnviar(!true);
+    setArchivosCotizacionesGuardadas({ ...archivosCotizaciones });
     // TODO  enviar los datos al servidor, esto es u ejemplo solamente
     try {
       console.log("Enviando archivos...");
@@ -171,58 +176,60 @@ const DetallesRequisicion = () => {
         // Valida que realmente el id regrese algo
         if (datos) {
           setDatos(datos);
-          // Para las vistas entre rec materiales y compras-inventarios
-          switch (rol) {
-            case "rec-materiales":
-              if (datos.estado === "PENDIENTE") {
-                // rec-materiales solo actua sobre requis pendientes
-                if (datos.tipo === "ORDINARIA") {
-                  activateBtnEnviar(true);
-                  setSubirCotizacion(false);
-                } else {
-                  // Es extraordinaria
-                  activateBtnEnviar(false);
-                  setSubirCotizacion(true);
-                }
-              } else {
-                // Si el estado es distinto a pendiente, ya no puede hacer nada rec-materiales
-                setSubirCotizacion(false);
-                activateBtnEnviar(false);
-              }
-              return;
+          if (rol === "rec-materiales") {
+            setSubirCotizacion(
+              datos.estado === "PENDIENTE" && datos.tipo === "EXTRAORDINARIA",
+            );
+            return;
           }
-          // Valido si realmente se puede activar el boton para cargar cotizaciones
-          //  datos.tipo === "EXTRAORDINARIA" ? setModal(true) : setModal(false);
+
+          if (rol === "compras-inventario") {
+            setSubirCotizacion(
+              datos.estado === "PRE-AUTORIZADA" ||
+                (datos.estado === "AUTORIZADA" && datos.tamanio === "MAYOR"),
+            );
+            return;
+          }
         } else {
           // TODO hacer la página de error 404
           console.log("Página no encontrada");
         }
       }
     },
-    [id],
+    [id, rol],
     //Si el id cambia, se vuelve a consultar
   );
 
   const articulos = datos?.articulos;
   let i = 0;
 
-  // Contamos cuántos espacios en el objeto NO son null
-  const totalCargados = Object.values(archivosCotizaciones).filter(
+  // Contamos cuántos espacios guardados en el objeto NO son null
+  const totalGuardados = Object.values(archivosCotizacionesGuardadas).filter(
     (f) => f !== null,
   ).length;
   let nombresPdfs = "";
 
   const getNombresPdfs = () => {
     nombresPdfs = "";
-    Object.values(archivosCotizaciones)
+    Object.values(archivosCotizacionesGuardadas)
       .slice(0, totalNecesarios)
       .map((a) => {
         nombresPdfs = nombresPdfs + ` \n ${a?.name}`;
       });
   };
 
-  const totalNecesarios = rol === "compras-inventarios" ? 3 : 1;
-  const cotizacionesPendientes = Math.max(0, totalNecesarios - totalCargados);
+  const totalNecesarios =
+    rol === "compras-inventario" &&
+    datos?.estado === "AUTORIZADA" &&
+    datos?.tamanio === "MAYOR"
+      ? 3
+      : 1;
+  const mostrarOrdenDeCompra =
+    rol === "compras-inventario" &&
+    datos?.estado === "AUTORIZADA" &&
+    (datos?.tipo === "EXTRAORDINARIA" ||
+      (datos?.tipo === "ORDINARIA" && datos?.tamanio === "MENOR"));
+  const cotizacionesPendientes = Math.max(0, totalNecesarios - totalGuardados);
   // En este punto ya se tienen los datos por lo que se procede a llenar cada uno dinámicamente con los datos
   return (
     // Div principal, debe tener altura definida y un ancho
@@ -238,19 +245,25 @@ const DetallesRequisicion = () => {
           {/* div de la segunda parte, donde se pondrán los botones */}
           <div className=" flex gap-4 h-full">
             {/* " botones " */}
-            {/* Este boton solo debe de estar activo si tiene los 3 archivos cargados */}
+            {/* Este boton solo debe de estar activo si tiene los archivos requeridos cargados */}
             <button
               className={`${ui.buttons.primary} py-2!`}
               onClick={() => {
+                if (mostrarOrdenDeCompra) {
+                  alert("Se generará la orden de compra");
+                  return;
+                }
                 getNombresPdfs();
                 //TODO crear componente para confirmar el envío de esos pdfs.
                 alert(`Se enviarán los archivos ${nombresPdfs}`);
               }}
               // Evalúa si TODOS los archivos son distintos de nulo
               // TODO evaluar si hay alguna otra forma de activar mejor este boton sin el segundo caso
-              disabled={!btnEnviar}
+              disabled={
+                !mostrarOrdenDeCompra && totalGuardados < totalNecesarios
+              }
             >
-              Enviar
+              {mostrarOrdenDeCompra ? "Orden de compra" : "Enviar"}
             </button>
             <button
               className={`${ui.buttons.primary} py-2!`}
@@ -457,8 +470,8 @@ const DetallesRequisicion = () => {
                     Gestión de cotizaciones
                   </h2>
                   <p className={ui.text.body + " text-start w-full"}>
-                    Cargue las 3 cotizaciones requeridas y consulte los
-                    proveedores autorizados
+                    Cargue las {totalNecesarios} cotizaciones requeridas y
+                    consulte los proveedores autorizados
                   </p>
                 </div>
                 <div className="flex gap-4">
@@ -495,7 +508,7 @@ const DetallesRequisicion = () => {
                       actualizarArchivoGlobal("1", file)
                     }
                   />
-                  {rol === "compras-inventarios" && (
+                  {rol === "compras-inventario" && (
                     <>
                       <TarjetaCotizacion
                         archivoInicial={archivosCotizaciones["2"]}

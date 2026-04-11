@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { ui } from "../../config/theme";
 import * as tipos from "../../types/requisicion.ts";
 import { useNavigate, useParams } from "react-router-dom";
@@ -10,14 +10,27 @@ interface Props {
 const ListaRequisiciones = ({ requisiciones }: Props) => {
   //mapeo de las rutas
   const navigate = useNavigate();
-
   // Validar el rol del usuario
   const { rol } = useParams<{ rol: string }>();
-  const user = rol === "rec-materiales";
+  const requisicionesAMostrar = useMemo(() => {
+    // Este console.log servirá para comprobar que ya no se filtra al hacer clic en filas
+    console.log("Calculando filtro de requisiciones...");
 
-  const requisicionesAMostrar = user
-    ? requisiciones
-    : requisiciones.filter((r) => r.estado !== "PENDIENTE");
+    if (rol === "rec-materiales") {
+      return requisiciones;
+    } else {
+      const ordinarias = requisiciones.filter(
+        (r) => r.tipo === "ORDINARIA" && r.estado !== "PENDIENTE",
+      );
+      const extraordinarias = requisiciones.filter(
+        (r) =>
+          r.tipo === "EXTRAORDINARIA" &&
+          (r.estado === "AUTORIZADA" || r.estado === "FINALIZADA"),
+      );
+
+      return [...ordinarias, ...extraordinarias];
+    }
+  }, [requisiciones, rol]);
   // TODO se cargarán diferentes requis si es compras-inventario, ya que este solo recibe las autorizadas, por lo que se filtrarán estas
 
   // Direccionamiento hacia la ventana para ver la requisicion seleccionada
