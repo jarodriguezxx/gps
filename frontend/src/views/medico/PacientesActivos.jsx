@@ -18,12 +18,6 @@ const pacientesMock = [
   { id: 3, clave: 'HGU-31', adiccion: 'Tabaquismo',  habitacion: 7,  edad: 41, observaciones: 'Presenta ansiedad moderada, bajo control' },
 ];
 
-const estadoBadge = {
-  Estable:    'bg-emerald-100 text-emerald-700',
-  Observación:'bg-amber-100 text-amber-700',
-  Crítico:    'bg-rose-100 text-rose-700',
-};
-
 const PacientesActivos = () => {
   const navigate = useNavigate();
   const [activeNav, setActiveNav]       = useState('pacientes');
@@ -70,14 +64,14 @@ const PacientesActivos = () => {
 
             {/* ── Sidebar ── */}
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-              {navItems.map(({ label, icon: Icon, key, path }) => (
+              {navItems.map(({ label, icon, key, path }) => (
                 <button key={key} onClick={() => handleNavClick({ key, path })}
                   className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition flex items-center gap-2.5 text-left ${
                     activeNav === key
                       ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
                       : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
                   }`}>
-                  <Icon size={15} className="shrink-0" />
+                  {React.createElement(icon, { size: 15, className: 'shrink-0' })}
                   <span>{label}</span>
                 </button>
               ))}

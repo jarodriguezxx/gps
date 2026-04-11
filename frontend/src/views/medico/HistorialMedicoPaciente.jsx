@@ -95,14 +95,14 @@ const HistorialMedicoPaciente = () => {
 
             {/* ── Sidebar ── */}
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-              {navItems.map(({ label, icon: Icon, key, path }) => (
+              {navItems.map(({ label, icon, key, path }) => (
                 <button key={key} onClick={() => handleNavClick({ key, path })}
                   className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition flex items-center gap-2.5 text-left ${
                     activeNav === key
                       ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
                       : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
                   }`}>
-                  <Icon size={15} className="shrink-0" />
+                  {React.createElement(icon, { size: 15, className: 'shrink-0' })}
                   <span>{label}</span>
                 </button>
               ))}
@@ -155,11 +155,11 @@ const HistorialMedicoPaciente = () => {
 
                 {/* Columna izquierda — documentos */}
                 <div className="space-y-4">
-                  {seccionesDoc.map(({ key, label, icon: Icon, archivo, fecha }) => (
+                  {seccionesDoc.map(({ key, label, icon, archivo, fecha }) => (
                     <section key={key} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                          <Icon size={15} className="text-[#7E1D3B]" />
+                          {React.createElement(icon, { size: 15, className: 'text-[#7E1D3B]' })}
                           <h3 className="text-sm font-black text-slate-700">{label}</h3>
                         </div>
                         <button className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white

@@ -19,7 +19,10 @@ const ExpedienteAdmisiones = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const [tab, setTab] = useState('general');
-	const isAdmisiones = location.pathname === '/admisiones/expediente';
+	const isInicioActive = location.pathname === '/admisiones';
+	const isExpedienteActive = location.pathname === '/admisiones/expediente';
+	const isEstudioActive = location.pathname === '/admisiones/estudio-socioeconomico';
+	const isValoracionActive = location.pathname === '/admisiones/valoracion-diagnostica';
 
 	return (
 		<div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(126,29,59,0.10),_transparent_25%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] text-slate-900">
@@ -49,19 +52,18 @@ const ExpedienteAdmisiones = () => {
 			<main className="mx-auto w-full max-w-7xl px-4 py-5 md:px-6 md:py-6">
 				<div className="grid gap-4 md:grid-cols-[220px_1fr]">
 					<aside className="rounded-3xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner">
-						<button type="button" onClick={() => navigate('/admisiones')} className={`mb-3 w-full rounded-xl px-3 py-3 text-sm font-semibold shadow-md transition ${isAdmisiones ? 'bg-[#7E1D3B] text-white hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+						<button type="button" onClick={() => navigate('/admisiones')} className={`mb-3 w-full rounded-xl px-3 py-3 text-sm font-semibold shadow-md transition ${isInicioActive ? 'bg-[#7E1D3B] text-white hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
 							Inicio
 						</button>
-						<button type="button" onClick={() => navigate('/admisiones/expediente')} className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B] px-3 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[#63162e]">
+						<button type="button" onClick={() => navigate('/admisiones/expediente')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isExpedienteActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
 							Expediente
 						</button>
-						<button type="button" onClick={() => navigate('/admisiones/estudio-socioeconomico')} className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-3 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
+						<button type="button" onClick={() => navigate('/admisiones/estudio-socioeconomico')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isEstudioActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
 							Estudio socioeconómico
 						</button>
-						<button type="button" onClick={() => navigate('/admisiones/valoracion-diagnostica')} className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-3 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
+						<button type="button" onClick={() => navigate('/admisiones/valoracion-diagnostica')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isValoracionActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
 							Valoración diagnóstica
 						</button>
-						<button className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Acceso futuro</button>
 					</aside>
 
 					<div className="space-y-5">
@@ -79,15 +81,7 @@ const ExpedienteAdmisiones = () => {
 
 						{tab === 'general' && (
 							<>
-								<section className="rounded-[28px] border border-[#7E1D3B]/12 bg-white p-5 shadow-sm md:p-6">
-									<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-										<div>
-											<p className="text-xs font-black uppercase tracking-[0.25em] text-[#7E1D3B]">Resumen general</p>
-											<h2 className="mt-1 text-2xl font-black text-slate-900 md:text-3xl">Expediente individual de admisiones</h2>
-										</div>
-										<div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">Conecta estudio socioeconómico y valoración diagnóstica.</div>
-									</div>
-								</section>
+								
 
 								<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 									{[
@@ -161,7 +155,7 @@ const ExpedienteAdmisiones = () => {
 							<div className="grid gap-3 md:grid-cols-3">
 								<button type="button" onClick={() => navigate('/admisiones/estudio-socioeconomico')} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Abrir estudio socioeconómico</button>
 								<button type="button" onClick={() => navigate('/admisiones/valoracion-diagnostica')} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Abrir valoración diagnóstica</button>
-								<button type="button" onClick={() => navigate('/medico')} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Ir a Médico</button>
+								<button type="button" onClick={() => navigate('/admisiones')} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Volver a inicio de admisiones</button>
 							</div>
 						</section>
 					</div>

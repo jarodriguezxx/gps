@@ -74,7 +74,7 @@ const AltaPersonal = () => {
 
             {/* ── Sidebar nav ── */}
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-              {navItems.map(({ label, icon: Icon, key }) => (
+              {navItems.map(({ label, icon, key }) => (
                 <button
                   key={key}
                   onClick={() => setActiveNav(key)}
@@ -84,7 +84,7 @@ const AltaPersonal = () => {
                       : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
                   }`}
                 >
-                  <Icon size={15} />
+                  {React.createElement(icon, { size: 15 })}
                   {label}
                 </button>
               ))}

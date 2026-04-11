@@ -38,50 +38,42 @@ import { REQUISICIONES_COMPLETO } from '../src/types/requisicion.ts'
 
 
 const quickViews = [
-  { label: 'Login', path: '/login', tone: 'slate' },
-  { label: 'Admisiones', path: '/admisiones', tone: 'slate' },
-  { label: 'Médico', path: '/medico', tone: 'rose' },
-  { label: 'Nutriología', path: '/nutriologia', tone: 'rose' },
-  { label: 'Historia', path: '/medico/historia-medica', tone: 'rose' },
-  { label: 'Inventario', path: '/medico/inventario-pertenencias', tone: 'rose' },
-  { label: 'Exp. Admisiones', path: '/admisiones/expediente', tone: 'rose' },
-  { label: 'Exp. Médico', path: '/medico/expediente', tone: 'rose' },
-  { label: 'Estudio', path: '/admisiones/estudio-socioeconomico', tone: 'rose' },
-  { label: 'Valoración', path: '/admisiones/valoracion-diagnostica', tone: 'rose' },
-  { label: 'RecMateriales', path: '/rec-materiales', tone: 'rose' },
-
-  { label: 'RH - Alta', path: '/rh/alta-personal', tone: 'slate' },
-  { label: 'RH - Baja', path: '/rh/baja-personal', tone: 'slate' },
-  { label: 'RH - Catalogos Roles', path: '/rh/catalogo-roles', tone: 'slate' },
-  { label: 'RH - Asignacion Roles', path: '/rh/asignacion-roles', tone: 'slate' },
-
-
-  { label: 'Login',                              path: '/login' },
-  { label: 'Admisiones',                         path: '/admisiones' },
-  { label: 'Estudio',                            path: '/admisiones/estudio-socioeconomico' },
-  { label: 'Valoración',                         path: '/admisiones/valoracion-diagnostica' },
-  { label: 'RH - Alta',                          path: '/rh/alta-personal' },
-  { label: 'RH - Baja',                          path: '/rh/baja-personal' },
-  { label: 'RH - Catálogo Roles',                path: '/rh/catalogo-roles' },
-  { label: 'RH - Asignación Roles',              path: '/rh/asignacion-roles' },
-  { label: 'Médico - Evaluación Enfermería',     path: '/medico/evaluacion-medica' },
-  { label: 'Médico - Protocolo Desintoxicación', path: '/medico/protocolo-desintoxicacion' },
-  { label: 'Médico - Pacientes Activos',         path: '/medico/pacientes-activos' },
-  { label: 'Médico - Historial Médico',          path: '/medico/historial-paciente' },
-  { label: 'Financiero - Archivo Contable',      path: '/financiero/archivo-contable' },
-  { label: 'Financiero - Digitalizar Comprobantes',      path: '/financiero/digitalizar-comprobantes' },
-  { label: 'Financiero - Gestionar Correciones',      path: '/financiero/gestionar-correcciones' },
-  { label: 'Financiero - Factura Electronica',      path: '/financiero/factura-electronica' },
-  { label: 'Financiero - Comprobantes Fiscales',      path: '/financiero/comprobantes-fiscales' },
-  { label: 'Financiero - Requisiciones Almacen',      path: '/financiero/requisiciones-almacen' },
-  { label: 'Financiero - Deposito Bancario',      path: '/financiero/deposito-bancario' }
-
+  { label: 'Login', path: '/login' },
+  { label: 'Admisiones', path: '/admisiones' },
+  { label: 'Exp. Admisiones', path: '/admisiones/expediente' },
+  { label: 'Estudio', path: '/admisiones/estudio-socioeconomico' },
+  { label: 'Valoración', path: '/admisiones/valoracion-diagnostica' },
+  { label: 'Médico', path: '/medico' },
+  { label: 'Exp. Médico', path: '/medico/expediente' },
+  { label: 'Historia', path: '/medico/historia-medica' },
+  { label: 'Inventario', path: '/medico/inventario-pertenencias' },
+  { label: 'Eval. Enfermería', path: '/medico/evaluacion-medica' },
+  { label: 'Protocolo', path: '/medico/protocolo-desintoxicacion' },
+  { label: 'Pacientes Activos', path: '/medico/pacientes-activos' },
+  { label: 'Historial Paciente', path: '/medico/historial-paciente' },
+  { label: 'Nutriología', path: '/nutriologia' },
+  { label: 'Evaluación Nutri', path: '/nutriologia/evaluacion-nutricional' },
+  { label: 'RH - Alta', path: '/rh/alta-personal' },
+  { label: 'RH - Baja', path: '/rh/baja-personal' },
+  { label: 'RH - Catálogo', path: '/rh/catalogo-roles' },
+  { label: 'RH - Asignación', path: '/rh/asignacion-roles' },
+  { label: 'Fin - Archivo', path: '/financiero/archivo-contable' },
+  { label: 'Fin - Digitalizar', path: '/financiero/digitalizar-comprobantes' },
+  { label: 'Fin - Correcciones', path: '/financiero/gestionar-correcciones' },
+  { label: 'Fin - Factura', path: '/financiero/factura-electronica' },
+  { label: 'Fin - Comprobantes', path: '/financiero/comprobantes-fiscales' },
+  { label: 'Fin - Requisiciones', path: '/financiero/requisiciones-almacen' },
+  { label: 'Fin - Depósito', path: '/financiero/deposito-bancario' },
+  { label: 'Rec. Materiales', path: '/rec-materiales' },
+  { label: 'Rec. Proveedores', path: '/rec-materiales/proveedores' },
+  { label: 'Rec. Historial', path: '/rec-materiales/historial' },
 ];
 
 const QuickNavigator = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const [abierto, setAbierto] = useState(false);
+  const uniqueQuickViews = Array.from(new Map(quickViews.map((view) => [view.path, view])).values());
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -94,11 +86,11 @@ const QuickNavigator = () => {
             Vistas rápidas
           </p>
           <div className="grid gap-1.5">
-            {quickViews.map((view) => {
+            {uniqueQuickViews.map((view) => {
               const active = location.pathname === view.path;
               return (
                 <button
-                  key={view.path}
+                  key={`${view.label}-${view.path}`}
                   onClick={() => { navigate(view.path); setAbierto(false); }}
                   className={`w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${
                     active
@@ -144,60 +136,47 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-
-        {/* Rutas para admisiones */}
-        <Route path="/" element={<Navigate to="/admisiones" replace />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/admisiones" element={<AdmisionesInicio />} />
-        <Route path="/admisiones/expediente" element={<ExpedienteAdmisiones />} />
-        <Route path="/admisiones/estudio-socioeconomico" element={<EstudioSocioeconomico />} />
-        <Route path="/admisiones/valoracion-diagnostica" element={<ValoracionDiagnostica />} />
-        <Route path="/medico" element={<MedicoInicio />} />
-        <Route path="/nutriologia" element={<NutriologiaInicio />} />
-        <Route path="/nutriologia/evaluacion-nutricional" element={<EvaluacionNutricional />} />
-        <Route path="/medico/nutriologia/evaluacion-nutricional" element={<EvaluacionNutricional />} />
-        <Route path="/medico/cuestionario-salud" element={<EvaluacionNutricional />} />
-        <Route path="/medico/expediente" element={<ExpedienteMedico />} />
-        <Route path="/medico/historia-medica" element={<HistoriaMedica />} />
-        <Route path="/medico/inventario-pertenencias" element={<InventarioPertenencias />} />
-
-        <Route path="/rh/alta-personal" element={<AltaPersonal />} />
-        <Route path="/rh/baja-personal" element={<BajaPersonal />} />
-        <Route path="/rh/catalogo-roles" element={<CatalogoRoles />} />
-        <Route path="/rh/asignacion-roles" element={<AsignacionRoles />} />
-
-        <Route path="*" element={<Navigate to="/admisiones" replace />} />
-
-        {/* Rutas para rec Materiales */}
-        <Route path='/rec-materiales' element = {<RecMaterialesDashboard/>}>
-
-          {/* Estas son las rutas hijas  */}
-          <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
-          <Route path='proveedores' element = {<Proveedores/>}/>
-          <Route path='historial' element = {<Historial/>}/>
-          <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
-        </Route>
-=======
         <Route path="/"                                        element={<Navigate to="/admisiones" replace />} />
         <Route path="/login"                                   element={<Login />} />
         <Route path="/admisiones"                              element={<AdmisionesInicio />} />
+        <Route path="/admisiones/expediente"                   element={<ExpedienteAdmisiones />} />
         <Route path="/admisiones/estudio-socioeconomico"       element={<EstudioSocioeconomico />} />
         <Route path="/admisiones/valoracion-diagnostica"       element={<ValoracionDiagnostica />} />
+
+        <Route path="/medico"                                  element={<MedicoInicio />} />
+        <Route path="/medico/expediente"                       element={<ExpedienteMedico />} />
+        <Route path="/medico/historia-medica"                  element={<HistoriaMedica />} />
+        <Route path="/medico/inventario-pertenencias"          element={<InventarioPertenencias />} />
         <Route path="/rh/alta-personal"                        element={<AltaPersonal />} />
         <Route path="/rh/baja-personal"                        element={<BajaPersonal />} />
         <Route path="/rh/catalogo-roles"                       element={<CatalogoRoles />} />
         <Route path="/rh/asignacion-roles"                     element={<AsignacionRoles />} />
+
         <Route path="/medico/evaluacion-medica"                element={<EvaluacionEnfermeria />} />
         <Route path="/medico/protocolo-desintoxicacion"        element={<ProtocoloDesintoxicacion />} />
         <Route path="/medico/pacientes-activos"                element={<PacientesActivos />} />
         <Route path="/medico/historial-paciente"               element={<HistorialMedicoPaciente />} />
+
+        <Route path="/nutriologia"                             element={<NutriologiaInicio />} />
+        <Route path="/nutriologia/evaluacion-nutricional"      element={<EvaluacionNutricional />} />
+        <Route path="/medico/nutriologia/evaluacion-nutricional" element={<EvaluacionNutricional />} />
+        <Route path="/medico/cuestionario-salud"               element={<EvaluacionNutricional />} />
+
         <Route path="/financiero/archivo-contable"             element={<ArchivoContable />} />
-        <Route path="/financiero/digitalizar-comprobantes" element={<DigitalizarComprobantes />} />
-        <Route path="/financiero/factura-electronica" element={<FacturaElectronica />} />
-        <Route path="/financiero/comprobantes-fiscales" element={<ComprobantesFiscales />} />
-        <Route path="/financiero/requisiciones-almacen" element={<RequisicionesAlmacen />} />
-        <Route path="/financiero/gestionar-correcciones" element={<GestionarCorreciones />} />
-        <Route path="/financiero/deposito-bancario" element={<DepositoBancario />} />
+        <Route path="/financiero/digitalizar-comprobantes"     element={<DigitalizarComprobantes />} />
+        <Route path="/financiero/factura-electronica"          element={<FacturaElectronica />} />
+        <Route path="/financiero/comprobantes-fiscales"        element={<ComprobantesFiscales />} />
+        <Route path="/financiero/requisiciones-almacen"        element={<RequisicionesAlmacen />} />
+        <Route path="/financiero/gestionar-correcciones"       element={<GestionarCorreciones />} />
+        <Route path="/financiero/deposito-bancario"            element={<DepositoBancario />} />
+
+        <Route path="/rec-materiales" element={<RecMaterialesDashboard />}>
+          <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO} />} />
+          <Route path="proveedores" element={<Proveedores />} />
+          <Route path="historial" element={<Historial />} />
+          <Route path="requisicion/:id" element={<DetallesRequisicion />} />
+        </Route>
+
         <Route path="*"                                        element={<Navigate to="/admisiones" replace />} />
       </Routes>
       <QuickNavigator />

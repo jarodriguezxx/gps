@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, Bell, ClipboardList, Search, Sparkles } from 'lucide-react';
+import { ArrowRight, Bell, Search } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const citasHoy = [
@@ -106,7 +106,9 @@ const AdmisionesInicio = ({ onOpenEstudio }) => {
 	};
 	const goInicio = () => navigate('/admisiones');
 	const isInicioActive = location.pathname === '/admisiones';
+	const isExpedienteActive = location.pathname === '/admisiones/expediente';
 	const isEstudioActive = location.pathname === '/admisiones/estudio-socioeconomico';
+	const isValoracionActive = location.pathname === '/admisiones/valoracion-diagnostica';
 
 	return (
 		<div className="min-h-screen bg-slate-100 text-slate-900">
@@ -155,39 +157,44 @@ const AdmisionesInicio = ({ onOpenEstudio }) => {
 				<div className="grid gap-4 md:grid-cols-[220px_1fr]">
 					<aside className="rounded-3xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner">
 						<button
-							onClick={openEstudio}
+							onClick={goInicio}
 							className={`mb-3 w-full rounded-xl px-3 py-3 text-sm font-semibold shadow-md transition ${
-								isEstudioActive
+								isInicioActive
 									? 'bg-[#7E1D3B] text-white hover:bg-[#63162e]'
 									: 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
-							}`}
-						>
-							Estudio Socioeconómico
-						</button>
-						<button
-							onClick={goInicio}
-							className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
-								isInicioActive
-									? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
-									: 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
 							}`}
 						>
 							Inicio
 						</button>
 						<button
 							onClick={() => navigate('/admisiones/expediente')}
-							className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B] px-3 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[#63162e]"
+							className={`mb-3 w-full rounded-xl px-3 py-3 text-sm font-semibold shadow-md transition ${
+								isExpedienteActive
+									? 'bg-[#7E1D3B] text-white hover:bg-[#63162e]'
+									: 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
+							}`}
 						>
 							Expediente
 						</button>
-						<button className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-3 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
-							Prueba 1
+						<button
+							onClick={openEstudio}
+							className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
+								isEstudioActive
+									? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+									: 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
+							}`}
+						>
+							Estudio socioeconómico
 						</button>
-						<button className="mb-2 w-full rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-3 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
-							Prueba 2
-						</button>
-						<button className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-							Acceso futuro
+						<button
+							onClick={() => navigate('/admisiones/valoracion-diagnostica')}
+							className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
+								isValoracionActive
+									? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+									: 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
+							}`}
+						>
+							Valoración diagnóstica
 						</button>
 
 						<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -195,22 +202,9 @@ const AdmisionesInicio = ({ onOpenEstudio }) => {
 							<p className="mt-2 text-3xl font-black text-[#7E1D3B]">78%</p>
 							<p className="text-xs text-slate-500">Tasa de conversión semanal</p>
 						</div>
-						<button onClick={() => navigate('/admisiones/expediente')} className="mt-3 w-full rounded-xl bg-[#7E1D3B] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#63162e]">
-							Abrir expediente
-						</button>
 					</aside>
 					<div className="space-y-5">
-							<section className="rounded-[28px] border border-[#7E1D3B]/12 bg-white p-5 shadow-sm md:p-6">
-								<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-									<div>
-										<p className="text-xs font-black uppercase tracking-[0.25em] text-[#7E1D3B]">Vista principal</p>
-										<h2 className="mt-1 text-2xl font-black text-slate-900 md:text-3xl">Panel de admisiones con estructura más limpia</h2>
-									</div>
-									<div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-										Conserva la paleta izquierda y gana lectura de dashboard.
-									</div>
-								</div>
-							</section>
+							
 
 							<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 								{[
@@ -226,29 +220,6 @@ const AdmisionesInicio = ({ onOpenEstudio }) => {
 										</p>
 									</article>
 								))}
-							</section>
-
-							<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-								<article className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
-									<p className="text-xs uppercase tracking-widest text-slate-500">Citas hoy</p>
-									<p className="mt-2 text-3xl font-black text-slate-900">18</p>
-									<p className="text-sm text-emerald-700">+4 vs ayer</p>
-								</article>
-								<article className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
-									<p className="text-xs uppercase tracking-widest text-slate-500">Pacientes nuevos</p>
-									<p className="mt-2 text-3xl font-black text-slate-900">6</p>
-									<p className="text-sm text-sky-700">3 referidos</p>
-								</article>
-								<article className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
-									<p className="text-xs uppercase tracking-widest text-slate-500">Llamadas pendientes</p>
-									<p className="mt-2 text-3xl font-black text-slate-900">12</p>
-									<p className="text-sm text-amber-700">5 prioritarias</p>
-								</article>
-								<article className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
-									<p className="text-xs uppercase tracking-widest text-slate-500">Ingreso proyectado</p>
-									<p className="mt-2 text-3xl font-black text-slate-900">$184k</p>
-									<p className="text-sm text-[#7E1D3B]">Meta mensual 82%</p>
-								</article>
 							</section>
 
 							<section className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
@@ -311,22 +282,7 @@ const AdmisionesInicio = ({ onOpenEstudio }) => {
 								</article>
 							</section>
 
-							<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-								<div className="mb-4 flex items-center justify-between gap-3">
-									<div>
-										<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Menú de prueba</p>
-										<h3 className="text-2xl font-black text-slate-900">Accesos rápidos futuros</h3>
-									</div>
-									<Sparkles className="text-[#7E1D3B]" size={22} />
-								</div>
-								<div className="grid gap-3 md:grid-cols-2">
-									{['Prueba 1', 'Prueba 2'].map((item) => (
-										<button key={item} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-4 text-left text-sm font-semibold text-slate-600 transition hover:border-[#7E1D3B]/25 hover:bg-[#7E1D3B]/5">
-											{item}
-										</button>
-									))}
-								</div>
-							</section>
+						
 
 							<section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
 								<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

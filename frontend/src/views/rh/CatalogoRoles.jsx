@@ -102,14 +102,14 @@ const CatalogoRoles = () => {
 
             {/* Sidebar */}
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-              {navItems.map(({ label, icon: Icon, key, path }) => (
+              {navItems.map(({ label, icon, key, path }) => (
                 <button key={key} onClick={() => handleNavClick({ key, path })}
                   className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition flex items-center gap-2.5 ${
                     activeNav === key
                       ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
                       : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
                   }`}>
-                  <Icon size={15} />{label}
+                  {React.createElement(icon, { size: 15 })}{label}
                 </button>
               ))}
             </aside>
@@ -142,7 +142,7 @@ const CatalogoRoles = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {roles.map((r, i) => (
+                    {roles.map((r) => (
                       <tr key={r.id}
                         className={`border-b border-slate-100 transition hover:bg-[#7E1D3B]/3 ${editando?.id === r.id ? 'bg-[#7E1D3B]/5' : ''}`}>
                         <td className="px-4 py-3 font-semibold text-slate-800">{r.rol}</td>
