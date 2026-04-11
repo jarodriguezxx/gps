@@ -149,8 +149,8 @@ const DetallesRequisicion = () => {
       }
     });
     totalCargados === totalNecesarios
-      ? activateBtnEnviar(false)
-      : activateBtnEnviar(true);
+      ? activateBtnEnviar(!false)
+      : activateBtnEnviar(!true);
     // TODO  enviar los datos al servidor, esto es u ejemplo solamente
     try {
       console.log("Enviando archivos...");
@@ -171,9 +171,26 @@ const DetallesRequisicion = () => {
         // Valida que realmente el id regrese algo
         if (datos) {
           setDatos(datos);
-          datos.tipo === "EXTRAORDINARIA"
-            ? setSubirCotizacion(true)
-            : (setSubirCotizacion(false), activateBtnEnviar(false));
+          // Para las vistas entre rec materiales y compras-inventarios
+          switch (rol) {
+            case "rec-materiales":
+              if (datos.estado === "PENDIENTE") {
+                // rec-materiales solo actua sobre requis pendientes
+                if (datos.tipo === "ORDINARIA") {
+                  activateBtnEnviar(true);
+                  setSubirCotizacion(false);
+                } else {
+                  // Es extraordinaria
+                  activateBtnEnviar(false);
+                  setSubirCotizacion(true);
+                }
+              } else {
+                // Si el estado es distinto a pendiente, ya no puede hacer nada rec-materiales
+                setSubirCotizacion(false);
+                activateBtnEnviar(false);
+              }
+              return;
+          }
           // Valido si realmente se puede activar el boton para cargar cotizaciones
           //  datos.tipo === "EXTRAORDINARIA" ? setModal(true) : setModal(false);
         } else {
@@ -230,15 +247,14 @@ const DetallesRequisicion = () => {
                 alert(`Se enviarán los archivos ${nombresPdfs}`);
               }}
               // Evalúa si TODOS los archivos son distintos de nulo
-              disabled={btnEnviar || datos?.estado !== "PENDIENTE"}
+              // TODO evaluar si hay alguna otra forma de activar mejor este boton sin el segundo caso
+              disabled={!btnEnviar}
             >
               Enviar
             </button>
             <button
               className={`${ui.buttons.primary} py-2!`}
-              hidden={
-                !activarSubirCotizacion || (rol === "compras-inventario")
-              }
+              hidden={!activarSubirCotizacion}
               onClick={() => setModal(true)}
             >
               Cargar cotizaciones
