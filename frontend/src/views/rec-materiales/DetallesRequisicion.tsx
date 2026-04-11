@@ -136,7 +136,7 @@ const DetallesRequisicion = () => {
     "2": null,
     "3": null,
   });
-
+  
   // Función para actualizar un archivo específico
   const actualizarArchivoGlobal = (numero: string, archivo: File | null) => {
     setArchivosCotizaciones((prev) => ({
