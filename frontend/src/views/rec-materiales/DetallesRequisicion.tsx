@@ -134,12 +134,29 @@ const DetallesRequisicion = () => {
       "2": null,
       "3": null,
     });
+  const [archivosFacturas, setArchivosFacturas] = useState<{
+    [key: string]: File | null;
+  }>({
+    "1": null,
+  });
+  const [archivosFacturasGuardadas, setArchivosFacturasGuardadas] = useState<{
+    [key: string]: File | null;
+  }>({
+    "1": null,
+  });
 
   const [activarSubirCotizacion, setSubirCotizacion] = useState(false);
 
   // Función para actualizar un archivo específico
   const actualizarArchivoGlobal = (numero: string, archivo: File | null) => {
     setArchivosCotizaciones((prev) => ({
+      ...prev,
+      [numero]: archivo,
+    }));
+  };
+
+  const actualizarFacturaGlobal = (numero: string, archivo: File | null) => {
+    setArchivosFacturas((prev) => ({
       ...prev,
       [numero]: archivo,
     }));
@@ -155,11 +172,17 @@ const DetallesRequisicion = () => {
         formData.append(`cotizacion_${key}`, file);
       }
     });
+    Object.entries(archivosFacturas).forEach(([key, file]) => {
+      if (file) {
+        formData.append(`factura_${key}`, file);
+      }
+    });
     setArchivosCotizacionesGuardadas({ ...archivosCotizaciones });
+    setArchivosFacturasGuardadas({ ...archivosFacturas });
     // TODO  enviar los datos al servidor, esto es u ejemplo solamente
     try {
       console.log("Enviando archivos...");
-      alert("Archivos listos para enviarse al servidor");
+      alert("Documentos listos para enviarse al servidor");
     } catch (e: any) {
       console.log("error al subir", e);
     }
@@ -186,7 +209,9 @@ const DetallesRequisicion = () => {
           if (rol === "compras-inventario") {
             setSubirCotizacion(
               datos.estado === "PRE-AUTORIZADA" ||
-                (datos.estado === "AUTORIZADA" && datos.tamanio === "MAYOR"),
+                (datos.estado === "AUTORIZADA" &&
+                  datos.tipo === "ORDINARIA" &&
+                  datos.tamanio === "MAYOR"),
             );
             return;
           }
@@ -207,6 +232,9 @@ const DetallesRequisicion = () => {
   const totalGuardados = Object.values(archivosCotizacionesGuardadas).filter(
     (f) => f !== null,
   ).length;
+  const totalFacturasGuardadas = Object.values(
+    archivosFacturasGuardadas,
+  ).filter((f) => f !== null).length;
   let nombresPdfs = "";
 
   const getNombresPdfs = () => {
@@ -221,15 +249,32 @@ const DetallesRequisicion = () => {
   const totalNecesarios =
     rol === "compras-inventario" &&
     datos?.estado === "AUTORIZADA" &&
+    datos?.tipo === "ORDINARIA" &&
     datos?.tamanio === "MAYOR"
       ? 3
       : 1;
+  const requiereFacturas =
+    rol === "compras-inventario" &&
+    datos?.estado === "AUTORIZADA" &&
+    datos?.tipo === "ORDINARIA" &&
+    datos?.tamanio === "MAYOR";
+  const esExtraordinariaAutorizada =
+    rol === "compras-inventario" &&
+    datos?.estado === "AUTORIZADA" &&
+    datos?.tipo === "EXTRAORDINARIA";
+  const esExtraordinariaMenor =
+    esExtraordinariaAutorizada && datos?.tamanio === "MENOR";
+  const esExtraordinariaMayor =
+    esExtraordinariaAutorizada && datos?.tamanio === "MAYOR";
   const mostrarOrdenDeCompra =
     rol === "compras-inventario" &&
     datos?.estado === "AUTORIZADA" &&
     (datos?.tipo === "EXTRAORDINARIA" ||
       (datos?.tipo === "ORDINARIA" && datos?.tamanio === "MENOR"));
+  const mostrarIntegrarExpediente = esExtraordinariaMenor || esExtraordinariaMayor;
+  const mostrarEnviarFinanzas = esExtraordinariaMayor;
   const cotizacionesPendientes = Math.max(0, totalNecesarios - totalGuardados);
+  const facturasPendientes = Math.max(0, 1 - totalFacturasGuardadas);
   // En este punto ya se tienen los datos por lo que se procede a llenar cada uno dinámicamente con los datos
   return (
     // Div principal, debe tener altura definida y un ancho
@@ -249,6 +294,20 @@ const DetallesRequisicion = () => {
             <button
               className={`${ui.buttons.primary} py-2!`}
               onClick={() => {
+                if (mostrarEnviarFinanzas) {
+                  alert(
+                    "Se generará la orden de compra, luego se integrarán las facturas al expediente y después se enviará el reporte a recursos financieros",
+                  );
+                  return;
+                }
+
+                if (mostrarIntegrarExpediente) {
+                  alert(
+                    "Se generará la orden de compra y después se integrarán las facturas al expediente",
+                  );
+                  return;
+                }
+
                 if (mostrarOrdenDeCompra) {
                   alert("Se generará la orden de compra");
                   return;
@@ -260,10 +319,20 @@ const DetallesRequisicion = () => {
               // Evalúa si TODOS los archivos son distintos de nulo
               // TODO evaluar si hay alguna otra forma de activar mejor este boton sin el segundo caso
               disabled={
-                !mostrarOrdenDeCompra && totalGuardados < totalNecesarios
+                !mostrarOrdenDeCompra &&
+                !mostrarIntegrarExpediente &&
+                !mostrarEnviarFinanzas &&
+                (totalGuardados < totalNecesarios ||
+                  (requiereFacturas && totalFacturasGuardadas < 1))
               }
             >
-              {mostrarOrdenDeCompra ? "Orden de compra" : "Enviar"}
+              {mostrarEnviarFinanzas
+                ? "Orden de compra / Recursos financieros"
+                : mostrarIntegrarExpediente
+                  ? "Orden de compra / Integrar expediente"
+                  : mostrarOrdenDeCompra
+                    ? "Orden de compra"
+                    : "Enviar"}
             </button>
             <button
               className={`${ui.buttons.primary} py-2!`}
@@ -473,6 +542,22 @@ const DetallesRequisicion = () => {
                     Cargue las {totalNecesarios} cotizaciones requeridas y
                     consulte los proveedores autorizados
                   </p>
+                  {requiereFacturas && (
+                    <p className={ui.text.body + " text-start w-full"}>
+                      Integre al menos 1 factura para habilitar el envío
+                    </p>
+                  )}
+                  {mostrarIntegrarExpediente && (
+                    <p className={ui.text.body + " text-start w-full"}>
+                      Primero genere la orden de compra y después integre las
+                      facturas al expediente
+                    </p>
+                  )}
+                  {mostrarEnviarFinanzas && (
+                    <p className={ui.text.body + " text-start w-full"}>
+                      Después, envíe el reporte a recursos financieros
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-4">
                   <button
@@ -480,7 +565,7 @@ const DetallesRequisicion = () => {
                     //
                     onClick={guardarTodo}
                   >
-                    Guardar cotizaciones
+                    Guardar documentos
                   </button>
                   {/* TODO el botón de cancelar lo que hace es cerrar el modal, nada más */}
                   <button
@@ -529,6 +614,24 @@ const DetallesRequisicion = () => {
                     </>
                   )}
                 </div>
+                {requiereFacturas && (
+                  <>
+                    <div className="w-full flex bg-slate-200 h-px" />
+                    <p className={ui.text.body + " font-bold"}>
+                      Facturas requeridas ({facturasPendientes})
+                    </p>
+                    <div className=" w-full flex gap-6 flex-row justify-between items-center">
+                      <TarjetaCotizacion
+                        archivoInicial={archivosFacturas["1"]}
+                        numero="F1"
+                        titulo="Factura 1"
+                        onArchivoChange={(file) =>
+                          actualizarFacturaGlobal("1", file)
+                        }
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="w-full flex bg-slate-200 h-px" />
                 {/* Contenedor padre de la tabla */}
                 <div className={`w-full flex-col  p-2 flex-1 min-h-0 flex `}>
