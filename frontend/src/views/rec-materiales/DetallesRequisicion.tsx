@@ -4,34 +4,27 @@ import * as tipos from "../../types/requisicion.ts";
 import { useParams } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
+
+// Simulación de rol de REcMateriales
+
+
 // Componentes
 
 interface TarjetaCotizacionProps {
   numero: string;
   titulo: string;
-  setCotizaciones: (cantidad: number) => void;
-  numCotizaciones: number;
   onArchivoChange: (archivo: File | null) => void;
+  archivoInicial: File | null;
 }
 
 const TarjetaCotizacion = ({
   numero,
   titulo,
-  setCotizaciones,
-  numCotizaciones,
   onArchivoChange,
+  archivoInicial,
 }: TarjetaCotizacionProps) => {
-  const [archivo, setArchivo] = useState<File | null>(null);
+  const [archivo, setArchivo] = useState<File | null>(archivoInicial);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (archivo === null) {
-      console.log("El estado ahora es nulo oficialmente");
-    } else {
-      console.log("Se ha cargado un archivo nuevo:", archivo.name);
-      setCotizaciones(numCotizaciones - 1);
-    }
-  }, [archivo]); // Este efecto corre cada vez que 'archivo' cambia
 
   // Método para majear el archivo
   const manejarCambioArchivo = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +91,6 @@ const TarjetaCotizacion = ({
           <button
             onClick={() => {
               if (archivo) {
-                setCotizaciones(numCotizaciones + 1);
                 setArchivo(null);
                 onArchivoChange(null);
                 return;
@@ -128,7 +120,6 @@ const DetallesRequisicion = () => {
   // Setear los datos cada que haya un cambio
   const [datos, setDatos] = useState<tipos.Requisicion | null>(null);
   const [modal, setModal] = useState(false);
-  const [cotizaciones, setCotizacion] = useState<number>(3);
   const [archivosCotizaciones, setArchivosCotizaciones] = useState<{
     [key: string]: File | null;
   }>({
@@ -136,7 +127,10 @@ const DetallesRequisicion = () => {
     "2": null,
     "3": null,
   });
-  
+  const [btnEnviar, activateBtnEnviar] = useState(true);
+
+  const [activarSubirCotizacion, setSubirCotizacion] = useState(false);
+
   // Función para actualizar un archivo específico
   const actualizarArchivoGlobal = (numero: string, archivo: File | null) => {
     setArchivosCotizaciones((prev) => ({
@@ -155,7 +149,7 @@ const DetallesRequisicion = () => {
         formData.append(`cotizacion_${key}`, file);
       }
     });
-
+    totalCargados === 3 ? activateBtnEnviar(false) : activateBtnEnviar(true);
     // TODO  enviar los datos al servidor, esto es u ejemplo solamente
     try {
       console.log("Enviando archivos...");
@@ -176,7 +170,9 @@ const DetallesRequisicion = () => {
         // Valida que realmente el id regrese algo
         if (datos) {
           setDatos(datos);
-
+          datos.tipo === "EXTRAORDINARIA"
+            ? setSubirCotizacion(true)
+            : (setSubirCotizacion(false), activateBtnEnviar(false));
           // Valido si realmente se puede activar el boton para cargar cotizaciones
           //  datos.tipo === "EXTRAORDINARIA" ? setModal(true) : setModal(false);
         } else {
@@ -192,6 +188,21 @@ const DetallesRequisicion = () => {
   const articulos = datos?.articulos;
   let i = 0;
 
+  // Contamos cuántos espacios en el objeto NO son null
+  const totalCargados = Object.values(archivosCotizaciones).filter(
+    (f) => f !== null,
+  ).length;
+  let nombresPdfs = "";
+
+  const getNombresPdfs = () => {
+    nombresPdfs = "";
+    Object.values(archivosCotizaciones).map((a) => {
+      nombresPdfs = nombresPdfs + ` \n ${a?.name}`;
+    });
+  };
+
+  // El número de pendientes es el total que se necesitan menos os los cargados
+  const cotizacionesPendientes = Math.max(0, 3 - totalCargados);
   // En este punto ya se tienen los datos por lo que se procede a llenar cada uno dinámicamente con los datos
   return (
     // Div principal, debe tener altura definida y un ancho
@@ -207,8 +218,24 @@ const DetallesRequisicion = () => {
           {/* div de la segunda parte, donde se pondrán los botones */}
           <div className=" flex gap-4 h-full">
             {/* " botones " */}
-            <button className={`${ui.buttons.primary} py-2!`}>Enviar</button>
-            <button className={`${ui.buttons.primary} py-2!`}>
+            {/* Este boton solo debe de estar activo si tiene los 3 archivos cargados */}
+            <button
+              className={`${ui.buttons.primary} py-2!`}
+              onClick={() => {
+                getNombresPdfs();
+                //TODO crear componente para confirmar el envío de esos pdfs.
+                alert(`Se enviarán los archivos ${nombresPdfs}`);
+              }}
+              // Evalúa si TODOS los archivos son distintos de nulo
+              disabled={btnEnviar}
+            >
+              Enviar
+            </button>
+            <button
+              className={`${ui.buttons.primary} py-2!`}
+              hidden={!activarSubirCotizacion}
+              onClick={() => setModal(true)}
+            >
               Cargar cotizaciones
             </button>
           </div>
@@ -424,7 +451,9 @@ const DetallesRequisicion = () => {
                   {/* TODO el botón de cancelar lo que hace es cerrar el modal, nada más */}
                   <button
                     className={ui.buttons.secondary}
-                    onClick={() => setModal(false)}
+                    onClick={() => {
+                      setModal(false);
+                    }}
                   >
                     Cerrar
                   </button>
@@ -433,32 +462,31 @@ const DetallesRequisicion = () => {
 
               <div className="flex flex-1 min-h-0 flex-col items-start justify-start pt-1 gap-2">
                 <p className={ui.text.body + " font-bold"}>
-                  Cotizaciones requeridas ({cotizaciones})
+                  Cotizaciones requeridas ({cotizacionesPendientes})
                 </p>
                 {/* Contenedor de las tarjetas */}
                 <div className=" w-full flex gap-6 flex-row justify-between items-center">
                   <TarjetaCotizacion
+                    archivoInicial={archivosCotizaciones["1"]}
                     numero="1"
                     titulo="Cotización 1"
-                    setCotizaciones={setCotizacion}
-                    numCotizaciones={cotizaciones}
                     onArchivoChange={(file) =>
                       actualizarArchivoGlobal("1", file)
                     }
                   />
                   <TarjetaCotizacion
+                    archivoInicial={archivosCotizaciones["2"]}
                     numero="2"
                     titulo="Cotización 2"
-                    setCotizaciones={setCotizacion}
-                    numCotizaciones={cotizaciones}onArchivoChange={(file) =>
+                    onArchivoChange={(file) =>
                       actualizarArchivoGlobal("2", file)
                     }
                   />
                   <TarjetaCotizacion
+                    archivoInicial={archivosCotizaciones["3"]}
                     numero="3"
                     titulo="Cotización 3"
-                    setCotizaciones={setCotizacion}
-                    numCotizaciones={cotizaciones}onArchivoChange={(file) =>
+                    onArchivoChange={(file) =>
                       actualizarArchivoGlobal("3", file)
                     }
                   />

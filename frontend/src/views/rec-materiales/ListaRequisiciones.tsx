@@ -105,7 +105,7 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
         >
           Ver
         </button>
-        <button
+        {/* <button
           disabled={!selectedId}
           className={
             ui.buttons.primary +
@@ -113,7 +113,7 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
           }
         >
           Enviar
-        </button>
+        </button> */}
       </div>
     </div>
   );
