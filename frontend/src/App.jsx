@@ -64,8 +64,8 @@ function App() {
         <Route path="/admisiones/valoracion-diagnostica" element={<ValoracionDiagnostica />} />
         <Route path="*" element={<Navigate to="/admisiones" replace />} />
 
-        {/* Rutas para rec Materiales */}
-        <Route path='/rec-materiales' element = {<RecMaterialesDashboard/>}>
+        {/* Rutas para rec Materiales y compras e inventario*/}
+        <Route path='/:rol' element = {<RecMaterialesDashboard/>}>
 
           {/* Estas son las rutas hijas  */}
           <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>

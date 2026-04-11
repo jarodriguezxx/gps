@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ui, colors } from "../../config/theme";
 import * as tipos from "../../types/requisicion.ts";
-import { useParams } from "react-router-dom";
+import { Outlet, useOutletContext, useParams } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
 
 // Simulación de rol de REcMateriales
-
 
 // Componentes
 
@@ -116,7 +115,7 @@ const TarjetaCotizacion = ({
 const DetallesRequisicion = () => {
   // Recuperar el id que está incrustado en la URL
   const { id } = useParams<{ id: string }>();
-
+  const rol = useOutletContext();
   // Setear los datos cada que haya un cambio
   const [datos, setDatos] = useState<tipos.Requisicion | null>(null);
   const [modal, setModal] = useState(false);
@@ -149,7 +148,9 @@ const DetallesRequisicion = () => {
         formData.append(`cotizacion_${key}`, file);
       }
     });
-    totalCargados === 3 ? activateBtnEnviar(false) : activateBtnEnviar(true);
+    totalCargados === totalNecesarios
+      ? activateBtnEnviar(false)
+      : activateBtnEnviar(true);
     // TODO  enviar los datos al servidor, esto es u ejemplo solamente
     try {
       console.log("Enviando archivos...");
@@ -196,13 +197,15 @@ const DetallesRequisicion = () => {
 
   const getNombresPdfs = () => {
     nombresPdfs = "";
-    Object.values(archivosCotizaciones).map((a) => {
-      nombresPdfs = nombresPdfs + ` \n ${a?.name}`;
-    });
+    Object.values(archivosCotizaciones)
+      .slice(0, totalNecesarios)
+      .map((a) => {
+        nombresPdfs = nombresPdfs + ` \n ${a?.name}`;
+      });
   };
 
-  // El número de pendientes es el total que se necesitan menos os los cargados
-  const cotizacionesPendientes = Math.max(0, 3 - totalCargados);
+  const totalNecesarios = rol === "compras-inventarios" ? 3 : 1;
+  const cotizacionesPendientes = Math.max(0, totalNecesarios - totalCargados);
   // En este punto ya se tienen los datos por lo que se procede a llenar cada uno dinámicamente con los datos
   return (
     // Div principal, debe tener altura definida y un ancho
@@ -227,13 +230,15 @@ const DetallesRequisicion = () => {
                 alert(`Se enviarán los archivos ${nombresPdfs}`);
               }}
               // Evalúa si TODOS los archivos son distintos de nulo
-              disabled={btnEnviar}
+              disabled={btnEnviar || datos?.estado !== "PENDIENTE"}
             >
               Enviar
             </button>
             <button
               className={`${ui.buttons.primary} py-2!`}
-              hidden={!activarSubirCotizacion}
+              hidden={
+                !activarSubirCotizacion || (rol === "compras-inventario")
+              }
               onClick={() => setModal(true)}
             >
               Cargar cotizaciones
@@ -474,22 +479,26 @@ const DetallesRequisicion = () => {
                       actualizarArchivoGlobal("1", file)
                     }
                   />
-                  <TarjetaCotizacion
-                    archivoInicial={archivosCotizaciones["2"]}
-                    numero="2"
-                    titulo="Cotización 2"
-                    onArchivoChange={(file) =>
-                      actualizarArchivoGlobal("2", file)
-                    }
-                  />
-                  <TarjetaCotizacion
-                    archivoInicial={archivosCotizaciones["3"]}
-                    numero="3"
-                    titulo="Cotización 3"
-                    onArchivoChange={(file) =>
-                      actualizarArchivoGlobal("3", file)
-                    }
-                  />
+                  {rol === "compras-inventarios" && (
+                    <>
+                      <TarjetaCotizacion
+                        archivoInicial={archivosCotizaciones["2"]}
+                        numero="2"
+                        titulo="Cotización 2"
+                        onArchivoChange={(file) =>
+                          actualizarArchivoGlobal("2", file)
+                        }
+                      />
+                      <TarjetaCotizacion
+                        archivoInicial={archivosCotizaciones["3"]}
+                        numero="3"
+                        titulo="Cotización 3"
+                        onArchivoChange={(file) =>
+                          actualizarArchivoGlobal("3", file)
+                        }
+                      />
+                    </>
+                  )}
                 </div>
                 <div className="w-full flex bg-slate-200 h-px" />
                 {/* Contenedor padre de la tabla */}

@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { ui } from "../../config/theme";
 import * as tipos from "../../types/requisicion.ts";
-import {  useNavigate } from "react-router-dom";
-
+import { useNavigate, useParams } from "react-router-dom";
 
 interface Props {
   requisiciones: tipos.Requisicion[];
@@ -11,6 +10,15 @@ interface Props {
 const ListaRequisiciones = ({ requisiciones }: Props) => {
   //mapeo de las rutas
   const navigate = useNavigate();
+
+  // Validar el rol del usuario
+  const { rol } = useParams<{ rol: string }>();
+  const user = rol === "rec-materiales";
+
+  const requisicionesAMostrar = user
+    ? requisiciones
+    : requisiciones.filter((r) => r.estado !== "PENDIENTE");
+  // TODO se cargarán diferentes requis si es compras-inventario, ya que este solo recibe las autorizadas, por lo que se filtrarán estas
 
   // Direccionamiento hacia la ventana para ver la requisicion seleccionada
   const goDetalleRequisicion = (id: string) => navigate(`requisicion/${id}`); // Constantes de estado
@@ -49,7 +57,7 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
           <tbody className="overflow-auto">
             {/* Se mapean todos los elementos recibidos */}
             {/* Entre llaves es para insertar código js */}
-            {requisiciones.map((item: tipos.Requisicion) => {
+            {requisicionesAMostrar.map((item: tipos.Requisicion) => {
               // Checar si la fila es la seleccionada
               const isSelected = selectedId === item.id;
               const textColor = isSelected ? "text-white" : "text-slate-700";
@@ -99,7 +107,7 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
       <div className="flex gap-10 justify-center items-center">
         <button
           // Aseguro que yo sé que siempre se enviará un string al hacer click
-          onClick={()=>goDetalleRequisicion(selectedId!)}
+          onClick={() => goDetalleRequisicion(selectedId!)}
           disabled={!selectedId}
           className={ui.buttons.primary + " w-50 disabled:pointer-events-none"}
         >
