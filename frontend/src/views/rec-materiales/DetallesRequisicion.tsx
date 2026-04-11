@@ -11,12 +11,15 @@ interface TarjetaCotizacionProps {
   titulo: string;
   setCotizaciones: (cantidad: number) => void;
   numCotizaciones: number;
+  onArchivoChange: (archivo: File | null) => void;
 }
+
 const TarjetaCotizacion = ({
   numero,
   titulo,
   setCotizaciones,
   numCotizaciones,
+  onArchivoChange,
 }: TarjetaCotizacionProps) => {
   const [archivo, setArchivo] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +50,7 @@ const TarjetaCotizacion = ({
       return;
     }
     setArchivo(file); //se guarda el objeto file
+    onArchivoChange(file);
     if (inputRef.current) {
       inputRef.current.value = ""; //limpiar la referencia al archivo
     }
@@ -70,14 +74,13 @@ const TarjetaCotizacion = ({
           <div className=" w-full  h-full flex flex-col justify-center  gap-2">
             <p className={ui.text.body + " font-bold text-[12px]"}>{titulo}</p>
 
-            {/* TODO agregarle la condicional para mostrar este badge cuando se cargue un archivo, cuando el archivo se cambie, reemplazarlo por el nombre de este y agregarle boton para quitar */}
             <div
-              className={`flex w-fit  text-center ${!archivo && 'bg-amber-100 border-amber-950 border px-2 '}justify-center rounded-full`}
+              className={`flex w-fit  text-center ${!archivo && "bg-amber-100 border-amber-950 border px-2 "}justify-center rounded-full`}
             >
-              <p className={`max-w-26 truncate max-h-4 text-center self-center text-[9px] ${!archivo && 'text-amber-900 '}`}>
-                {
-                  archivo ? archivo.name:'Pendiente'
-                }
+              <p
+                className={`max-w-26 truncate max-h-4 text-center self-center text-[9px] ${!archivo && "text-amber-900 "}`}
+              >
+                {archivo ? archivo.name : "Pendiente"}
               </p>
             </div>
           </div>
@@ -93,11 +96,11 @@ const TarjetaCotizacion = ({
             accept=".pdf,.doc,.docx"
           />
           <button
-            // TODO agregarle el método para cargar el archivo
             onClick={() => {
               if (archivo) {
                 setCotizaciones(numCotizaciones + 1);
                 setArchivo(null);
+                onArchivoChange(null);
                 return;
               }
               inputRef.current?.click();
@@ -124,8 +127,44 @@ const DetallesRequisicion = () => {
 
   // Setear los datos cada que haya un cambio
   const [datos, setDatos] = useState<tipos.Requisicion | null>(null);
-  const [modal, setModal] = useState(true);
+  const [modal, setModal] = useState(false);
   const [cotizaciones, setCotizacion] = useState<number>(3);
+  const [archivosCotizaciones, setArchivosCotizaciones] = useState<{
+    [key: string]: File | null;
+  }>({
+    "1": null,
+    "2": null,
+    "3": null,
+  });
+
+  // Función para actualizar un archivo específico
+  const actualizarArchivoGlobal = (numero: string, archivo: File | null) => {
+    setArchivosCotizaciones((prev) => ({
+      ...prev,
+      [numero]: archivo,
+    }));
+  };
+
+  // Esto es para guardar los archivos que se tienen
+  const guardarTodo = async () => {
+    const formData = new FormData();
+
+    // Agregamos los archivos que no sean nulos al formData
+    Object.entries(archivosCotizaciones).forEach(([key, file]) => {
+      if (file) {
+        formData.append(`cotizacion_${key}`, file);
+      }
+    });
+
+    // TODO  enviar los datos al servidor, esto es u ejemplo solamente
+    try {
+      console.log("Enviando archivos...");
+      alert("Archivos listos para enviarse al servidor");
+    } catch (e: any) {
+      console.log("error al subir", e);
+    }
+  };
+
   // Una vez que se tiene el id, consultar en la base de datos ese id
   useEffect(
     () => {
@@ -357,10 +396,7 @@ const DetallesRequisicion = () => {
         createPortal(
           <div className="fixed select-none inset-0 z-30 flex items-center justify-center">
             {/* Fondo oscuro */}
-            <div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={() => setModal(false)}
-            />
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
             {/* Cuerpo del modal */}
             <div className="flex flex-col relative bg-white w-full max-w-[85%] h-[90vh] p-4 rounded-2xl shadow-2xl z-40">
@@ -378,11 +414,20 @@ const DetallesRequisicion = () => {
                   </p>
                 </div>
                 <div className="flex gap-4">
-                  <button className={ui.buttons.primary}>
+                  <button
+                    className={ui.buttons.primary}
+                    //
+                    onClick={guardarTodo}
+                  >
                     Guardar cotizaciones
                   </button>
                   {/* TODO el botón de cancelar lo que hace es cerrar el modal, nada más */}
-                  <button  className={ui.buttons.secondary}>Cancelar</button>
+                  <button
+                    className={ui.buttons.secondary}
+                    onClick={() => setModal(false)}
+                  >
+                    Cerrar
+                  </button>
                 </div>
               </div>
 
@@ -397,18 +442,25 @@ const DetallesRequisicion = () => {
                     titulo="Cotización 1"
                     setCotizaciones={setCotizacion}
                     numCotizaciones={cotizaciones}
+                    onArchivoChange={(file) =>
+                      actualizarArchivoGlobal("1", file)
+                    }
                   />
                   <TarjetaCotizacion
                     numero="2"
                     titulo="Cotización 2"
                     setCotizaciones={setCotizacion}
-                    numCotizaciones={cotizaciones}
+                    numCotizaciones={cotizaciones}onArchivoChange={(file) =>
+                      actualizarArchivoGlobal("2", file)
+                    }
                   />
                   <TarjetaCotizacion
                     numero="3"
                     titulo="Cotización 3"
                     setCotizaciones={setCotizacion}
-                    numCotizaciones={cotizaciones}
+                    numCotizaciones={cotizaciones}onArchivoChange={(file) =>
+                      actualizarArchivoGlobal("3", file)
+                    }
                   />
                 </div>
                 <div className="w-full flex bg-slate-200 h-px" />
