@@ -171,11 +171,13 @@ function App() {
         <Route path="/financiero/gestionar-correcciones"       element={<GestionarCorreciones />} />
         <Route path="/financiero/deposito-bancario"            element={<DepositoBancario />} />
 
-        {/* Rutas para Recursos Materiales y Compras/Inventario */}
-        <Route path='/rec-materiales' element={<RecMaterialesDashboard/>}>
+        {/* Rutas para rec Materiales y compras e inventario*/}
+        <Route path='/:rol' element = {<RecMaterialesDashboard/>}>
+
+          {/* Estas son las rutas hijas  */}
           <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
-          <Route path='proveedores' element={<Proveedores/>}/>
-          <Route path='historial' element={<Historial/>}/>
+          <Route path='proveedores' element = {<Proveedores/>}/>
+          <Route path='historial' element = {<Historial/>}/>
           <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
           <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
         </Route>
