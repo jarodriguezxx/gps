@@ -4,6 +4,10 @@ import { ui } from "../../config/theme";
 import * as requisicionTypes from "../../types/requisicion.ts";
 import * as ordenTypes from "../../types/ordenCompra.ts";
 import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
+import {
+  cargarOrdenCompraPersistida,
+  guardarOrdenCompraPersistida,
+} from "./ordenCompraStorage";
 
 const moneda = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -14,7 +18,8 @@ const OrdenCompra = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const rol = useOutletContext() as string;
-  const [requisicion, setRequisicion] = useState<requisicionTypes.Requisicion | null>(null);
+  const [requisicion, setRequisicion] =
+    useState<requisicionTypes.Requisicion | null>(null);
   const [orden, setOrden] = useState<ordenTypes.OrdenCompra | null>(null);
 
   useEffect(() => {
@@ -35,11 +40,19 @@ const OrdenCompra = () => {
     }
 
     setRequisicion(requisicionEncontrada);
-    setOrden(ordenTypes.crearBorradorOrdenCompra(requisicionEncontrada));
+
+    const borradorGuardado = cargarOrdenCompraPersistida(
+      requisicionEncontrada.id,
+    );
+    setOrden(
+      borradorGuardado ??
+        ordenTypes.crearBorradorOrdenCompra(requisicionEncontrada),
+    );
   }, [id]);
 
   const proveedoresActivos = useMemo(
-    () => DATA_PROVEEDORES.filter((proveedor) => proveedor.estatus === "ACTIVO"),
+    () =>
+      DATA_PROVEEDORES.filter((proveedor) => proveedor.estatus === "ACTIVO"),
     [],
   );
 
@@ -50,14 +63,32 @@ const OrdenCompra = () => {
   const iva = ordenTypes.calcularIvaOrdenCompra(subtotal);
   const total = ordenTypes.calcularTotalOrdenCompra(subtotal);
 
+  useEffect(() => {
+    if (!orden) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      guardarOrdenCompraPersistida(orden);
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [orden]);
+
   const firmasCompletas =
     orden?.firmas.encargadoCompras.estado === "FIRMADA" &&
     orden?.firmas.administradora.estado === "FIRMADA" &&
     orden?.firmas.directoraGeneral.estado === "FIRMADA";
+  const esComprasInventario = rol === "compras-inventario";
 
   const actualizarArticulo = (
     articuloId: string,
-    campo: "articulo" | "descripcion" | "unidad" | "cantidad" | "precioUnitario",
+    campo:
+      | "articulo"
+      | "descripcion"
+      | "unidad"
+      | "cantidad"
+      | "precioUnitario",
     valor: string | number,
   ) => {
     setOrden((prev) => {
@@ -80,6 +111,10 @@ const OrdenCompra = () => {
   };
 
   const firmarDocumento = (clave: keyof ordenTypes.OrdenCompra["firmas"]) => {
+    if (!esComprasInventario || clave !== "encargadoCompras") {
+      return;
+    }
+
     setOrden((prev) => {
       if (!prev) {
         return prev;
@@ -88,8 +123,10 @@ const OrdenCompra = () => {
       const firmas = { ...prev.firmas };
       const firmaAnteriorFirmada =
         clave === "encargadoCompras" ||
-        (clave === "administradora" && firmas.encargadoCompras.estado === "FIRMADA") ||
-        (clave === "directoraGeneral" && firmas.administradora.estado === "FIRMADA");
+        (clave === "administradora" &&
+          firmas.encargadoCompras.estado === "FIRMADA") ||
+        (clave === "directoraGeneral" &&
+          firmas.administradora.estado === "FIRMADA");
 
       if (!firmaAnteriorFirmada || firmas[clave].estado === "FIRMADA") {
         return prev;
@@ -118,7 +155,7 @@ const OrdenCompra = () => {
       return;
     }
 
-    localStorage.setItem(`orden-compra-${orden.requisicionId}`, JSON.stringify(orden));
+    guardarOrdenCompraPersistida(orden);
     alert("Borrador guardado");
   };
 
@@ -136,7 +173,8 @@ const OrdenCompra = () => {
         <div className="max-w-lg rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
           <h1 className={ui.text.h1}>Orden de compra</h1>
           <p className={ui.text.body + " mt-2"}>
-            No se encontró la requisición solicitada o la ruta no contiene un id válido.
+            No se encontró la requisición solicitada o la ruta no contiene un id
+            válido.
           </p>
           <button
             onClick={() => navigate(-1)}
@@ -161,7 +199,9 @@ const OrdenCompra = () => {
       <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-4 md:px-6">
         <div>
           <p className={ui.text.labelGuinda}>Orden de compra</p>
-          <h1 className={ui.text.h1}>Instituto Marakame - Sistema de Gestión Unificada</h1>
+          <h1 className={ui.text.h1}>
+            Instituto Marakame - Sistema de Gestión Unificada
+          </h1>
           <p className={ui.text.helper}>
             {rol?.replace("-", " ")} · {pasoPosteriorTexto}
           </p>
@@ -188,12 +228,16 @@ const OrdenCompra = () => {
         <div className="space-y-6 pb-8">
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="bg-[#8B1238] px-4 py-3 text-white">
-              <h2 className="text-base font-semibold">Datos de la Orden de Compra</h2>
+              <h2 className="text-base font-semibold">
+                Datos de la Orden de Compra
+              </h2>
             </div>
 
             <div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Fecha de Orden</label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Fecha de Orden
+                </label>
                 <div className="rounded-xl bg-slate-100 px-3 py-2 font-semibold text-slate-900">
                   {orden.fechaOrden.toLocaleDateString("es-MX", {
                     day: "2-digit",
@@ -204,28 +248,38 @@ const OrdenCompra = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Número de Orden</label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Número de Orden
+                </label>
                 <div className="rounded-xl bg-slate-100 px-3 py-2 font-semibold text-slate-900">
                   {orden.numeroOrden}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">No. Consecutivo</label>
+                <label className="text-sm font-semibold text-slate-700">
+                  No. Consecutivo
+                </label>
                 <div className="rounded-xl bg-slate-100 px-3 py-2 font-semibold text-slate-900">
                   {orden.consecutivo}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Estatus</label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Estatus
+                </label>
                 <div className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">
-                  {orden.estatus === "BORRADOR" ? "Pendiente de Autorización" : orden.estatus}
+                  {orden.estatus === "BORRADOR"
+                    ? "Pendiente de Autorización"
+                    : orden.estatus}
                 </div>
               </div>
 
               <div className="space-y-2 md:col-span-2 xl:col-span-3">
-                <label className="text-sm font-semibold text-slate-700">Proveedor / Razón Social</label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Proveedor / Razón Social
+                </label>
                 <select
                   value={orden.proveedor?.id ?? ""}
                   onChange={(event) => {
@@ -242,9 +296,12 @@ const OrdenCompra = () => {
                                   id: proveedorSeleccionado.id,
                                   nombre: proveedorSeleccionado.nombre,
                                   rfc: proveedorSeleccionado.rfc,
-                                  telefono: proveedorSeleccionado.contacto.telefono,
+                                  telefono:
+                                    proveedorSeleccionado.contacto.telefono,
                                   correo: proveedorSeleccionado.contacto.correo,
-                                  contactoNombre: proveedorSeleccionado.contacto.nombreEncargado,
+                                  contactoNombre:
+                                    proveedorSeleccionado.contacto
+                                      .nombreEncargado,
                                 }
                               : null,
                           }
@@ -314,16 +371,23 @@ const OrdenCompra = () => {
                 </thead>
                 <tbody>
                   {orden.articulos.map((articulo, index) => {
-                    const subtotalLinea = articulo.cantidad * articulo.precioUnitario;
+                    const subtotalLinea =
+                      articulo.cantidad * articulo.precioUnitario;
 
                     return (
                       <tr key={articulo.id} className={ui.table.row}>
-                        <td className={ui.table.cell + " text-center"}>{index + 1}</td>
+                        <td className={ui.table.cell + " text-center"}>
+                          {index + 1}
+                        </td>
                         <td className={ui.table.cell}>
                           <input
                             value={articulo.articulo}
                             onChange={(event) =>
-                              actualizarArticulo(articulo.id, "articulo", event.target.value)
+                              actualizarArticulo(
+                                articulo.id,
+                                "articulo",
+                                event.target.value,
+                              )
                             }
                             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
                             placeholder="Artículo"
@@ -333,7 +397,11 @@ const OrdenCompra = () => {
                           <input
                             value={articulo.descripcion}
                             onChange={(event) =>
-                              actualizarArticulo(articulo.id, "descripcion", event.target.value)
+                              actualizarArticulo(
+                                articulo.id,
+                                "descripcion",
+                                event.target.value,
+                              )
                             }
                             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
                             placeholder="Descripción"
@@ -346,7 +414,8 @@ const OrdenCompra = () => {
                               actualizarArticulo(
                                 articulo.id,
                                 "unidad",
-                                event.target.value as requisicionTypes.UnidadesArticulos,
+                                event.target
+                                  .value as requisicionTypes.UnidadesArticulos,
                               )
                             }
                             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
@@ -387,7 +456,11 @@ const OrdenCompra = () => {
                             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
                           />
                         </td>
-                        <td className={ui.table.cell + " text-right font-semibold"}>
+                        <td
+                          className={
+                            ui.table.cell + " text-right font-semibold"
+                          }
+                        >
                           {moneda.format(subtotalLinea)}
                         </td>
                       </tr>
@@ -399,19 +472,29 @@ const OrdenCompra = () => {
 
             <div className="grid gap-4 border-t border-slate-200 bg-slate-50 px-4 py-5 md:grid-cols-[1fr_280px]">
               <div className="rounded-2xl bg-white p-4 shadow-sm">
-                <p className="text-sm font-semibold text-slate-700">Resumen de Montos</p>
+                <p className="text-sm font-semibold text-slate-700">
+                  Resumen de Montos
+                </p>
                 <div className="mt-4 space-y-3 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">Subtotal:</span>
-                    <span className="font-semibold text-slate-900">{moneda.format(subtotal)}</span>
+                    <span className="font-semibold text-slate-900">
+                      {moneda.format(subtotal)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">IVA (16%):</span>
-                    <span className="font-semibold text-slate-900">{moneda.format(iva)}</span>
+                    <span className="font-semibold text-slate-900">
+                      {moneda.format(iva)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between border-t border-slate-200 pt-3">
-                    <span className="text-base font-black text-slate-900">Total:</span>
-                    <span className="text-base font-black text-[#7E1D3B]">{moneda.format(total)} MXN</span>
+                    <span className="text-base font-black text-slate-900">
+                      Total:
+                    </span>
+                    <span className="text-base font-black text-[#7E1D3B]">
+                      {moneda.format(total)} MXN
+                    </span>
                   </div>
                 </div>
               </div>
@@ -422,7 +505,8 @@ const OrdenCompra = () => {
                 </p>
                 <p className="mt-2 text-lg font-black">{pasoPosteriorTexto}</p>
                 <p className="mt-3 text-sm text-white/80">
-                  Esta orden comparte el mismo flujo base para requisiciones ordinarias y extraordinarias.
+                  Esta orden comparte el mismo flujo base para requisiciones
+                  ordinarias y extraordinarias.
                 </p>
               </div>
             </div>
@@ -430,7 +514,9 @@ const OrdenCompra = () => {
 
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-              <h2 className="text-base font-semibold text-slate-800">Justificación de la Compra</h2>
+              <h2 className="text-base font-semibold text-slate-800">
+                Justificación de la Compra
+              </h2>
             </div>
             <div className="p-4">
               <textarea
@@ -456,38 +542,55 @@ const OrdenCompra = () => {
 
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="bg-[#8B1238] px-4 py-3 text-white">
-              <h2 className="text-base font-semibold">Firmas de Autorización</h2>
+              <h2 className="text-base font-semibold">
+                Firmas de Autorización
+              </h2>
             </div>
 
             <div className="grid gap-4 p-4 lg:grid-cols-3">
-              {([
-                orden.firmas.encargadoCompras,
-                orden.firmas.administradora,
-                orden.firmas.directoraGeneral,
-              ] as const).map((firma, index) => {
+              {(
+                [
+                  orden.firmas.encargadoCompras,
+                  orden.firmas.administradora,
+                  orden.firmas.directoraGeneral,
+                ] as const
+              ).map((firma, index) => {
                 const firmaAnteriorFirmada =
                   index === 0 ||
-                  (index === 1 && orden.firmas.encargadoCompras.estado === "FIRMADA") ||
-                  (index === 2 && orden.firmas.administradora.estado === "FIRMADA");
+                  (index === 1 &&
+                    orden.firmas.encargadoCompras.estado === "FIRMADA") ||
+                  (index === 2 &&
+                    orden.firmas.administradora.estado === "FIRMADA");
 
-                const puedeFirmar = firma.estado !== "FIRMADA" && firmaAnteriorFirmada;
                 const firmaKey: keyof ordenTypes.OrdenCompra["firmas"] =
                   index === 0
                     ? "encargadoCompras"
                     : index === 1
                       ? "administradora"
                       : "directoraGeneral";
+                const esBloqueCompras = firmaKey === "encargadoCompras";
+                const puedeFirmar =
+                  esBloqueCompras &&
+                  esComprasInventario &&
+                  firma.estado !== "FIRMADA" &&
+                  firmaAnteriorFirmada;
 
                 return (
                   <article
                     key={firma.cargo}
                     className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                   >
-                    <p className="text-base font-black text-slate-900">{firma.cargo}</p>
-                    <p className="mt-1 text-sm text-slate-500">{firma.nombre}</p>
+                    <p className="text-base font-black text-slate-900">
+                      {firma.cargo}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {firma.nombre}
+                    </p>
 
                     <div className="my-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">
-                      {firma.estado === "FIRMADA" ? "Firmado" : "Pendiente de firma"}
+                      {firma.estado === "FIRMADA"
+                        ? "Firmado"
+                        : "Pendiente de firma"}
                     </div>
 
                     <div className="border-t border-slate-200 pt-4">
@@ -496,11 +599,23 @@ const OrdenCompra = () => {
                         disabled={!puedeFirmar}
                         className={`${ui.buttons.neutral} w-full justify-center ${firma.estado === "FIRMADA" ? "opacity-60" : ""}`}
                       >
-                        {firma.estado === "FIRMADA" ? "Firmado" : "Firmar Documento"}
+                        {firma.estado === "FIRMADA"
+                          ? "Firmado"
+                          : "Firmar Documento"}
                       </button>
                       {!firmaAnteriorFirmada && index > 0 && (
                         <p className="mt-2 text-center text-xs text-orange-600">
                           Requiere firma anterior
+                        </p>
+                      )}
+                      {!esBloqueCompras && (
+                        <p className="mt-2 text-center text-xs text-slate-500">
+                          Firma restringida temporalmente
+                        </p>
+                      )}
+                      {esBloqueCompras && !esComprasInventario && (
+                        <p className="mt-2 text-center text-xs text-slate-500">
+                          Solo compras e inventarios puede firmar este bloque
                         </p>
                       )}
                       {firma.estado === "FIRMADA" && firma.fechaFirma && (
@@ -516,9 +631,10 @@ const OrdenCompra = () => {
 
             <div className="border-t border-slate-200 bg-slate-50 p-4">
               <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-                <strong>Nota:</strong> Las firmas deben realizarse en orden jerárquico:
-                Encargado de Compras → Administradora → Directora General.
-                Una vez firmada la orden, se procederá con el proceso de adquisición.
+                <strong>Nota:</strong> Las firmas deben realizarse en orden
+                jerárquico: Encargado de Compras → Administradora → Directora
+                General. Una vez firmada la orden, se procederá con el proceso
+                de adquisición.
               </div>
             </div>
           </section>

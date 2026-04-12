@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ui, colors } from "../../config/theme";
 import * as tipos from "../../types/requisicion.ts";
-import { Outlet, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import {
+  Outlet,
+  useNavigate,
+  useOutletContext,
+  useParams,
+} from "react-router-dom";
 import { createPortal } from "react-dom";
 import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
 

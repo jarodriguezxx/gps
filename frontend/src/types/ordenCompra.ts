@@ -55,7 +55,10 @@ export type OrdenCompra = {
 };
 
 export const crearNumeroOrdenCompra = (requisicionId: string, fecha: Date) => {
-  const consecutivo = requisicionId.replace(/\D/g, "").slice(-4).padStart(4, "0");
+  const consecutivo = requisicionId
+    .replace(/\D/g, "")
+    .slice(-4)
+    .padStart(4, "0");
   return {
     consecutivo,
     numeroOrden: `OC-${fecha.getFullYear()}-${consecutivo}`,
@@ -130,7 +133,8 @@ export const crearBorradorOrdenCompra = (
 
 export const calcularSubtotalOrdenCompra = (articulos: OrdenCompraArticulo[]) =>
   articulos.reduce(
-    (subtotal, articulo) => subtotal + articulo.cantidad * articulo.precioUnitario,
+    (subtotal, articulo) =>
+      subtotal + articulo.cantidad * articulo.precioUnitario,
     0,
   );
 
