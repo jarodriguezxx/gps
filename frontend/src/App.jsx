@@ -65,9 +65,9 @@ const quickViews = [
   { label: 'Fin - Comprobantes', path: '/financiero/comprobantes-fiscales' },
   { label: 'Fin - Requisiciones', path: '/financiero/requisiciones-almacen' },
   { label: 'Fin - Depósito', path: '/financiero/deposito-bancario' },
-  { label: 'Rec. Materiales', path: '/rec-materiales' },
-  { label: 'Rec. Proveedores', path: '/rec-materiales/proveedores' },
-  { label: 'Rec. Historial', path: '/rec-materiales/historial' },
+  { label: 'Rec. Materiales', path: '/materiales/rec-materiales' },
+  { label: 'Rec. Proveedores', path: '/materiales/rec-materiales/proveedores' },
+  { label: 'Rec. Historial', path: '/materiales/rec-materiales/historial' },
 ];
 
 const QuickNavigator = () => {
@@ -172,7 +172,7 @@ function App() {
         <Route path="/financiero/deposito-bancario"            element={<DepositoBancario />} />
 
         {/* Rutas para rec Materiales y compras e inventario*/}
-        <Route path='/:rol' element = {<RecMaterialesDashboard/>}>
+        <Route path='/materiales/:rol' element = {<RecMaterialesDashboard/>}>
 
           {/* Estas son las rutas hijas  */}
           <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>

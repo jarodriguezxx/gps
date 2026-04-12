@@ -21,20 +21,17 @@ const RecMaterialesDashboard = () => {
     return <Navigate to="/login" replace />;
   }
   // . Funciones de navegación dinámicas
-  const goTo = (path: string) => navigate(`/${rol}${path}`);
-
+  const goTo = (path: string) => navigate(`/materiales/${rol}${path}`);
   //mapeo de las rutas
   const navigate = useNavigate();
-  const goProveedores = () => navigate(`/${rol}/proveedores`);
-  const goHistorial = () => navigate(`/${rol}/historial`);
-  const goDetalleRequisicion = () => navigate(`/${rol}/det-requisicion`);
 
   const isRequisicionesActive =
-    location.pathname === `/${rol}` ||
-    location.pathname.includes(`/${rol}/requisicion`);
-  const isProveedoresActive = location.pathname === `/${rol}/proveedores`;
-  const isHistorialActive = location.pathname === `/${rol}/historial`;
-
+    location.pathname === `/materiales/${rol}` ||
+    location.pathname.includes(`/materiales/${rol}/requisicion`);
+  const isProveedoresActive =
+    location.pathname === `/materiales/${rol}/proveedores`;
+  const isHistorialActive =
+    location.pathname === `/materiales/${rol}/historial`;
   return (
     // 1. min-h-screen asegura que el fondo gris cubra todo
     <div className="h-screen bg-slate-100 text-slate-900 flex flex-col select-none overflow-hidden">
@@ -75,7 +72,7 @@ const RecMaterialesDashboard = () => {
           <div className="grid flex-1 gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6 bg-white min-h-0 h-full">
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner h-fit md:h-full">
               <button
-                onClick={() => navigate(`/${rol}`)}
+                onClick={() => navigate(`/materiales/${rol}`)}
                 className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
                   isRequisicionesActive
                     ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
@@ -108,7 +105,7 @@ const RecMaterialesDashboard = () => {
 
             {/* Este es el contenedor que se estirará */}
             <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
-              <Outlet context={rol}/>
+              <Outlet context={rol} />
             </main>
           </div>
         </div>
