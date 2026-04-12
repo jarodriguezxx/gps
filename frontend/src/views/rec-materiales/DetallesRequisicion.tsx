@@ -253,12 +253,16 @@ const DetallesRequisicion = () => {
   };
 
   const totalNecesarios =
-    rol === "compras-inventario" &&
-    datos?.estado === "AUTORIZADA" &&
-    datos?.tipo === "ORDINARIA" &&
-    datos?.tamanio === "MAYOR"
-      ? 3
-      : 1;
+    rol === "rec-materiales" &&
+    datos?.estado === "PENDIENTE" &&
+    datos?.tipo === "ORDINARIA"
+      ? 0
+      : rol === "compras-inventario" &&
+          datos?.estado === "AUTORIZADA" &&
+          datos?.tipo === "ORDINARIA" &&
+          datos?.tamanio === "MAYOR"
+        ? 3
+        : 1;
   const requiereFacturas =
     rol === "compras-inventario" &&
     datos?.estado === "AUTORIZADA" &&

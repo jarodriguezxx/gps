@@ -31,6 +31,22 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
       return [...ordinarias, ...extraordinarias];
     }
   }, [requisiciones, rol]);
+
+  const obtenerEstiloBadge = (estado: tipos.Estado) => {
+    switch (estado) {
+      case "PENDIENTE":
+        return "bg-yellow-100 text-yellow-800 border border-yellow-300";
+      case "AUTORIZADA":
+        return "bg-blue-100 text-blue-800 border border-blue-300";
+      case "FINALIZADA":
+        return "bg-green-100 text-green-800 border border-green-300";
+      case "PRE-AUTORIZADA":
+        return "bg-purple-100 text-purple-800 border border-purple-300";
+      default:
+        return "bg-slate-100 text-slate-800 border border-slate-300";
+    }
+  };
+
   // TODO se cargarán diferentes requis si es compras-inventario, ya que este solo recibe las autorizadas, por lo que se filtrarán estas
 
   // Direccionamiento hacia la ventana para ver la requisicion seleccionada
@@ -101,7 +117,11 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
                     {item.solicitante}
                   </td>
                   <td className={ui.table.cell + " text-center " + textColor}>
-                    {item.estado}
+                    <span
+                      className={`inline-block rounded-full px-2 py-1 text-xs font-bold ${obtenerEstiloBadge(item.estado)}`}
+                    >
+                      {item.estado}
+                    </span>
                   </td>
                   <td className={ui.table.cell + " text-center " + textColor}>
                     {item.tamanio}
