@@ -1,34 +1,34 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ui, colors } from "../../config/theme";
 import * as tipos from "../../types/requisicion.ts";
-import { useParams } from "react-router-dom";
+import {
+  Outlet,
+  useNavigate,
+  useOutletContext,
+  useParams,
+} from "react-router-dom";
 import { createPortal } from "react-dom";
 import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
+
+// Simulación de rol de REcMateriales
+
 // Componentes
 
 interface TarjetaCotizacionProps {
   numero: string;
   titulo: string;
-  setCotizaciones: (cantidad: number) => void;
-  numCotizaciones: number;
+  onArchivoChange: (archivo: File | null) => void;
+  archivoInicial: File | null;
 }
+
 const TarjetaCotizacion = ({
   numero,
   titulo,
-  setCotizaciones,
-  numCotizaciones,
+  onArchivoChange,
+  archivoInicial,
 }: TarjetaCotizacionProps) => {
-  const [archivo, setArchivo] = useState<File | null>(null);
+  const [archivo, setArchivo] = useState<File | null>(archivoInicial);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (archivo === null) {
-      console.log("El estado ahora es nulo oficialmente");
-    } else {
-      console.log("Se ha cargado un archivo nuevo:", archivo.name);
-      setCotizaciones(numCotizaciones - 1);
-    }
-  }, [archivo]); // Este efecto corre cada vez que 'archivo' cambia
 
   // Método para majear el archivo
   const manejarCambioArchivo = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,6 +47,7 @@ const TarjetaCotizacion = ({
       return;
     }
     setArchivo(file); //se guarda el objeto file
+    onArchivoChange(file);
     if (inputRef.current) {
       inputRef.current.value = ""; //limpiar la referencia al archivo
     }
@@ -70,14 +71,13 @@ const TarjetaCotizacion = ({
           <div className=" w-full  h-full flex flex-col justify-center  gap-2">
             <p className={ui.text.body + " font-bold text-[12px]"}>{titulo}</p>
 
-            {/* TODO agregarle la condicional para mostrar este badge cuando se cargue un archivo, cuando el archivo se cambie, reemplazarlo por el nombre de este y agregarle boton para quitar */}
             <div
-              className={`flex w-fit  text-center ${!archivo && 'bg-amber-100 border-amber-950 border px-2 '}justify-center rounded-full`}
+              className={`flex w-fit  text-center ${!archivo && "bg-amber-100 border-amber-950 border px-2 "}justify-center rounded-full`}
             >
-              <p className={`max-w-26 truncate max-h-4 text-center self-center text-[9px] ${!archivo && 'text-amber-900 '}`}>
-                {
-                  archivo ? archivo.name:'Pendiente'
-                }
+              <p
+                className={`max-w-26 truncate max-h-4 text-center self-center text-[9px] ${!archivo && "text-amber-900 "}`}
+              >
+                {archivo ? archivo.name : "Pendiente"}
               </p>
             </div>
           </div>
@@ -93,11 +93,10 @@ const TarjetaCotizacion = ({
             accept=".pdf,.doc,.docx"
           />
           <button
-            // TODO agregarle el método para cargar el archivo
             onClick={() => {
               if (archivo) {
-                setCotizaciones(numCotizaciones + 1);
                 setArchivo(null);
+                onArchivoChange(null);
                 return;
               }
               inputRef.current?.click();
@@ -121,11 +120,80 @@ const TarjetaCotizacion = ({
 const DetallesRequisicion = () => {
   // Recuperar el id que está incrustado en la URL
   const { id } = useParams<{ id: string }>();
-
+  const navigate = useNavigate();
+  const rol = useOutletContext();
   // Setear los datos cada que haya un cambio
   const [datos, setDatos] = useState<tipos.Requisicion | null>(null);
-  const [modal, setModal] = useState(true);
-  const [cotizaciones, setCotizacion] = useState<number>(3);
+  const [modal, setModal] = useState(false);
+  const [archivosCotizaciones, setArchivosCotizaciones] = useState<{
+    [key: string]: File | null;
+  }>({
+    "1": null,
+    "2": null,
+    "3": null,
+  });
+  const [archivosCotizacionesGuardadas, setArchivosCotizacionesGuardadas] =
+    useState<{
+      [key: string]: File | null;
+    }>({
+      "1": null,
+      "2": null,
+      "3": null,
+    });
+  const [archivosFacturas, setArchivosFacturas] = useState<{
+    [key: string]: File | null;
+  }>({
+    "1": null,
+  });
+  const [archivosFacturasGuardadas, setArchivosFacturasGuardadas] = useState<{
+    [key: string]: File | null;
+  }>({
+    "1": null,
+  });
+
+  const [activarSubirCotizacion, setSubirCotizacion] = useState(false);
+
+  // Función para actualizar un archivo específico
+  const actualizarArchivoGlobal = (numero: string, archivo: File | null) => {
+    setArchivosCotizaciones((prev) => ({
+      ...prev,
+      [numero]: archivo,
+    }));
+  };
+
+  const actualizarFacturaGlobal = (numero: string, archivo: File | null) => {
+    setArchivosFacturas((prev) => ({
+      ...prev,
+      [numero]: archivo,
+    }));
+  };
+
+  // Esto es para guardar los archivos que se tienen
+  const guardarTodo = async () => {
+    const formData = new FormData();
+
+    // Agregamos los archivos que no sean nulos al formData
+    Object.entries(archivosCotizaciones).forEach(([key, file]) => {
+      if (file) {
+        formData.append(`cotizacion_${key}`, file);
+      }
+    });
+    Object.entries(archivosFacturas).forEach(([key, file]) => {
+      if (file) {
+        formData.append(`factura_${key}`, file);
+      }
+    });
+    setArchivosCotizacionesGuardadas({ ...archivosCotizaciones });
+    setArchivosFacturasGuardadas({ ...archivosFacturas });
+    // TODO  enviar los datos al servidor, esto es u ejemplo solamente
+    try {
+      console.log("Enviando archivos...");
+      alert("Documentos listos para enviarse al servidor");
+    } catch (e: any) {
+      console.log("error al subir", e);
+    }
+  };
+
   // Una vez que se tiene el id, consultar en la base de datos ese id
   useEffect(
     () => {
@@ -137,22 +205,102 @@ const DetallesRequisicion = () => {
         // Valida que realmente el id regrese algo
         if (datos) {
           setDatos(datos);
+          if (rol === "rec-materiales") {
+            setSubirCotizacion(
+              datos.estado === "PENDIENTE" && datos.tipo === "EXTRAORDINARIA",
+            );
+            return;
+          }
 
-          // Valido si realmente se puede activar el boton para cargar cotizaciones
-          //  datos.tipo === "EXTRAORDINARIA" ? setModal(true) : setModal(false);
+          if (rol === "compras-inventario") {
+            setSubirCotizacion(
+              datos.estado === "PRE-AUTORIZADA" ||
+                (datos.estado === "AUTORIZADA" &&
+                  datos.tipo === "ORDINARIA" &&
+                  datos.tamanio === "MAYOR"),
+            );
+            return;
+          }
         } else {
           // TODO hacer la página de error 404
           console.log("Página no encontrada");
         }
       }
     },
-    [id],
+    [id, rol],
     //Si el id cambia, se vuelve a consultar
   );
 
   const articulos = datos?.articulos;
   let i = 0;
 
+  // Contamos cuántos espacios guardados en el objeto NO son null
+  const totalGuardados = Object.values(archivosCotizacionesGuardadas).filter(
+    (f) => f !== null,
+  ).length;
+  const totalFacturasGuardadas = Object.values(
+    archivosFacturasGuardadas,
+  ).filter((f) => f !== null).length;
+  let nombresPdfs = "";
+
+  const getNombresPdfs = () => {
+    nombresPdfs = "";
+    Object.values(archivosCotizacionesGuardadas)
+      .slice(0, totalNecesarios)
+      .map((a) => {
+        nombresPdfs = nombresPdfs + ` \n ${a?.name}`;
+      });
+  };
+
+  const totalNecesarios =
+    rol === "rec-materiales" &&
+    datos?.estado === "PENDIENTE" &&
+    datos?.tipo === "ORDINARIA"
+      ? 0
+      : rol === "compras-inventario" &&
+          datos?.estado === "AUTORIZADA" &&
+          datos?.tipo === "ORDINARIA" &&
+          datos?.tamanio === "MAYOR"
+        ? 3
+        : 1;
+  const requiereFacturas =
+    rol === "compras-inventario" &&
+    datos?.estado === "AUTORIZADA" &&
+    datos?.tipo === "ORDINARIA" &&
+    datos?.tamanio === "MAYOR";
+  const esExtraordinariaAutorizada =
+    rol === "compras-inventario" &&
+    datos?.estado === "AUTORIZADA" &&
+    datos?.tipo === "EXTRAORDINARIA";
+  const esExtraordinariaMenor =
+    esExtraordinariaAutorizada && datos?.tamanio === "MENOR";
+  const esExtraordinariaMayor =
+    esExtraordinariaAutorizada && datos?.tamanio === "MAYOR";
+  const mostrarOrdenDeCompra =
+    rol === "compras-inventario" &&
+    datos?.estado === "AUTORIZADA" &&
+    (datos?.tipo === "EXTRAORDINARIA" ||
+      (datos?.tipo === "ORDINARIA" && datos?.tamanio === "MENOR"));
+  const mostrarIntegrarExpediente =
+    esExtraordinariaMenor || esExtraordinariaMayor;
+  const mostrarEnviarFinanzas = esExtraordinariaMayor;
+  const cotizacionesPendientes = Math.max(0, totalNecesarios - totalGuardados);
+  const facturasPendientes = Math.max(0, 1 - totalFacturasGuardadas);
+  const irAOrdenCompra = () => {
+    if (!id) {
+      return;
+    }
+
+    navigate(`../orden-compra/${id}`);
+  };
+  const regresarPantallaAnterior = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    navigate(`/${String(rol)}`);
+  };
   // En este punto ya se tienen los datos por lo que se procede a llenar cada uno dinámicamente con los datos
   return (
     // Div principal, debe tener altura definida y un ancho
@@ -168,8 +316,57 @@ const DetallesRequisicion = () => {
           {/* div de la segunda parte, donde se pondrán los botones */}
           <div className=" flex gap-4 h-full">
             {/* " botones " */}
-            <button className={`${ui.buttons.primary} py-2!`}>Enviar</button>
-            <button className={`${ui.buttons.primary} py-2!`}>
+            <button
+              className={`${ui.buttons.secondary} py-2!`}
+              onClick={regresarPantallaAnterior}
+            >
+              Regresar
+            </button>
+            {/* Este boton solo debe de estar activo si tiene los archivos requeridos cargados */}
+            <button
+              className={`${ui.buttons.primary} py-2!`}
+              onClick={() => {
+                if (mostrarEnviarFinanzas) {
+                  irAOrdenCompra();
+                  return;
+                }
+
+                if (mostrarIntegrarExpediente) {
+                  irAOrdenCompra();
+                  return;
+                }
+
+                if (mostrarOrdenDeCompra) {
+                  irAOrdenCompra();
+                  return;
+                }
+                getNombresPdfs();
+                //TODO crear componente para confirmar el envío de esos pdfs.
+                alert(`Se enviarán los archivos ${nombresPdfs}`);
+              }}
+              // Evalúa si TODOS los archivos son distintos de nulo
+              // TODO evaluar si hay alguna otra forma de activar mejor este boton sin el segundo caso
+              disabled={
+                !mostrarOrdenDeCompra &&
+                !mostrarIntegrarExpediente &&
+                !mostrarEnviarFinanzas &&
+                (totalGuardados < totalNecesarios ||
+                  (requiereFacturas && totalFacturasGuardadas < 1))
+              }
+            >
+              {mostrarEnviarFinanzas
+                ? "Orden de compra / Recursos financieros"
+                : mostrarIntegrarExpediente
+                  ? "Orden de compra / Integrar expediente"
+                  : mostrarOrdenDeCompra
+                    ? "Orden de compra"
+                    : "Enviar"}
+            </button>
+            <button
+              className={`${ui.buttons.primary} py-2!`}
+              hidden={!activarSubirCotizacion}
+              onClick={() => setModal(true)}
+            >
               Cargar cotizaciones
             </button>
           </div>
@@ -357,10 +554,7 @@ const DetallesRequisicion = () => {
         createPortal(
           <div className="fixed select-none inset-0 z-30 flex items-center justify-center">
             {/* Fondo oscuro */}
-            <div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={() => setModal(false)}
-            />
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
             {/* Cuerpo del modal */}
             <div className="flex flex-col relative bg-white w-full max-w-[85%] h-[90vh] p-4 rounded-2xl shadow-2xl z-40">
@@ -373,44 +567,99 @@ const DetallesRequisicion = () => {
                     Gestión de cotizaciones
                   </h2>
                   <p className={ui.text.body + " text-start w-full"}>
-                    Cargue las 3 cotizaciones requeridas y consulte los
-                    proveedores autorizados
+                    Cargue las {totalNecesarios} cotizaciones requeridas y
+                    consulte los proveedores autorizados
                   </p>
+                  {requiereFacturas && (
+                    <p className={ui.text.body + " text-start w-full"}>
+                      Integre al menos 1 factura para habilitar el envío
+                    </p>
+                  )}
+                  {mostrarIntegrarExpediente && (
+                    <p className={ui.text.body + " text-start w-full"}>
+                      Primero genere la orden de compra y después integre las
+                      facturas al expediente
+                    </p>
+                  )}
+                  {mostrarEnviarFinanzas && (
+                    <p className={ui.text.body + " text-start w-full"}>
+                      Después, envíe el reporte a recursos financieros
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-4">
-                  <button className={ui.buttons.primary}>
-                    Guardar cotizaciones
+                  <button
+                    className={ui.buttons.primary}
+                    //
+                    onClick={guardarTodo}
+                  >
+                    Guardar documentos
                   </button>
                   {/* TODO el botón de cancelar lo que hace es cerrar el modal, nada más */}
-                  <button  className={ui.buttons.secondary}>Cancelar</button>
+                  <button
+                    className={ui.buttons.secondary}
+                    onClick={() => {
+                      setModal(false);
+                    }}
+                  >
+                    Cerrar
+                  </button>
                 </div>
               </div>
 
               <div className="flex flex-1 min-h-0 flex-col items-start justify-start pt-1 gap-2">
                 <p className={ui.text.body + " font-bold"}>
-                  Cotizaciones requeridas ({cotizaciones})
+                  Cotizaciones requeridas ({cotizacionesPendientes})
                 </p>
                 {/* Contenedor de las tarjetas */}
                 <div className=" w-full flex gap-6 flex-row justify-between items-center">
                   <TarjetaCotizacion
+                    archivoInicial={archivosCotizaciones["1"]}
                     numero="1"
                     titulo="Cotización 1"
-                    setCotizaciones={setCotizacion}
-                    numCotizaciones={cotizaciones}
+                    onArchivoChange={(file) =>
+                      actualizarArchivoGlobal("1", file)
+                    }
                   />
-                  <TarjetaCotizacion
-                    numero="2"
-                    titulo="Cotización 2"
-                    setCotizaciones={setCotizacion}
-                    numCotizaciones={cotizaciones}
-                  />
-                  <TarjetaCotizacion
-                    numero="3"
-                    titulo="Cotización 3"
-                    setCotizaciones={setCotizacion}
-                    numCotizaciones={cotizaciones}
-                  />
+                  {rol === "compras-inventario" && (
+                    <>
+                      <TarjetaCotizacion
+                        archivoInicial={archivosCotizaciones["2"]}
+                        numero="2"
+                        titulo="Cotización 2"
+                        onArchivoChange={(file) =>
+                          actualizarArchivoGlobal("2", file)
+                        }
+                      />
+                      <TarjetaCotizacion
+                        archivoInicial={archivosCotizaciones["3"]}
+                        numero="3"
+                        titulo="Cotización 3"
+                        onArchivoChange={(file) =>
+                          actualizarArchivoGlobal("3", file)
+                        }
+                      />
+                    </>
+                  )}
                 </div>
+                {requiereFacturas && (
+                  <>
+                    <div className="w-full flex bg-slate-200 h-px" />
+                    <p className={ui.text.body + " font-bold"}>
+                      Facturas requeridas ({facturasPendientes})
+                    </p>
+                    <div className=" w-full flex gap-6 flex-row justify-between items-center">
+                      <TarjetaCotizacion
+                        archivoInicial={archivosFacturas["1"]}
+                        numero="F1"
+                        titulo="Factura 1"
+                        onArchivoChange={(file) =>
+                          actualizarFacturaGlobal("1", file)
+                        }
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="w-full flex bg-slate-200 h-px" />
                 {/* Contenedor padre de la tabla */}
                 <div className={`w-full flex-col  p-2 flex-1 min-h-0 flex `}>

@@ -32,6 +32,7 @@ import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
 import Proveedores from './views/rec-materiales/Proveedores';
 import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
 import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion';
+import OrdenCompra from './views/rec-materiales/OrdenCompra';
 import Historial from './views/rec-materiales/Historial';
 import { REQUISICIONES_COMPLETO } from '../src/types/requisicion.ts'
 
@@ -152,6 +153,15 @@ function App() {
         <Route path="/rh/catalogo-roles"                       element={<CatalogoRoles />} />
         <Route path="/rh/asignacion-roles"                     element={<AsignacionRoles />} />
 
+        {/* Rutas para rec Materiales y compras e inventario*/}
+        <Route path='/:rol' element = {<RecMaterialesDashboard/>}>
+
+          {/* Estas son las rutas hijas  */}
+          <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
+          <Route path='proveedores' element = {<Proveedores/>}/>
+          <Route path='historial' element = {<Historial/>}/>
+          <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
+          <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
         <Route path="/medico/evaluacion-medica"                element={<EvaluacionEnfermeria />} />
         <Route path="/medico/protocolo-desintoxicacion"        element={<ProtocoloDesintoxicacion />} />
         <Route path="/medico/pacientes-activos"                element={<PacientesActivos />} />
@@ -170,11 +180,7 @@ function App() {
         <Route path="/financiero/gestionar-correcciones"       element={<GestionarCorreciones />} />
         <Route path="/financiero/deposito-bancario"            element={<DepositoBancario />} />
 
-        <Route path="/rec-materiales" element={<RecMaterialesDashboard />}>
-          <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO} />} />
-          <Route path="proveedores" element={<Proveedores />} />
-          <Route path="historial" element={<Historial />} />
-          <Route path="requisicion/:id" element={<DetallesRequisicion />} />
+       
         </Route>
 
         <Route path="*"                                        element={<Navigate to="/admisiones" replace />} />

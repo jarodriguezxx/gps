@@ -1,5 +1,9 @@
 // Zona de variables de prueba
-export type Estado = "PENDIENTE" | "AUTORIZADA" | "FINALIZADA";
+export type Estado =
+  | "PENDIENTE"
+  | "AUTORIZADA"
+  | "FINALIZADA"
+  | "PRE-AUTORIZADA";
 export type TamanioCompra = "MAYOR" | "MENOR";
 export type TipoCompra = "ORDINARIA" | "EXTRAORDINARIA";
 // TODO: Investigar bien todas las unidades que se manejan
@@ -126,7 +130,7 @@ export const REQUISICIONES_COMPLETO: Requisicion[] = [
     fecha: new Date("2026-04-02T09:00:00"),
     area: "MANTENIMIENTO",
     solicitante: "Ing. Alberto Rojas",
-    estado: "PENDIENTE",
+    estado: "AUTORIZADA",
     tamanio: "MAYOR",
     tipo: "EXTRAORDINARIA",
     articulos: [
@@ -402,6 +406,56 @@ export const REQUISICIONES_COMPLETO: Requisicion[] = [
     area: "ALMACÉN",
     solicitante: "C. Juan Pérez",
     estado: "PENDIENTE",
+    tamanio: "MAYOR",
+    tipo: "ORDINARIA",
+    articulos: [
+      {
+        id: "ART-014",
+        articuloRequisitado: "Cinta de embalaje",
+        unidad: "PIEZA",
+        articulosSolicitados: 20,
+        articulosEntregados: 0,
+        articulosPendientes: 20,
+      },
+    ],
+    justificacion: "Empaquetado de insumos para envío a clínicas periféricas.",
+    responsableArea: "Lic. Roberto Meza",
+    selloRecibido: false,
+    firmaDeResponsableArea: false,
+    firmaAdminsitradora: false,
+    firmaDirectoraGral: false,
+  },
+  {
+    id: "REQ-2026-015",
+    fecha: new Date("2026-04-07T16:40:00"),
+    area: "DIRECCIÓN",
+    solicitante: "Dra. Elena Poniatowska",
+    estado: "AUTORIZADA",
+    tamanio: "MENOR",
+    tipo: "ORDINARIA",
+    articulos: [
+      {
+        id: "ART-015",
+        articuloRequisitado: "Café en grano 1kg",
+        unidad: "PIEZA",
+        articulosSolicitados: 5,
+        articulosEntregados: 0,
+        articulosPendientes: 5,
+      },
+    ],
+    justificacion: "Insumos para sala de juntas de Dirección General.",
+    responsableArea: "Dra. Elena Poniatowska",
+    selloRecibido: false,
+    firmaDeResponsableArea: false,
+    firmaAdminsitradora: false,
+    firmaDirectoraGral: false,
+  },
+  {
+    id: "REQ-2026-055",
+    fecha: new Date("2026-04-07T13:00:00"),
+    area: "ALMACÉN",
+    solicitante: "C. Juan Pérez",
+    estado: "PRE-AUTORIZADA",
     tamanio: "MAYOR",
     tipo: "ORDINARIA",
     articulos: [

@@ -1,25 +1,39 @@
 import React from "react";
-import { useLocation, useNavigate, Outlet } from "react-router-dom";
+import {
+  useLocation,
+  useNavigate,
+  Outlet,
+  useParams,
+  Navigate,
+} from "react-router-dom";
 import marakameLogo from "../../assets/marakame.jpeg";
 import { ui } from "../../config/theme";
+import { ROLES_PERMITIDOS } from "../../types/roles";
 
 const RecMaterialesDashboard = () => {
   //devuelve la ruta sobre la que está esta pantalla
   const location = useLocation();
+  // Validar el rol del usuario
+  const { rol } = useParams<{ rol: string }>();
+  const esRolValido = ROLES_PERMITIDOS.includes(rol || "");
+  if (!esRolValido) {
+    // TODO poner la ruta del login
+    return <Navigate to="/login" replace />;
+  }
+  // . Funciones de navegación dinámicas
+  const goTo = (path: string) => navigate(`/${rol}${path}`);
 
   //mapeo de las rutas
   const navigate = useNavigate();
-  const goInicio = () => navigate("/rec-materiales");
-  const goProveedores = () => navigate("/rec-materiales/proveedores");
-  const goHistorial = () => navigate("/rec-materiales/historial");
-  const goDetalleRequisicion = () =>
-    navigate("/rec-materiales/det-requisicion");
+  const goProveedores = () => navigate(`/${rol}/proveedores`);
+  const goHistorial = () => navigate(`/${rol}/historial`);
+  const goDetalleRequisicion = () => navigate(`/${rol}/det-requisicion`);
 
   const isRequisicionesActive =
-    location.pathname === "/rec-materiales" || "/rec-materiales/requisicion:id";
-  const isProveedoresActive =
-    location.pathname === "/rec-materiales/proveedores";
-  const isHistorialActive = location.pathname === "/rec-materiales/historial";
+    location.pathname === `/${rol}` ||
+    location.pathname.includes(`/${rol}/requisicion`);
+  const isProveedoresActive = location.pathname === `/${rol}/proveedores`;
+  const isHistorialActive = location.pathname === `/${rol}/historial`;
 
   return (
     // 1. min-h-screen asegura que el fondo gris cubra todo
@@ -48,7 +62,10 @@ const RecMaterialesDashboard = () => {
               <div className="h-10 w-10 rounded-full border-2 border-slate-300 bg-slate-100" />
               <div className="text-right md:text-left">
                 <p className="text-xs text-slate-500">Sesión activa</p>
-                <p className="font-semibold text-sm">Rec. Materiales</p>
+                <p className="font-semibold text-sm">
+                  {rol?.replace("-", " ")}{" "}
+                  {/* Convierte 'rec-materiales' en 'rec materiales' */}
+                </p>
               </div>
             </div>
           </header>
@@ -58,7 +75,7 @@ const RecMaterialesDashboard = () => {
           <div className="grid flex-1 gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6 bg-white min-h-0 h-full">
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner h-fit md:h-full">
               <button
-                onClick={() => navigate("/rec-materiales")}
+                onClick={() => navigate(`/${rol}`)}
                 className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
                   isRequisicionesActive
                     ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
@@ -68,7 +85,7 @@ const RecMaterialesDashboard = () => {
                 Requisiciones
               </button>
               <button
-                onClick={() => navigate("/rec-materiales/proveedores")}
+                onClick={() => goTo("/proveedores")} // Ruta relativa dinámica
                 className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
                   isProveedoresActive
                     ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
@@ -78,7 +95,7 @@ const RecMaterialesDashboard = () => {
                 Proveedores
               </button>
               <button
-                onClick={() => navigate("/rec-materiales/historial")}
+                onClick={() => goTo("/historial")}
                 className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
                   isHistorialActive
                     ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
@@ -91,7 +108,7 @@ const RecMaterialesDashboard = () => {
 
             {/* Este es el contenedor que se estirará */}
             <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
-              <Outlet />
+              <Outlet context={rol}/>
             </main>
           </div>
         </div>
