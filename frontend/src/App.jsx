@@ -162,6 +162,8 @@ function App() {
           <Route path='historial' element = {<Historial/>}/>
           <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
           <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
+        </Route>
+        
         <Route path="/medico/evaluacion-medica"                element={<EvaluacionEnfermeria />} />
         <Route path="/medico/protocolo-desintoxicacion"        element={<ProtocoloDesintoxicacion />} />
         <Route path="/medico/pacientes-activos"                element={<PacientesActivos />} />
@@ -181,7 +183,7 @@ function App() {
         <Route path="/financiero/deposito-bancario"            element={<DepositoBancario />} />
 
        
-        </Route>
+       
 
         <Route path="*"                                        element={<Navigate to="/admisiones" replace />} />
       </Routes>
