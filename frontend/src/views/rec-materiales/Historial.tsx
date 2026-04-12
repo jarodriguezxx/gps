@@ -80,7 +80,7 @@ const Historial = () => {
 
   // Navegar a detalles
   const irADetalles = (id: string) => {
-    navigate(`/${rol}/det-requisicion?id=${id}`);
+    navigate(`/${rol}/requisicion/${id}`);
   };
 
   return (
