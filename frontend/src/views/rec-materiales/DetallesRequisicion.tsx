@@ -293,6 +293,14 @@ const DetallesRequisicion = () => {
 
     navigate(`../orden-compra/${id}`);
   };
+  const regresarPantallaAnterior = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    navigate(`/${String(rol)}`);
+  };
   // En este punto ya se tienen los datos por lo que se procede a llenar cada uno dinámicamente con los datos
   return (
     // Div principal, debe tener altura definida y un ancho
@@ -308,6 +316,12 @@ const DetallesRequisicion = () => {
           {/* div de la segunda parte, donde se pondrán los botones */}
           <div className=" flex gap-4 h-full">
             {/* " botones " */}
+            <button
+              className={`${ui.buttons.secondary} py-2!`}
+              onClick={regresarPantallaAnterior}
+            >
+              Regresar
+            </button>
             {/* Este boton solo debe de estar activo si tiene los archivos requeridos cargados */}
             <button
               className={`${ui.buttons.primary} py-2!`}

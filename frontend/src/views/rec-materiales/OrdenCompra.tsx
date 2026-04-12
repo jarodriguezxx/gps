@@ -80,6 +80,14 @@ const OrdenCompra = () => {
     orden?.firmas.administradora.estado === "FIRMADA" &&
     orden?.firmas.directoraGeneral.estado === "FIRMADA";
   const esComprasInventario = rol === "compras-inventario";
+  const regresarPantallaAnterior = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    navigate(`/${rol}`);
+  };
 
   const actualizarArticulo = (
     articuloId: string,
@@ -106,6 +114,19 @@ const OrdenCompra = () => {
               }
             : articulo,
         ),
+      };
+    });
+  };
+
+  const eliminarArticulo = (articuloId: string) => {
+    setOrden((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        articulos: prev.articulos.filter((articulo) => articulo.id !== articuloId),
       };
     });
   };
@@ -208,6 +229,12 @@ const OrdenCompra = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={regresarPantallaAnterior}
+            className={ui.buttons.secondary}
+          >
+            Regresar
+          </button>
           <button onClick={() => window.print()} className={ui.buttons.neutral}>
             Imprimir
           </button>
@@ -367,6 +394,7 @@ const OrdenCompra = () => {
                     <th className={ui.table.header}>Cantidad</th>
                     <th className={ui.table.header}>Precio Unit.</th>
                     <th className={ui.table.header}>Subtotal</th>
+                    <th className={ui.table.header}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -462,6 +490,14 @@ const OrdenCompra = () => {
                           }
                         >
                           {moneda.format(subtotalLinea)}
+                        </td>
+                        <td className={ui.table.cell + " text-center"}>
+                          <button
+                            onClick={() => eliminarArticulo(articulo.id)}
+                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                          >
+                            Eliminar
+                          </button>
                         </td>
                       </tr>
                     );
