@@ -10,7 +10,7 @@
 // EJEMPLOS DE USO DEL ARCHIVO theme.js
 // ============================================================
 
-import { colors, typography, spacing, borders, shadows } from '@/config/theme';
+import { colors, typography, spacing, borders } from '@/config/theme';
 
 // ============================================================
 // 1. USANDO COLORES EN UN COMPONENTE

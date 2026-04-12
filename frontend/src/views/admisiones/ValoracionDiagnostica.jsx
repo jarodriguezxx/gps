@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
-import { Save, X, User, Phone, Activity, HeartPulse, Clipboard } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Save, X, User, Phone, Activity, HeartPulse, Clipboard, Search, ArrowRight } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const ValoracionDiagnostica = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isInicioActive = location.pathname === '/admisiones';
+  const isExpedienteActive = location.pathname === '/admisiones/expediente';
+  const isEstudioActive = location.pathname === '/admisiones/estudio-socioeconomico';
+  const isValoracionActive = location.pathname === '/admisiones/valoracion-diagnostica';
   const [tab, setTab] = useState('solicitante');
   const [formData, setFormData] = useState({
     fechaAtencion: '',
@@ -18,19 +25,25 @@ const ValoracionDiagnostica = () => {
     dedicacionSolicitante: '',
     parentesco: '',
     nombrePaciente: '',
+    origenPaciente: '',
     edadPaciente: '',
     estadoCivilPaciente: '',
     hijosCount: '',
     escolaridadPaciente: '',
     domicilioPaciente: '',
+    pacienteTelefonoCelular: '',
     dedicacionPaciente: '',
     sustanciaConsumo: '',
+    sustanciaEspecifica: '',
     internamiento: '',
     criterioInternamiento: '',
+    Conclusion: '',
+    tratamientoAnterior: '',
     posibilidadesEconomicas: '',
     llamarPaciente: '',
     fechaLlamada: '',
     estadoSeguimiento: '',
+    acuerdo: '',
     nombreMedicoValoro: '',
     conclusionMedica: '',
   });
@@ -44,32 +57,57 @@ const ValoracionDiagnostica = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(126,29,59,0.10),_transparent_25%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] text-slate-900">
-      {/* Header */}
-      <header className="bg-white/95 border-b border-slate-200 px-4 py-4 md:px-6 flex justify-between items-center shadow-sm sticky top-0 z-40 backdrop-blur">
-        <div className="flex items-center gap-4">
-          <img
-            src={marakameLogo}
-            alt="Logo Nayarit Marakame"
-            className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
-          />
-          <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
-            <h1 className="text-lg md:text-xl font-black text-[#7E1D3B]">Registro de Valoración Diagnóstica</h1>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo de admisión clínica</p>
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
+        <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
+          <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+            <div className="flex items-center gap-3">
+              <img src={marakameLogo} alt="Logo Nayarit Marakame" className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
+                <h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema Integral Marakame</h1>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo de Admisiones</p>
+                <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Área responsable: Admisiones</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 self-end md:self-auto">
+              <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center" aria-hidden="true" />
+              <div className="text-right md:text-left">
+                <p className="text-xs text-slate-500">Sesión activa</p>
+                <p className="font-semibold text-slate-700">Admisiones</p>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-3 justify-end">
-          <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all font-semibold shadow-sm">
-            <X size={18} /> Cancelar
-          </button>
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-[#7E1D3B] text-white rounded-xl font-semibold hover:bg-[#63162e] shadow-sm transition-all">
-            <Save size={18} /> Guardar Paciente
-          </button>
-        </div>
-      </header>
 
-      <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
+          <div className="flex flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+            <div className="relative min-w-[240px] flex-1 md:max-w-[420px]">
+              <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input type="text" placeholder="Buscar solicitante, expediente o folio..." className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
+            </div>
+            <button type="button" onClick={() => navigate('/admisiones')} className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-3 text-sm font-bold text-white shadow-md shadow-rose-900/15 transition hover:bg-[#63162e]">
+              Volver a admisiones <ArrowRight size={18} />
+            </button>
+          </div>
+        </header>
+
+        <main className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+            <aside className="rounded-3xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+              <button type="button" onClick={() => navigate('/admisiones')} className={`mb-3 w-full rounded-xl px-3 py-3 text-sm font-semibold shadow-md transition ${isInicioActive ? 'bg-[#7E1D3B] text-white hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+                Inicio
+              </button>
+              <button type="button" onClick={() => navigate('/admisiones/expediente')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isExpedienteActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+                Expediente
+              </button>
+              <button type="button" onClick={() => navigate('/admisiones/estudio-socioeconomico')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isEstudioActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+                Estudio socioeconómico
+              </button>
+              <button type="button" onClick={() => navigate('/admisiones/valoracion-diagnostica')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isValoracionActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+                Valoración diagnóstica
+              </button>
+            </aside>
+
+            <div className="space-y-5">
         {/* Datos Generales */}
         <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
@@ -305,8 +343,8 @@ const ValoracionDiagnostica = () => {
                 </div>
                 <InputGroup
                   label="Origen"
-                  name="OrigenPaciente"
-                  value={formData.OrigenPaciente}
+                  name="origenPaciente"
+                  value={formData.origenPaciente}
                   onChange={handleInputChange}
                   placeholder="Mexico"
                 />
@@ -319,8 +357,8 @@ const ValoracionDiagnostica = () => {
                 />
                 <InputGroup
                   label="Telefono de contacto"
-                  name="telefonoPaciente"
-                  value={formData.telefonoPaciente}
+                  name="pacienteTelefonoCelular"
+                  value={formData.pacienteTelefonoCelular}
                   onChange={handleInputChange}
                   placeholder="(123) 456-7890"
                 />
@@ -334,8 +372,8 @@ const ValoracionDiagnostica = () => {
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Sustancia de consumo</label>
                   <select
-                    name="SustanciaConsumo"
-                    value={formData.SustanciaConsumo}
+                    name="sustanciaConsumo"
+                    value={formData.sustanciaConsumo}
                     onChange={handleInputChange}
                     className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                   >                    <option value="">Seleccionar...</option>
@@ -355,7 +393,7 @@ const ValoracionDiagnostica = () => {
                     
                   
                   </select>
-                  {(formData.SustanciaConsumo === 'otros' ) && (
+                  {(formData.sustanciaConsumo === 'otros' ) && (
                   <div className="space-y-3">
                       <InputGroup
                   label="especifique la sustancia"
@@ -596,7 +634,10 @@ const ValoracionDiagnostica = () => {
             <Save size={18} /> Guardar Paciente
           </button>
         </div>
-      </main>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
@@ -608,7 +649,7 @@ const InputGroup = ({ label, name, value, onChange, placeholder, type = 'text' }
     <input
       type={type}
       name={name}
-      value={value}
+      value={value ?? ''}
       onChange={onChange}
       className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
       placeholder={placeholder}
