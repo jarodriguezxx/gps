@@ -9,6 +9,7 @@ import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
 import Proveedores from './views/rec-materiales/Proveedores';
 import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
 import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion';
+import OrdenCompra from './views/rec-materiales/OrdenCompra';
 import Historial from './views/rec-materiales/Historial';
 import { REQUISICIONES_COMPLETO } from '../src/types/requisicion.ts'
 
@@ -72,6 +73,7 @@ function App() {
           <Route path='proveedores' element = {<Proveedores/>}/>
           <Route path='historial' element = {<Historial/>}/>
           <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
+          <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
         </Route>
       </Routes>
       <QuickNavigator />

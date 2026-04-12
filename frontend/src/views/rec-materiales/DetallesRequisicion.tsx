@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ui, colors } from "../../config/theme";
 import * as tipos from "../../types/requisicion.ts";
-import { Outlet, useOutletContext, useParams } from "react-router-dom";
+import { Outlet, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
 
@@ -115,6 +115,7 @@ const TarjetaCotizacion = ({
 const DetallesRequisicion = () => {
   // Recuperar el id que está incrustado en la URL
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const rol = useOutletContext();
   // Setear los datos cada que haya un cambio
   const [datos, setDatos] = useState<tipos.Requisicion | null>(null);
@@ -271,10 +272,18 @@ const DetallesRequisicion = () => {
     datos?.estado === "AUTORIZADA" &&
     (datos?.tipo === "EXTRAORDINARIA" ||
       (datos?.tipo === "ORDINARIA" && datos?.tamanio === "MENOR"));
-  const mostrarIntegrarExpediente = esExtraordinariaMenor || esExtraordinariaMayor;
+  const mostrarIntegrarExpediente =
+    esExtraordinariaMenor || esExtraordinariaMayor;
   const mostrarEnviarFinanzas = esExtraordinariaMayor;
   const cotizacionesPendientes = Math.max(0, totalNecesarios - totalGuardados);
   const facturasPendientes = Math.max(0, 1 - totalFacturasGuardadas);
+  const irAOrdenCompra = () => {
+    if (!id) {
+      return;
+    }
+
+    navigate(`../orden-compra/${id}`);
+  };
   // En este punto ya se tienen los datos por lo que se procede a llenar cada uno dinámicamente con los datos
   return (
     // Div principal, debe tener altura definida y un ancho
@@ -295,21 +304,17 @@ const DetallesRequisicion = () => {
               className={`${ui.buttons.primary} py-2!`}
               onClick={() => {
                 if (mostrarEnviarFinanzas) {
-                  alert(
-                    "Se generará la orden de compra, luego se integrarán las facturas al expediente y después se enviará el reporte a recursos financieros",
-                  );
+                  irAOrdenCompra();
                   return;
                 }
 
                 if (mostrarIntegrarExpediente) {
-                  alert(
-                    "Se generará la orden de compra y después se integrarán las facturas al expediente",
-                  );
+                  irAOrdenCompra();
                   return;
                 }
 
                 if (mostrarOrdenDeCompra) {
-                  alert("Se generará la orden de compra");
+                  irAOrdenCompra();
                   return;
                 }
                 getNombresPdfs();
