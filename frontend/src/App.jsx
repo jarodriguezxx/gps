@@ -27,6 +27,9 @@ import HistoriaMedica from './views/Medico/HistoriaMedica';
 import NutriologiaInicio from './views/Nutriologia/Nutriologia-inicio';
 import ExpedienteAdmisiones from './views/admisiones/ExpedienteAdmisiones';
 import ExpedienteMedico from './views/Medico/ExpedienteMedico';
+import ConsultaDiaria from './views/Medico/ConsultaDiaria';
+import ControlTensionArterial from './views/Medico/ControlTensionArterial';
+import ControlGlicemia from './views/Medico/ControlGlicemia';
 // Importaciones para Recursos Materiales
 import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
 import Proveedores from './views/rec-materiales/Proveedores';
@@ -51,6 +54,7 @@ const quickViews = [
   { label: 'Eval. Enfermería', path: '/medico/evaluacion-medica' },
   { label: 'Protocolo', path: '/medico/protocolo-desintoxicacion' },
   { label: 'Pacientes Activos', path: '/medico/pacientes-activos' },
+  { label: 'Consulta Diaria', path: '/medico/consulta-diaria' },
   { label: 'Historial Paciente', path: '/medico/historial-paciente' },
   { label: 'Nutriología', path: '/nutriologia' },
   { label: 'Evaluación Nutri', path: '/nutriologia/evaluacion-nutricional' },
@@ -157,6 +161,9 @@ function App() {
         <Route path="/medico/protocolo-desintoxicacion"        element={<ProtocoloDesintoxicacion />} />
         <Route path="/medico/pacientes-activos"                element={<PacientesActivos />} />
         <Route path="/medico/historial-paciente"               element={<HistorialMedicoPaciente />} />
+        <Route path="/medico/consulta-diaria"                  element={<ConsultaDiaria />} />
+        <Route path="/medico/pacientes/:id/tension" element={<ControlTensionArterial />} />
+        <Route path="/medico/pacientes/:id/glicemia" element={<ControlGlicemia />} /> 
 
         <Route path="/nutriologia"                             element={<NutriologiaInicio />} />
         <Route path="/nutriologia/evaluacion-nutricional"      element={<EvaluacionNutricional />} />
