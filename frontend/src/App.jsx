@@ -65,15 +65,9 @@ const quickViews = [
   { label: 'Fin - Comprobantes', path: '/financiero/comprobantes-fiscales' },
   { label: 'Fin - Requisiciones', path: '/financiero/requisiciones-almacen' },
   { label: 'Fin - Depósito', path: '/financiero/deposito-bancario' },
-<<<<<<< Updated upstream
-  { label: 'Rec. Materiales', path: '/materiales/rec-materiales' },
-  { label: 'Rec. Proveedores', path: '/materiales/rec-materiales/proveedores' },
-  { label: 'Rec. Historial', path: '/materiales/rec-materiales/historial' },
-=======
   { label: 'Rec. Materiales', path: '/rec-materiales/rec-materiales' },
   { label: 'Rec. Proveedores', path: '/rec-materiales/rec-materiales/proveedores' },
   { label: 'Rec. Historial', path: '/rec-materiales/rec-materiales/historial' },
->>>>>>> Stashed changes
 ];
 
 const QuickNavigator = () => {
@@ -177,15 +171,8 @@ function App() {
         <Route path="/financiero/gestionar-correcciones"       element={<GestionarCorreciones />} />
         <Route path="/financiero/deposito-bancario"            element={<DepositoBancario />} />
 
-<<<<<<< Updated upstream
-        {/* Rutas para rec Materiales y compras e inventario*/}
-        <Route path='/materiales/:rol' element = {<RecMaterialesDashboard/>}>
-
-          {/* Estas son las rutas hijas  */}
-=======
         {/* Rutas para Recursos Materiales y Compras/Inventario */}
         <Route path='/rec-materiales/:rol' element={<RecMaterialesDashboard/>}>
->>>>>>> Stashed changes
           <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
           <Route path='proveedores' element = {<Proveedores/>}/>
           <Route path='historial' element = {<Historial/>}/>
