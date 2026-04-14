@@ -19,6 +19,7 @@ import FacturaElectronica from './views/financiero/FacturaElectronica';
 import ComprobantesFiscales from './views/financiero/ComprobantesFiscales';
 import RequisicionesAlmacen from './views/financiero/RequisicionesAlmacen';
 import DepositoBancario from './views/financiero/DepositoBancario';
+import AlmacenDashboard from './views/almacen/AlmacenDashboard';
 
 import MedicoInicio from './views/Medico/Medico-inicio';
 import EvaluacionNutricional from './views/Medico/Nutriologia/EvaluacionNutricional';
@@ -72,6 +73,7 @@ const quickViews = [
   { label: 'Rec. Materiales', path: '/rec-materiales/rec-materiales' },
   { label: 'Rec. Proveedores', path: '/rec-materiales/rec-materiales/proveedores' },
   { label: 'Rec. Historial', path: '/rec-materiales/rec-materiales/historial' },
+  { label: 'Almacén', path: '/almacen' },
 ];
 
 const QuickNavigator = () => {
@@ -178,7 +180,7 @@ function App() {
         <Route path="/financiero/gestionar-correcciones"       element={<GestionarCorreciones />} />
         <Route path="/financiero/deposito-bancario"            element={<DepositoBancario />} />
 
-        {/* Rutas para Recursos Materiales y Compras/Inventario */}
+{/* Rutas para Recursos Materiales y Compras/Inventario */}
         <Route path='/rec-materiales/:rol' element={<RecMaterialesDashboard/>}>
           <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
           <Route path='proveedores' element = {<Proveedores/>}/>
@@ -187,11 +189,16 @@ function App() {
           <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
         </Route>
 
-        <Route path="*"                                        element={<Navigate to="/admisiones" replace />} />
+        {/* Rutas para Almacen */}
+        <Route path="/almacen" element={<AlmacenDashboard />} />
+
+        {/* Ruta comodín para redirigir si no existe la URL */}
+        <Route path="*" element={<Navigate to="/admisiones" replace />} />
       </Routes>
       <QuickNavigator />
     </BrowserRouter>
   );
 }
+
 
 export default App;
