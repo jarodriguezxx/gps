@@ -1,7 +1,9 @@
 import React from 'react';
+
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, Bell, Search } from 'lucide-react';
-import marakameLogo from '../../assets/marakame.jpeg';
+import { ArrowRight, Bell, Plus } from 'lucide-react';
+import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
+import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
 
 const citasHoy = [
 	{
@@ -109,53 +111,39 @@ const AdmisionesInicio = ({ onOpenEstudio }) => {
 	const isExpedienteActive = location.pathname === '/admisiones/expediente';
 	const isEstudioActive = location.pathname === '/admisiones/estudio-socioeconomico';
 	const isValoracionActive = location.pathname === '/admisiones/valoracion-diagnostica';
-
+const headerActions = (
+        <div className="flex items-center gap-3">
+            {/* Botón de Alertas */}
+            <button className="relative p-2 text-slate-400 transition-colors hover:text-[#7E1D3B]">
+                <Bell size={22} />
+                <span className="absolute right-1 top-1 h-2 w-2 rounded-full border-2 border-white bg-rose-500"></span>
+            </button>
+            
+            {/* Botón de Nuevo Ingreso */}
+            <button 
+                onClick={() => navigate('/admisiones/Valoracion-diagnostica')}
+                className="flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:bg-[#63162e]"
+            >
+                <Plus size={18} />
+                Nuevo Ingreso
+            </button>
+        </div>
+    );
 	return (
-		<div className="min-h-screen bg-slate-100 text-slate-900">
-			<div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
-				<header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
-					<div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
-						<div className="flex items-center gap-3">
-							<img src={marakameLogo} alt="Logo Nayarit Marakame" className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" />
-							<div>
-								<p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
-								<h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema Integral Marakame</h1>
-								<p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo de Admisiones</p>
-								<p className="mt-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Área responsable: Admisiones</p>
-							</div>
-						</div>
-						<div className="flex items-center gap-3 self-end md:self-auto">
-							<div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center" aria-hidden="true" />
-							<div className="text-right md:text-left">
-								<p className="text-xs text-slate-500">Sesión activa</p>
-								<p className="font-semibold text-slate-700">Admisiones</p>
-							</div>
-						</div>
-					</div>
-
-					<div className="flex flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
-						<div className="relative min-w-[240px] flex-1 md:max-w-[420px]">
-							<Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-							<input
-								type="text"
-								placeholder="Buscar solicitante, expediente o folio..."
-								className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-							/>
-						</div>
-						<div className="flex flex-wrap items-center gap-3">
-							<button type="button" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
-								<Bell size={18} /> Alertas
-							</button>
-							<button type="button" className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-3 text-sm font-bold text-white shadow-md shadow-rose-900/15 transition hover:bg-[#63162e]">
-								Nuevo ingreso <ArrowRight size={18} />
-							</button>
-						</div>
-					</div>
-				</header>
-
+	<div className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-[1600px] p-4 md:p-6">
+        
+        {/* REUTILIZACIÓN DEL HEADER */}
+        <header className="mb-6 rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <InstitutionalHeader 
+            sessionValue="Admisiones" // Aquí iría el nombre del usuario logueado
+            actions={headerActions} // Pasamos los botones como props
+          />
+        </header>
 				<main className="space-y-5">
 				<div className="grid gap-4 md:grid-cols-[220px_1fr]">
 					<aside className="rounded-3xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner">
+					
 						<button
 							onClick={goInicio}
 							className={`mb-3 w-full rounded-xl px-3 py-3 text-sm font-semibold shadow-md transition ${

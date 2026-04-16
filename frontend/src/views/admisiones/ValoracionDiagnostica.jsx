@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Save, X, User, Phone, Activity, HeartPulse, Clipboard, Search, ArrowRight } from 'lucide-react';
-import marakameLogo from '../../assets/marakame.jpeg';
+import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
 
 const ValoracionDiagnostica = () => {
   const navigate = useNavigate();
@@ -57,37 +57,16 @@ const ValoracionDiagnostica = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
-      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
-        <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
-          <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
-            <div className="flex items-center gap-3">
-              <img src={marakameLogo} alt="Logo Nayarit Marakame" className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" />
-              <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
-                <h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema Integral Marakame</h1>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo de Admisiones</p>
-                <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Área responsable: Admisiones</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 self-end md:self-auto">
-              <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center" aria-hidden="true" />
-              <div className="text-right md:text-left">
-                <p className="text-xs text-slate-500">Sesión activa</p>
-                <p className="font-semibold text-slate-700">Admisiones</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
-            <div className="relative min-w-[240px] flex-1 md:max-w-[420px]">
-              <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="text" placeholder="Buscar solicitante, expediente o folio..." className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
-            </div>
-            <button type="button" onClick={() => navigate('/admisiones')} className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-3 text-sm font-bold text-white shadow-md shadow-rose-900/15 transition hover:bg-[#63162e]">
-              Volver a admisiones <ArrowRight size={18} />
-            </button>
-          </div>
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="mx-auto max-w-[1600px] p-4 md:p-6">
+        <header className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <InstitutionalHeader
+            title="Sistema Integral Marakame"
+            moduleLabel="Módulo de Admisiones"
+            areaLabel="Área responsable: Admisiones"
+            sessionValue="Admisiones"
+            badge={<Phone size={16} className="text-[#7E1D3B]" />}
+          />
         </header>
 
         <main className="space-y-5">
@@ -108,8 +87,10 @@ const ValoracionDiagnostica = () => {
             </aside>
 
             <div className="space-y-5">
+              
+
         {/* Datos Generales */}
-        <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fecha de Atención *</label>
             <input
@@ -144,17 +125,6 @@ const ValoracionDiagnostica = () => {
           </div>
         </section>
 
-        {/* Selector de Secciones (TABS) */}
-        <div className="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <span>Secciones de valoración</span>
-            <span>{tab === 'solicitante' ? '1/2' : '2/2'}</span>
-          </div>
-          <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-2 rounded-full bg-[#7E1D3B] transition-all duration-500" style={{ width: tab === 'solicitante' ? '50%' : '100%' }} />
-          </div>
-        </div>
-
         <div className="flex gap-4 mb-6">
           <button
             onClick={() => setTab('solicitante')}
@@ -182,8 +152,8 @@ const ValoracionDiagnostica = () => {
         <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 min-h-[600px] animate-fadeIn">
           {tab === 'solicitante' ? (
             // SECCIÓN: SOLICITANTE
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
+              <div className="space-y-5 xl:col-span-2">
                 <h3 className="text-[#7E1D3B] font-bold text-lg border-b border-slate-100 pb-3 flex items-center gap-2">
                   <Clipboard size={18} /> Información de Contacto
                 </h3>
@@ -247,7 +217,7 @@ const ValoracionDiagnostica = () => {
                 />
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-5 xl:col-span-1">
                 <h3 className="text-[#7E1D3B] font-bold text-lg border-b border-slate-100 pb-3 flex items-center gap-2">
                   <Activity size={18} /> Relación y Ocupación
                 </h3>
@@ -286,7 +256,7 @@ const ValoracionDiagnostica = () => {
           ) : (
             // SECCIÓN: PACIENTE
             <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                 <InputGroup
                   label="Nombre completo del paciente"
                   name="nombrePaciente"
@@ -408,7 +378,7 @@ const ValoracionDiagnostica = () => {
                 
               </div>
               <h3 className="text-[#7E1D3B] font-bold text-lg border-b border-slate-100 pb-3">Valoración y Criterios de internamiento</h3>
-              <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8 shadow-sm">
+              <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-200 grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3 shadow-sm">
                 <div className="space-y-3">
                   <p className="font-bold text-sm mb-4 text-slate-700 uppercase flex items-center gap-2">
                     <HeartPulse size={16} /> ¿Está dispuesto a internarse?
@@ -601,7 +571,7 @@ const ValoracionDiagnostica = () => {
               </div>
 
               <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                   <InputGroup
                     label="Nombre del medico que lo valoro"
                     name="nombreMedicoValoro"
@@ -626,14 +596,18 @@ const ValoracionDiagnostica = () => {
         </div>
 
         {/* Botones Finales */}
-        <div className="flex flex-wrap justify-end gap-3 mt-6">
-          <button className="flex items-center gap-2 px-6 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all font-semibold shadow-sm">
+        <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <button
+            type="button"
+            onClick={() => navigate('/admisiones')}
+            className="flex items-center gap-2 px-6 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all font-semibold shadow-sm"
+          >
             <X size={18} /> Cancelar
           </button>
           <button className="flex items-center gap-2 px-6 py-2.5 bg-[#7E1D3B] text-white rounded-xl font-semibold hover:bg-[#63162e] shadow-sm transition-all">
             <Save size={18} /> Guardar Paciente
           </button>
-        </div>
+        </section>
             </div>
           </div>
         </main>

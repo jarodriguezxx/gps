@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, FileText, Search, Sparkles } from 'lucide-react';
-import marakameLogo from '../../assets/marakame.jpeg';
+import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
+import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
 
 const documentos = [
 	{ nombre: 'Estudio socioeconómico', tipo: 'PDF', estado: 'Adjunto', detalle: 'Se recomienda cargar archivo PDF individual' },
@@ -25,33 +26,25 @@ const ExpedienteAdmisiones = () => {
 	const isValoracionActive = location.pathname === '/admisiones/valoracion-diagnostica';
 
 	return (
-		<div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(126,29,59,0.10),_transparent_25%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] text-slate-900">
-			<header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-4 py-4 shadow-sm backdrop-blur md:px-6">
-				<div className="mx-auto flex max-w-7xl flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-					<div className="flex items-center gap-4">
-						<img src={marakameLogo} alt="Logo Nayarit Marakame" className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" />
-						<div>
-							<p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
-							<h1 className="text-xl font-black uppercase tracking-tight text-[#7E1D3B]">Expediente de admisiones</h1>
-							<p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Documento maestro del área</p>
-						</div>
-					</div>
+		<div className="min-h-screen bg-slate-50 text-slate-900">
+			<div className="mx-auto max-w-[1600px] p-4 md:p-6">
+				<header className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+					<InstitutionalHeader
+						title="Expediente de admisiones"
+						moduleLabel="Documento maestro del área"
+						sessionValue="Admisiones"
+						badge={<FileText size={16} className="text-[#7E1D3B]" />}
+					/>
+				</header>
 
-					<div className="flex flex-wrap items-center gap-3">
-						<div className="relative min-w-[240px] flex-1 xl:flex-none xl:w-[320px]">
-							<Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-							<input type="text" placeholder="Buscar expediente, nombre o clave..." className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
-						</div>
-						<button type="button" onClick={() => navigate('/admisiones')} className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-3 text-sm font-bold text-white shadow-md shadow-rose-900/15 transition hover:bg-[#63162e]">
-							Volver a admisiones <ArrowRight size={18} />
-						</button>
-					</div>
-				</div>
-			</header>
-
-			<main className="mx-auto w-full max-w-7xl px-4 py-5 md:px-6 md:py-6">
+				<main className="space-y-5">
 				<div className="grid gap-4 md:grid-cols-[220px_1fr]">
 					<aside className="rounded-3xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner">
+						<PrimarySidebarActionButton
+							label="Volver a admisiones"
+							onClick={() => navigate('/admisiones')}
+							icon={<ArrowRight size={18} />}
+						/>
 						<button type="button" onClick={() => navigate('/admisiones')} className={`mb-3 w-full rounded-xl px-3 py-3 text-sm font-semibold shadow-md transition ${isInicioActive ? 'bg-[#7E1D3B] text-white hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
 							Inicio
 						</button>
@@ -67,6 +60,15 @@ const ExpedienteAdmisiones = () => {
 					</aside>
 
 					<div className="space-y-5">
+						<section className="rounded-[24px] border border-slate-200 bg-slate-100/70 p-4 shadow-sm md:p-5">
+							<div className="flex justify-start">
+								<div className="relative w-full md:max-w-md">
+									<Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+									<input type="text" placeholder="Buscar expediente, nombre o clave..." className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
+								</div>
+							</div>
+						</section>
+
 						<section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
 							<div className="mb-3 flex items-center justify-between gap-3">
 								<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Navegación</p>
@@ -160,7 +162,8 @@ const ExpedienteAdmisiones = () => {
 						</section>
 					</div>
 				</div>
-			</main>
+				</main>
+			</div>
 		</div>
 	);
 };
