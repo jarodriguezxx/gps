@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2 } from 'lucide-react';
-import marakameLogo from '../../assets/marakame.jpeg';
+import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
+
+import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
 
 const EstudioSocioeconomico = () => {
   const navigate = useNavigate();
@@ -207,7 +208,10 @@ const EstudioSocioeconomico = () => {
     ],
   };
 
-  const stepNumber = tabs.findIndex((tab) => tab.id === activeTab) + 1;
+  const currentTabIndex = tabs.findIndex((tab) => tab.id === activeTab);
+  const stepNumber = currentTabIndex + 1;
+  const isFirstStep = currentTabIndex === 0;
+  const isLastStep = currentTabIndex === tabs.length - 1;
 
   const occupationScale = [
     { value: 'desempleado', label: 'Desempleado', score: '0' },
@@ -651,11 +655,21 @@ const EstudioSocioeconomico = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const completedTabs = tabs.reduce((acc, tab) => {
-    return isTabCompleted(tab.id) ? acc + 1 : acc;
-  }, 0);
+  const handlePreviousStep = () => {
+    if (isFirstStep) return;
+    setActiveTab(tabs[currentTabIndex - 1].id);
+  };
 
-  const progressPercent = Math.round((completedTabs / tabs.length) * 100);
+  const handleNextStep = () => {
+    const isValid = validateCurrentTab();
+    if (!isValid) {
+      window.alert('Completa los campos obligatorios de esta sección antes de continuar.');
+      return;
+    }
+    if (!isLastStep) {
+      setActiveTab(tabs[currentTabIndex + 1].id);
+    }
+  };
 
   const handleCancel = () => {
     if (isDirty) {
@@ -815,48 +829,21 @@ const EstudioSocioeconomico = () => {
   }, [isDirty]);
 
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(126,29,59,0.10),_transparent_25%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] flex flex-col font-sans">
-      
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(126,29,59,0.10),_transparent_25%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] font-sans">
+        <div className="mx-auto max-w-[1600px] p-4 md:p-6">
+
       {/* --- HEADER DE ACCIÓN --- */}
-        <header className="bg-white/95 border-b border-slate-200 px-4 py-4 md:px-6 flex justify-between items-center sticky top-0 z-10 shadow-sm backdrop-blur">
-        <div className="flex items-center gap-4">
-          <img
-            src={marakameLogo}
-            alt="Logo Nayarit Marakame"
-            className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
-          />
-          <div>
-            <h1 className="text-xl font-black text-[#7E1D3B] uppercase tracking-tight">Estudio Socioeconómico</h1>
-            <p className="text-xs text-slate-500 font-medium">Formulario de Ingreso Institucional</p>
-            <p className="text-[11px] text-[#7E1D3B] font-bold uppercase tracking-[0.2em] mt-1">
-              Paso {stepNumber} de {tabs.length} • {tabs[stepNumber - 1]?.label}
-            </p>
-          </div>
-        </div>
-          <div className="flex flex-wrap gap-3 justify-end">
-          
-          <button
-            onClick={handleCancel}
-            className="px-4 py-2 text-slate-500 font-semibold hover:bg-slate-100 rounded-xl transition-all flex items-center gap-2 border border-transparent hover:border-slate-200"
-          >
-            <X size={18}/> Cancelar
-          </button>
-            <button
-            onClick={handleSaveDraft}
-              className="px-6 py-2 bg-white text-[#7E1D3B] border border-[#7E1D3B]/20 font-bold rounded-xl shadow-sm hover:bg-[#7E1D3B]/8 transition-all flex items-center gap-2"
-          >
-            <Save size={18}/> Guardar borrador
-          </button>
-          <button
-            onClick={handleSaveStudy}
-            className="px-6 py-2 bg-[#7E1D3B] text-white font-bold rounded-xl shadow-lg shadow-rose-900/20 hover:bg-[#63162e] transition-all flex items-center gap-2"
-          >
-            <Save size={18}/> Guardar Estudio
-          </button>
-        </div>
+      <header className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <InstitutionalHeader
+          title="Estudio Socioeconómico"
+          moduleLabel="Formulario de Ingreso Institucional"
+          areaLabel={`Paso ${stepNumber} de ${tabs.length} • ${tabs[stepNumber - 1]?.label}`}
+          sessionValue="Admisiones"
+          badge={<Users size={16} className="text-[#7E1D3B]" />}
+        />
       </header>
 
-        <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
+        <main className="space-y-5">
         
         {/* --- BUSCADOR DE SOLICITANTE --- */}
         <section className="mb-8">
@@ -869,20 +856,6 @@ const EstudioSocioeconomico = () => {
             />
           </div>
         </section>
-
-        {/* --- NAVEGACIÓN DE PESTAÑAS (TABS) --- */}
-        <div className="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm" aria-label="Progreso por secciones">
-          <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <span>Avance por secciones</span>
-            <span>{completedTabs}/{tabs.length} completas</span>
-          </div>
-          <div className="h-2 w-full rounded-full bg-slate-100">
-            <div
-              className="h-2 rounded-full bg-[#7E1D3B] transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
 
         <nav className="flex flex-wrap gap-2 mb-8 bg-white border border-slate-200 p-1.5 rounded-2xl shadow-sm">
           {tabs.map((tab) => (
@@ -924,7 +897,7 @@ const EstudioSocioeconomico = () => {
                 </div>
               </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
                 <InputGroup label="Nombre Completo del Solicitante" name="nombreSolicitante" value={formData.nombreSolicitante} error={errors.nombreSolicitante} required onChange={handleChange} onBlur={handleBlur} placeholder="Escribe el nombre completo..." />
                 <InputGroup label="Fecha de Nacimiento" name="fechaNacimiento" value={formData.fechaNacimiento} error={errors.fechaNacimiento} required onChange={handleChange} onBlur={handleBlur} type="date" />
                 
@@ -985,14 +958,14 @@ const EstudioSocioeconomico = () => {
                   options={['Soltero(a)', 'Casado(a)', 'Divorciado(a)', 'Viudo(a)', 'Unión Libre']}
                 />
 
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 xl:col-span-3">
                   <InputGroup label="Dirección Actual" name="direccion" value={formData.direccion} error={errors.direccion} required onChange={handleChange} onBlur={handleBlur} placeholder="Calle, Número, Colonia, C.P." />
                 </div>
 
                 <InputGroup label="Número Telefónico (Casa)" name="telefonoCasa" value={formData.telefonoCasa} error={errors.telefonoCasa} onChange={handleChange} onBlur={handleBlur} placeholder="000-000-0000" />
                 <InputGroup label="Teléfono Celular" name="telefonoCelular" value={formData.telefonoCelular} error={errors.telefonoCelular} required onChange={handleChange} onBlur={handleBlur} placeholder="000-000-0000" />
 
-                  <div className="md:col-span-2 bg-rose-50/70 p-4 rounded-2xl border border-rose-100/70">
+                  <div className="md:col-span-2 xl:col-span-3 bg-rose-50/70 p-4 rounded-2xl border border-rose-100/70">
                    <InputGroup label="Personas que habitan en el domicilio" name="habitantesDomicilio" value={formData.habitantesDomicilio} error={errors.habitantesDomicilio} onChange={handleChange} onBlur={handleBlur} placeholder="Ej. 4 personas (Padres y hermanos)" />
                 </div>
               </div>
@@ -1011,7 +984,7 @@ const EstudioSocioeconomico = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
                 <InputGroup label="Nombre Completo del Paciente" name="pacienteNombre" value={formData.pacienteNombre} error={errors.pacienteNombre} required onChange={handleChange} onBlur={handleBlur} placeholder="Escribe el nombre completo..." />
                 <InputGroup label="Fecha de Nacimiento" name="pacienteFechaNacimiento" value={formData.pacienteFechaNacimiento} error={errors.pacienteFechaNacimiento} required onChange={handleChange} onBlur={handleBlur} type="date" />
 
@@ -1072,7 +1045,7 @@ const EstudioSocioeconomico = () => {
                   options={['Soltero(a)', 'Casado(a)', 'Divorciado(a)', 'Viudo(a)', 'Unión Libre']}
                 />
 
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 xl:col-span-3">
                   <InputGroup label="Dirección Actual" name="pacienteDireccion" value={formData.pacienteDireccion} error={errors.pacienteDireccion} required onChange={handleChange} onBlur={handleBlur} placeholder="Calle, Número, Colonia, C.P." />
                 </div>
 
@@ -1105,7 +1078,7 @@ const EstudioSocioeconomico = () => {
 
               <section>
                 <h3 className="mb-4 text-sm font-black uppercase tracking-wide text-slate-700">Datos Laborales del Solicitante</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
                   <div>
                     <label className="block text-[11px] font-black uppercase text-slate-600 mb-2 ml-1 tracking-widest">Cuenta con Empleo <span className="text-[#7E1D3B]">*</span></label>
                     <div className="flex gap-4">
@@ -1155,7 +1128,7 @@ const EstudioSocioeconomico = () => {
                   <InputGroup label="Ingreso Mensual neto" name="laboralIngresoMensual" value={formData.laboralIngresoMensual} error={errors.laboralIngresoMensual} required onChange={handleChange} onBlur={handleBlur} type="number" placeholder="0" />
                   <InputGroup label="Otros Ingresos" name="laboralOtrosIngresos" value={formData.laboralOtrosIngresos} error={errors.laboralOtrosIngresos} onChange={handleChange} onBlur={handleBlur} type="number" placeholder="0" />
 
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-2 xl:col-span-3">
                     <label className="block text-[11px] font-black uppercase text-slate-600 mb-2 ml-1 tracking-widest">
                       Categoria de Ocupación <span className="text-[#7E1D3B]">*</span>
                     </label>
@@ -1199,7 +1172,7 @@ const EstudioSocioeconomico = () => {
 
               <section className="mt-10">
                 <h3 className="mb-4 text-sm font-black uppercase tracking-wide text-slate-700">Datos Laborales del Cónyuge (si aplica)</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
                   <InputGroup label="Ocupación" name="conyugeOcupacion" value={formData.conyugeOcupacion} error={errors.conyugeOcupacion} onChange={handleChange} onBlur={handleBlur} placeholder="Ocupación actual" />
                   <InputGroup label="Lugar de Trabajo/Empleo" name="conyugeLugarTrabajo" value={formData.conyugeLugarTrabajo} error={errors.conyugeLugarTrabajo} onChange={handleChange} onBlur={handleBlur} placeholder="Empresa o negocio" />
                   <InputGroup label="Antiguedad Laboral" name="conyugeAntiguedad" value={formData.conyugeAntiguedad} error={errors.conyugeAntiguedad} onChange={handleChange} onBlur={handleBlur} placeholder="Ej. 1 ano" />
@@ -1559,7 +1532,7 @@ const EstudioSocioeconomico = () => {
                 </div>
               </div>
 
-              <section className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <section className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
                 <div>
                   <label className="block text-[11px] font-black uppercase text-slate-600 mb-2 ml-1 tracking-widest">
                     Donde recibe asistencia médica <span className="text-[#7E1D3B]">*</span>
@@ -1940,7 +1913,56 @@ const EstudioSocioeconomico = () => {
             </div>
           )}
         </div>
+
+        <section className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="px-4 py-2 text-slate-500 font-semibold hover:bg-slate-100 rounded-xl transition-all flex items-center gap-2 border border-transparent hover:border-slate-200"
+          >
+            <X size={18}/> Cancelar
+          </button>
+
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {!isFirstStep ? (
+              <button
+                type="button"
+                onClick={handlePreviousStep}
+                className="px-5 py-2 bg-white text-slate-700 border border-slate-200 font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-all flex items-center gap-2"
+              >
+                <ArrowLeft size={17}/> Anterior
+              </button>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              className="px-6 py-2 bg-white text-[#7E1D3B] border border-[#7E1D3B]/20 font-bold rounded-xl shadow-sm hover:bg-[#7E1D3B]/8 transition-all flex items-center gap-2"
+            >
+              <Save size={18}/> Guardar borrador
+            </button>
+
+            {isLastStep ? (
+              <button
+                type="button"
+                onClick={handleSaveStudy}
+                className="px-6 py-2 bg-[#7E1D3B] text-white font-bold rounded-xl shadow-lg shadow-rose-900/20 hover:bg-[#63162e] transition-all flex items-center gap-2"
+              >
+                <Save size={18}/> Guardar Estudio
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleNextStep}
+                className="px-6 py-2 bg-[#7E1D3B] text-white font-bold rounded-xl shadow-lg shadow-rose-900/20 hover:bg-[#63162e] transition-all flex items-center gap-2"
+              >
+                Siguiente <ArrowRight size={17}/>
+              </button>
+            )}
+          </div>
+        </section>
       </main>
+    </div>
     </div>
   );
 };
