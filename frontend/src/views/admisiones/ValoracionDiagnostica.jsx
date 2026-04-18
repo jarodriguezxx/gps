@@ -11,6 +11,7 @@ const ValoracionDiagnostica = () => {
   const isEstudioActive = location.pathname === '/admisiones/estudio-socioeconomico';
   const isValoracionActive = location.pathname === '/admisiones/valoracion-diagnostica';
   const [tab, setTab] = useState('solicitante');
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     fechaAtencion: '',
     diaSemanana: '',
@@ -54,6 +55,48 @@ const ValoracionDiagnostica = () => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleSavePaciente = async () => {
+    if (!formData.nombreSolicitante?.trim()) {
+      window.alert('Agrega el nombre del solicitante antes de guardar.');
+      setTab('solicitante');
+      return;
+    }
+
+    const payload = {
+      nombre: formData.nombreSolicitante,
+      lugar: formData.lugarVisita,
+      ocupacion: formData.dedicacionSolicitante,
+      domicilioParticular: formData.domicilioSolicitante,
+      parentescoPaciente: formData.parentesco,
+      telefono: formData.telefonoSolicitante,
+      celular: formData.celularSolicitante,
+    };
+
+    try {
+      setIsSaving(true);
+      const response = await fetch('http://localhost:4000/api/solicitantes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'No se pudo guardar la valoracion diagnostica.');
+      }
+
+      window.alert('Valoracion diagnostica guardada correctamente.');
+      navigate('/admisiones/expediente');
+    } catch (error) {
+      console.error('Error al guardar valoracion diagnostica:', error);
+      window.alert('Error al guardar. Revisa que el backend este corriendo en el puerto 4000.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -604,8 +647,13 @@ const ValoracionDiagnostica = () => {
           >
             <X size={18} /> Cancelar
           </button>
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-[#7E1D3B] text-white rounded-xl font-semibold hover:bg-[#63162e] shadow-sm transition-all">
-            <Save size={18} /> Guardar Paciente
+          <button
+            type="button"
+          onClick={() => navigate('/admisiones')}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-6 py-2.5 bg-[#7E1D3B] text-white rounded-xl font-semibold hover:bg-[#63162e] shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Save size={18} /> {isSaving ? 'Guardando...' : 'Guardar '}
           </button>
         </section>
             </div>
