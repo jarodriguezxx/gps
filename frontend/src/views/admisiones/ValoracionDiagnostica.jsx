@@ -43,6 +43,10 @@ const ValoracionDiagnostica = () => {
     posibilidadesEconomicas: '',
     llamarPaciente: '',
     fechaLlamada: '',
+    fechaLlamadaPaciente: '',
+    fechaEsperaLlamada: '',
+    fechaEsperaVisita: '',
+    fechaPosibleIngreso: '',
     estadoSeguimiento: '',
     acuerdo: '',
     nombreMedicoValoro: '',
@@ -64,7 +68,13 @@ const ValoracionDiagnostica = () => {
       return;
     }
 
-    const payload = {
+    if (!formData.nombrePaciente?.trim()) {
+      window.alert('Agrega el nombre del paciente antes de guardar.');
+      setTab('paciente');
+      return;
+    }
+
+    const solicitantePayload = {
       nombre: formData.nombreSolicitante,
       lugar: formData.lugarVisita,
       ocupacion: formData.dedicacionSolicitante,
@@ -74,19 +84,51 @@ const ValoracionDiagnostica = () => {
       celular: formData.celularSolicitante,
     };
 
+    const pacientePayload = {
+      nombre: formData.nombrePaciente,
+      edad: formData.edadPaciente ? Number(formData.edadPaciente) : null,
+      estadocivil: formData.estadoCivilPaciente,
+      hijos: formData.hijosCount ? Number(formData.hijosCount) : null,
+      escolaridad: formData.escolaridadPaciente,
+      origen: formData.origenPaciente,
+      domicilio: formData.domicilioPaciente,
+      telefono: formData.pacienteTelefonoCelular,
+      ocupacion: formData.dedicacionPaciente,
+      sustancia: formData.sustanciaConsumo,
+      solicitanteId: null,
+      estadoSeguimiento: formData.estadoSeguimiento,
+      fechaCita: formData.fechaEsperaLlamada || formData.fechaEsperaVisita || formData.fechaPosibleIngreso || formData.fechaLlamadaPaciente || null,
+      motivoAccion: formData.acuerdo,
+    };
+
     try {
       setIsSaving(true);
-      const response = await fetch('http://localhost:4000/api/solicitantes', {
+      const solicitanteResponse = await fetch('http://localhost:4000/api/solicitantes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(solicitantePayload),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'No se pudo guardar la valoracion diagnostica.');
+      if (!solicitanteResponse.ok) {
+        const errorText = await solicitanteResponse.text();
+        throw new Error(errorText || 'No se pudo guardar el solicitante.');
+      }
+
+      const solicitanteGuardado = await solicitanteResponse.json();
+
+      const pacienteResponse = await fetch('http://localhost:4000/api/pacientes/guardar-expediente', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...pacientePayload, solicitanteId: solicitanteGuardado.id }),
+      });
+
+      if (!pacienteResponse.ok) {
+        const errorText = await pacienteResponse.text();
+        throw new Error(errorText || 'No se pudo guardar el paciente.');
       }
 
       window.alert('Valoracion diagnostica guardada correctamente.');
@@ -190,11 +232,10 @@ const ValoracionDiagnostica = () => {
             <User size={20} /> Datos del Paciente
           </button>
         </div>
-
+            
         {/* Contenido Dinámico */}
         <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 min-h-[600px] animate-fadeIn">
           {tab === 'solicitante' ? (
-            // SECCIÓN: SOLICITANTE
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
               <div className="space-y-5 xl:col-span-2">
                 <h3 className="text-[#7E1D3B] font-bold text-lg border-b border-slate-100 pb-3 flex items-center gap-2">
@@ -208,7 +249,6 @@ const ValoracionDiagnostica = () => {
                     onChange={handleInputChange}
                     className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                   >
-                    <option value="">Seleccionar fuente...</option>
                     <option value="internet">Internet</option>
                     <option value="expaciente">Ex paciente</option>
                     <option value="familiar">Familiar</option>
@@ -564,8 +604,8 @@ const ValoracionDiagnostica = () => {
                       <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de llamada</label>
                       <input
                         type="datetime-local"
-                        name="fechaLlamada"
-                        value={formData.fechaLlamada}
+                        name="fechaLlamadaPaciente"
+                        value={formData.fechaLlamadaPaciente}
                         onChange={handleInputChange}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
@@ -577,8 +617,8 @@ const ValoracionDiagnostica = () => {
                       <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de llamada del paciente</label>
                       <input
                         type="datetime-local"
-                        name="espera_llamada"
-                        value={formData.estadoSeguimiento}
+                        name="fechaEsperaLlamada"
+                        value={formData.fechaEsperaLlamada}
                         onChange={handleInputChange}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
@@ -590,8 +630,8 @@ const ValoracionDiagnostica = () => {
                       <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de visita del paciente</label>
                       <input
                         type="datetime-local"
-                        name="espera_visita"
-                        value={formData.estadoSeguimiento}
+                        name="fechaEsperaVisita"
+                        value={formData.fechaEsperaVisita}
                         onChange={handleInputChange}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
@@ -603,8 +643,8 @@ const ValoracionDiagnostica = () => {
                       <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de Posible Ingreso</label>
                       <input
                         type="datetime-local"
-                        name="Posible_Ingreso"
-                        value={formData.estadoSeguimiento}
+                        name="fechaPosibleIngreso"
+                        value={formData.fechaPosibleIngreso}
                         onChange={handleInputChange}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
@@ -649,7 +689,7 @@ const ValoracionDiagnostica = () => {
           </button>
           <button
             type="button"
-          onClick={() => navigate('/admisiones')}
+            onClick={handleSavePaciente}
             disabled={isSaving}
             className="flex items-center gap-2 px-6 py-2.5 bg-[#7E1D3B] text-white rounded-xl font-semibold hover:bg-[#63162e] shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
           >

@@ -7,8 +7,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.marakame.api.dto.PacienteDTO;
 import com.marakame.api.entity.Paciente;
 import com.marakame.api.entity.Seguimiento;
+import com.marakame.api.entity.Solicitante;
 import com.marakame.api.repository.PacienteRepository;
 import com.marakame.api.repository.SeguimientoRepository;
+import com.marakame.api.repository.SolicitanteRepository;
 
 @Service
 public class PacienteService {
@@ -19,8 +21,17 @@ public class PacienteService {
     @Autowired
     private SeguimientoRepository seguimientoRepository;
 
+    @Autowired
+    private SolicitanteRepository solicitanteRepository;
+
     @Transactional // Esto asegura que si algo falla, no se guarde nada a medias
     public void guardarNuevoExpediente(PacienteDTO dto) {
+        Solicitante solicitante = null;
+        if (dto.solicitanteId() != null) {
+            solicitante = solicitanteRepository.findById(dto.solicitanteId())
+                .orElseThrow(() -> new IllegalArgumentException("No existe el solicitante indicado"));
+        }
+
         // 1. Creamos y guardamos al Paciente
         Paciente paciente = new Paciente();
         paciente.setNombreCompleto(dto.nombre());
@@ -33,6 +44,7 @@ public class PacienteService {
         paciente.setTelefonoContacto(dto.telefono());
         paciente.setOcupacion(dto.ocupacion());
         paciente.setSustanciaConsumo(dto.sustancia());
+        paciente.setSolicitante(solicitante);
         
         Paciente pacienteGuardado = pacienteRepository.save(paciente);
 

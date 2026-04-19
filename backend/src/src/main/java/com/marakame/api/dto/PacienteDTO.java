@@ -4,15 +4,16 @@ import java.time.LocalDateTime;
 
 public record PacienteDTO(
     String nombre,
-    int edad,
+    Integer edad,
     String estadocivil,
-    int hijos,
+    Integer hijos,
     String escolaridad,
     String origen,
     String domicilio,
     String telefono,
     String ocupacion,
     String sustancia,
+    Long solicitanteId,
     
     // --- CAMPOS PARA EL SEGUIMIENTO ---
     String estadoSeguimiento, // Ej: "En espera de llamada", "Posible Ingreso"
