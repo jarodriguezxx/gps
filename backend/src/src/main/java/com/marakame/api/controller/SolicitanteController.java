@@ -16,7 +16,7 @@ import com.marakame.api.repository.SolicitanteRepository;
 
 @RestController
 @RequestMapping("/api/solicitantes")
-@CrossOrigin(origins = "http://localhost:5173") // ¡Vital para que React no marque error!
+@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"}) // ¡Vital para que React no marque error!
 public class SolicitanteController {
 
     @Autowired

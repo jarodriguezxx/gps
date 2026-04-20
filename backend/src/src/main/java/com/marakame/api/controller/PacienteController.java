@@ -15,7 +15,7 @@ import com.marakame.api.service.PacienteService;
 @RestController
 @RequestMapping("/api/pacientes")
 // Importante: Permitir que React (puerto 5173) se comunique con el Backend (puerto 4000)
-@CrossOrigin(origins = "http://localhost:5173") 
+@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"}) 
 public class PacienteController {
 
     @Autowired

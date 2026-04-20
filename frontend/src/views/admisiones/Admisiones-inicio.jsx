@@ -1,82 +1,9 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Bell, Plus } from 'lucide-react';
 import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
 import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
-
-const citasHoy = [
-	{
-		hora: '09:00',
-		paciente: 'María García López',
-		tipo: 'Valoración Inicial',
-		profesional: 'Dr. Juan Martínez',
-		estado: 'En proceso',
-	},
-	{
-		hora: '09:30',
-		paciente: 'José Ramírez Díaz',
-		tipo: 'Seguimiento',
-		profesional: 'Dra. Laura Medina',
-		estado: 'Confirmada',
-	},
-	{
-		hora: '10:00',
-		paciente: 'Ana Torres Vela',
-		tipo: 'Primera Entrevista',
-		profesional: 'Lic. Marco Pineda',
-		estado: 'Pendiente',
-	},
-	{
-		hora: '10:45',
-		paciente: 'Carlos Bautista Ruiz',
-		tipo: 'Valoración Inicial',
-		profesional: 'Dr. Juan Martínez',
-		estado: 'En proceso',
-	},
-	{
-		hora: '11:20',
-		paciente: 'Diana Flores León',
-		tipo: 'Seguimiento',
-		profesional: 'Dra. Laura Medina',
-		estado: 'Confirmada',
-	},
-];
-
-const seguimiento = [
-	{
-		nombre: 'Roberto García Mendoza',
-		telefono: '3112345678',
-		fecha: '25/03/2026',
-		motivo: 'Seguimiento de familiar',
-		estado: 'Convertido a cita',
-		proxima: '28/03/2026',
-	},
-	{
-		nombre: 'Guadalupe Mejía Cano',
-		telefono: '3119876543',
-		fecha: '25/03/2026',
-		motivo: 'Información de ingreso',
-		estado: 'En proceso',
-		proxima: '28/03/2026',
-	},
-	{
-		nombre: 'Javier López Acosta',
-		telefono: '3115567788',
-		fecha: '25/03/2026',
-		motivo: 'Seguimiento de familiar',
-		estado: 'No contestó',
-		proxima: '28/03/2026',
-	},
-	{
-		nombre: 'Miriam Hernández Peña',
-		telefono: '3111029384',
-		fecha: '25/03/2026',
-		motivo: 'Validación de documentos',
-		estado: 'Convertido a cita',
-		proxima: '29/03/2026',
-	},
-];
 
 const estadoClasses = {
 	Confirmada: 'bg-emerald-100 text-emerald-800',
@@ -84,6 +11,13 @@ const estadoClasses = {
 	Pendiente: 'bg-slate-200 text-slate-700',
 	'Convertido a cita': 'bg-emerald-100 text-emerald-800',
 	'No contestó': 'bg-rose-100 text-rose-800',
+	'espera llamada': 'bg-amber-100 text-amber-900',
+	'espera visita': 'bg-sky-100 text-sky-800',
+	'posible ingreso': 'bg-emerald-100 text-emerald-800',
+	'Llamada programada por nosotros': 'bg-violet-100 text-violet-800',
+	'llamada programada por nosotros': 'bg-violet-100 text-violet-800',
+	'Llamada solicitada por el paciente': 'bg-cyan-100 text-cyan-800',
+	'llamada solicitada por el paciente': 'bg-cyan-100 text-cyan-800',
 };
 
 const barras = [
@@ -99,6 +33,66 @@ const barras = [
 const AdmisionesInicio = ({ onOpenEstudio }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
+	const [citasHoy, setCitasHoy] = useState([]);
+	const [seguimiento, setSeguimiento] = useState([]);
+	const [loadingTablas, setLoadingTablas] = useState(true);
+	const [errorTablas, setErrorTablas] = useState('');
+
+	const formatEstado = (estado = '') => estado.replaceAll('_', ' ').trim();
+	const estadoClass = (estado = '') => {
+		const normalizado = formatEstado(estado);
+		return estadoClasses[normalizado] || estadoClasses[normalizado.toLowerCase()] || 'bg-slate-200 text-slate-700';
+	};
+	const formatFecha = (fechaIso) => {
+		if (!fechaIso) return '--';
+		const date = new Date(fechaIso);
+		if (Number.isNaN(date.getTime())) return '--';
+		return date.toLocaleDateString('es-MX');
+	};
+
+	const formatHora = (fechaIso) => {
+		if (!fechaIso) return '--:--';
+		const date = new Date(fechaIso);
+		if (Number.isNaN(date.getTime())) return '--:--';
+		return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+	};
+
+	useEffect(() => {
+		const cargarTablas = async () => {
+			try {
+				setLoadingTablas(true);
+				setErrorTablas('');
+				const response = await fetch('http://localhost:4000/api/seguimientos/tablas');
+
+				if (!response.ok) {
+					const errorText = await response.text();
+					throw new Error(errorText || 'No se pudieron cargar las tablas de seguimiento.');
+				}
+
+				const data = await response.json();
+				setCitasHoy(Array.isArray(data.citas) ? data.citas : []);
+				setSeguimiento(Array.isArray(data.llamadas) ? data.llamadas : []);
+			} catch (error) {
+				setErrorTablas('No se pudo conectar con el backend para cargar citas y seguimiento.');
+				console.error('Error al cargar tablas de admisiones:', error);
+			} finally {
+				setLoadingTablas(false);
+			}
+		};
+
+		cargarTablas();
+	}, []);
+
+	const resumen = useMemo(() => {
+		const total = citasHoy.length + seguimiento.length;
+		return {
+			atencionesHoy: total,
+			pacientesNuevos: total,
+			pendientes: [...citasHoy, ...seguimiento].filter((item) => formatEstado(item.estadoSeguimiento).toLowerCase().includes('espera')).length,
+			seguimiento: seguimiento.length,
+		};
+	}, [citasHoy, seguimiento]);
+
 	const openEstudio = () => {
 		if (onOpenEstudio) {
 			onOpenEstudio();
@@ -196,10 +190,10 @@ const headerActions = (
 
 							<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 								{[
-									{ label: 'Atenciones hoy', value: '18', tone: 'emerald' },
-									{ label: 'Pacientes nuevos', value: '6', tone: 'sky' },
-									{ label: 'Pendientes', value: '12', tone: 'amber' },
-									{ label: 'Seguimiento', value: '9', tone: 'rose' },
+										{ label: 'Atenciones hoy', value: String(resumen.atencionesHoy), tone: 'emerald' },
+										{ label: 'Pacientes nuevos', value: String(resumen.pacientesNuevos), tone: 'sky' },
+										{ label: 'Pendientes', value: String(resumen.pendientes), tone: 'amber' },
+										{ label: 'Seguimiento', value: String(resumen.seguimiento), tone: 'rose' },
 								].map((item) => (
 									<article key={item.label} className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
 										<p className="text-xs uppercase tracking-widest text-slate-500">{item.label}</p>
@@ -286,6 +280,9 @@ const headerActions = (
 								</div>
 
 								<div className="overflow-x-auto">
+									{errorTablas && (
+										<p className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{errorTablas}</p>
+									)}
 									<table className="min-w-full border-collapse text-left text-sm">
 										<thead>
 											<tr className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -298,19 +295,25 @@ const headerActions = (
 											</tr>
 										</thead>
 										<tbody>
-											{citasHoy.map((item) => (
-												<tr key={`${item.hora}-${item.paciente}`} className="border-b border-slate-100">
-													<td className="px-3 py-3 font-medium text-slate-700">{item.hora}</td>
-													<td className="px-3 py-3">{item.paciente}</td>
-													<td className="px-3 py-3">{item.tipo}</td>
-													<td className="px-3 py-3">{item.profesional}</td>
+												{loadingTablas ? (
+													<tr>
+														<td className="px-3 py-3 text-slate-500" colSpan={6}>Cargando citas...</td>
+													</tr>
+												) : citasHoy.length === 0 ? (
+													<tr>
+														<td className="px-3 py-3 text-slate-500" colSpan={6}>No hay citas registradas en la BD.</td>
+													</tr>
+												) : citasHoy.map((item) => (
+												<tr key={item.id} className="border-b border-slate-100">
+													<td className="px-3 py-3 font-medium text-slate-700">{formatHora(item.fechaHoraProgramada)}</td>
+													<td className="px-3 py-3">{item.pacienteNombre}</td>
+													<td className="px-3 py-3">{item.tipoAccion}</td>
+													<td className="px-3 py-3">Sin asignar</td>
 													<td className="px-3 py-3">
 														<span
-															className={`rounded-full px-2 py-1 text-xs font-semibold ${
-																estadoClasses[item.estado] || 'bg-slate-200 text-slate-700'
-															}`}
+															className={`rounded-full px-2 py-1 text-xs font-semibold ${estadoClass(item.estadoSeguimiento)}`}
 														>
-															{item.estado}
+															{formatEstado(item.estadoSeguimiento) || 'Sin estado'}
 														</span>
 													</td>
 													<td className="px-3 py-3">
@@ -319,7 +322,7 @@ const headerActions = (
 														</button>
 													</td>
 												</tr>
-											))}
+												))}
 										</tbody>
 									</table>
 								</div>
@@ -340,22 +343,28 @@ const headerActions = (
 											</tr>
 										</thead>
 										<tbody>
-											{seguimiento.map((item) => (
-												<tr key={`${item.nombre}-${item.telefono}`} className="border-b border-slate-100">
-													<td className="px-3 py-3">{item.nombre}</td>
-													<td className="px-3 py-3">{item.telefono}</td>
-													<td className="px-3 py-3">{item.fecha}</td>
-													<td className="px-3 py-3">{item.motivo}</td>
+											{loadingTablas ? (
+												<tr>
+													<td className="px-3 py-3 text-slate-500" colSpan={6}>Cargando llamadas...</td>
+												</tr>
+											) : seguimiento.length === 0 ? (
+												<tr>
+													<td className="px-3 py-3 text-slate-500" colSpan={6}>No hay llamadas de seguimiento registradas en la BD.</td>
+												</tr>
+											) : seguimiento.map((item) => (
+												<tr key={item.id} className="border-b border-slate-100">
+													<td className="px-3 py-3">{item.pacienteNombre}</td>
+													<td className="px-3 py-3">{item.pacienteTelefono || '--'}</td>
+													<td className="px-3 py-3">{formatFecha(item.fechaHoraProgramada)}</td>
+													<td className="px-3 py-3">{item.motivo || '--'}</td>
 													<td className="px-3 py-3">
 														<span
-															className={`rounded-full px-2 py-1 text-xs font-semibold ${
-																estadoClasses[item.estado] || 'bg-slate-200 text-slate-700'
-															}`}
+															className={`rounded-full px-2 py-1 text-xs font-semibold ${estadoClass(item.estadoSeguimiento)}`}
 														>
-															{item.estado}
+															{formatEstado(item.estadoSeguimiento) || 'Sin estado'}
 														</span>
 													</td>
-													<td className="px-3 py-3">{item.proxima}</td>
+													<td className="px-3 py-3">{formatFecha(item.fechaHoraProgramada)}</td>
 												</tr>
 											))}
 										</tbody>

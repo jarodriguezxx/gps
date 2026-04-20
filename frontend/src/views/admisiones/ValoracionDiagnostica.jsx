@@ -38,7 +38,7 @@ const ValoracionDiagnostica = () => {
     sustanciaEspecifica: '',
     internamiento: '',
     criterioInternamiento: '',
-    Conclusion: '',
+    conclusionIntervencion: '',
     tratamientoAnterior: '',
     posibilidadesEconomicas: '',
     llamarPaciente: '',
@@ -55,9 +55,18 @@ const ValoracionDiagnostica = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    const seleccionarTipoLlamada = name === 'llamarPaciente' && !!value;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+      ...(seleccionarTipoLlamada
+        ? {
+            estadoSeguimiento: '',
+            fechaEsperaLlamada: '',
+            fechaEsperaVisita: '',
+            fechaPosibleIngreso: '',
+          }
+        : {}),
     }));
   };
 
@@ -70,6 +79,12 @@ const ValoracionDiagnostica = () => {
 
     if (!formData.nombrePaciente?.trim()) {
       window.alert('Agrega el nombre del paciente antes de guardar.');
+      setTab('paciente');
+      return;
+    }
+
+    if (!formData.estadoSeguimiento?.trim() && !formData.llamarPaciente?.trim()) {
+      window.alert('Selecciona el estado de seguimiento o el tipo de llamada.');
       setTab('paciente');
       return;
     }
@@ -96,8 +111,9 @@ const ValoracionDiagnostica = () => {
       ocupacion: formData.dedicacionPaciente,
       sustancia: formData.sustanciaConsumo,
       solicitanteId: null,
+      llamarPaciente: formData.llamarPaciente,
       estadoSeguimiento: formData.estadoSeguimiento,
-      fechaCita: formData.fechaEsperaLlamada || formData.fechaEsperaVisita || formData.fechaPosibleIngreso || formData.fechaLlamadaPaciente || null,
+      fechaCita: formData.fechaLlamada || formData.fechaEsperaVisita || formData.fechaPosibleIngreso || formData.fechaLlamadaPaciente || null,
       motivoAccion: formData.acuerdo,
     };
 
@@ -509,13 +525,13 @@ const ValoracionDiagnostica = () => {
                       checked={formData.criterioInternamiento === 'no'}
                       onChange={handleInputChange}
                     />
-                      <InputGroup
-                  label="Conclusion"
-                  name="criterioInternamiento"
-                  value={formData.Conclusion}
-                  onChange={handleInputChange}
-                  placeholder="..."
-                />
+                    <InputGroup
+                      label="Conclusión"
+                      name="conclusionIntervencion"
+                      value={formData.conclusionIntervencion}
+                      onChange={handleInputChange}
+                      placeholder="..."
+                    />
                   </div>
                 )}
                 <InputGroup
@@ -538,24 +554,17 @@ const ValoracionDiagnostica = () => {
               <label className="text-[#7E1D3B] font-bold text-lg border-b border-slate-100 pb-3">Seguimiento y Programación</label>
               <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8 shadow-sm">
                 <div>
-                  <p className="font-bold text-sm mb-4 text-slate-700 uppercase">Llamar al paciente</p>
-                  <div className="space-y-3">
-                    <RadioOption
-                      label="Sí"
-                      name="llamarPaciente"
-                      value="si"
-                      checked={formData.llamarPaciente === 'si'}
-                      onChange={handleInputChange}
-                    />
-                    <RadioOption
-                      label="No"
-                      name="llamarPaciente"
-                      value="no"
-                      checked={formData.llamarPaciente === 'no'}
-                      onChange={handleInputChange}
-                    />
-                    
-                  </div>
+                  <p className="mb-4 font-bold text-sm text-slate-700 uppercase">Tipo de llamada</p>
+                  <select
+                    name="llamarPaciente"
+                    value={formData.llamarPaciente}
+                    onChange={handleInputChange}
+                    className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
+                  >
+                    <option value="">Sin seleccionar</option>
+                    <option value="nosotros">Nosotros le llamamos</option>
+                    <option value="paciente">El paciente nos llama</option>
+                  </select>
                 </div>
                  <div className="space-y-4">
                  
@@ -571,61 +580,41 @@ const ValoracionDiagnostica = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <p className="font-bold text-sm mb-4 text-slate-700 uppercase flex items-center gap-2">
-                    <Clipboard size={16} /> Estado de seguimiento
-                  </p>
-                  <div className="space-y-3">
-                    <RadioOption
-                      label="En espera de llamada del paciente"
-                      name="estadoSeguimiento"
-                      value="espera_llamada"
-                      checked={formData.estadoSeguimiento === 'espera_llamada'}
-                      onChange={handleInputChange}
-                    />
-                    <RadioOption
-                      label="En espera de visita del paciente"
-                      name="estadoSeguimiento"
-                      value="espera_visita"
-                      checked={formData.estadoSeguimiento === 'espera_visita'}
-                      onChange={handleInputChange}
-                    />
-                    <RadioOption
-                      label="En espera de Posible Ingreso"
-                      name="estadoSeguimiento"
-                      value="Posible_Ingreso"
-                      checked={formData.estadoSeguimiento === 'Posible_Ingreso'}
-                      onChange={handleInputChange}
-                    />
-                  </div>
+                  {!formData.llamarPaciente && (
+                    <div>
+                      <p className="mb-4 font-bold text-sm text-slate-700 uppercase flex items-center gap-2">
+                        <Clipboard size={16} /> Estado de seguimiento
+                      </p>
+                      <select
+                        name="estadoSeguimiento"
+                        value={formData.estadoSeguimiento}
+                        onChange={handleInputChange}
+                        className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
+                      >
+                        <option value="">Sin seleccionar</option>
+                        <option value="espera_visita">En espera de visita del paciente</option>
+                        <option value="Posible_Ingreso">En espera de Posible Ingreso</option>
+                      </select>
+                    </div>
+                  )}
 
-                  {/* Mostrar fecha solo si se llamara al paciente */}
-                  {formData.llamarPaciente === 'si'  && (
+                  {/* Mostrar fecha solo si hay tipo de llamada */}
+                  {formData.llamarPaciente && (
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de llamada</label>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">
+                        {formData.llamarPaciente === 'nosotros' ? 'Fecha programada de nuestra llamada' : 'Fecha de llamada del paciente'}
+                      </label>
                       <input
                         type="datetime-local"
-                        name="fechaLlamadaPaciente"
-                        value={formData.fechaLlamadaPaciente}
+                        name="fechaLlamada"
+                        value={formData.fechaLlamada}
                         onChange={handleInputChange}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
                   )}
                   {/*llamda del pacinete hora */}
-                  {formData.estadoSeguimiento === 'espera_llamada' && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de llamada del paciente</label>
-                      <input
-                        type="datetime-local"
-                        name="fechaEsperaLlamada"
-                        value={formData.fechaEsperaLlamada}
-                        onChange={handleInputChange}
-                        className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
-                      />
-                    </div>
-                  )}
-                  {/*llamda del pacinete hora */}
-                  {formData.estadoSeguimiento === 'espera_visita' && (
+                  {!formData.llamarPaciente && formData.estadoSeguimiento === 'espera_visita' && (
                     <div>
                       <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de visita del paciente</label>
                       <input
@@ -638,7 +627,7 @@ const ValoracionDiagnostica = () => {
                     </div>
                   )}
                    {/*Posible ingreso */}
-                  {formData.estadoSeguimiento === 'Posible_Ingreso' && (
+                  {!formData.llamarPaciente && formData.estadoSeguimiento === 'Posible_Ingreso' && (
                     <div>
                       <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de Posible Ingreso</label>
                       <input
