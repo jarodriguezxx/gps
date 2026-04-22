@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 
@@ -15,6 +15,14 @@ const EstudioSocioeconomico = () => {
   const [activeContributorRow, setActiveContributorRow] = useState(0);
   const [activeVehicleRow, setActiveVehicleRow] = useState(0);
   const [activeFamilyReferenceRow, setActiveFamilyReferenceRow] = useState(0);
+  const [pacientesBase, setPacientesBase] = useState([]);
+  const [busquedaPaciente, setBusquedaPaciente] = useState('');
+  const [cargandoPacientes, setCargandoPacientes] = useState(false);
+  const [errorPacientes, setErrorPacientes] = useState('');
+  const [pacienteSeleccionadoId, setPacienteSeleccionadoId] = useState(null);
+  const [indiceResaltado, setIndiceResaltado] = useState(-1);
+  const [mostrarResultados, setMostrarResultados] = useState(false);
+  const ultimaBusquedaAutoSeleccionadaRef = useRef('');
   const [householdMembers, setHouseholdMembers] = useState([
     { nombre: '', parentesco: '', edad: '', sexo: '', estadoCivil: '', ocupacionLugar: '' },
   ]);
@@ -69,10 +77,16 @@ const EstudioSocioeconomico = () => {
     escolaridad: '',
     ocupacion: '',
     estadoCivil: '',
-    direccion: '',
+    direccionCalle: '',
+    direccionNoExt: '',
+    direccionNoInt: '',
+    direccionColonia: '',
+    direccionMunicipioDelegacion: '',
+    direccionCp: '',
+    direccionCiudadEstado: '',
     telefonoCasa: '',
     telefonoCelular: '',
-    habitantesDomicilio: '',
+    cuentaConTarjeta: '',
     pacienteNombre: '',
     pacienteFechaNacimiento: '',
     pacienteLugarNacimiento: '',
@@ -163,7 +177,11 @@ const EstudioSocioeconomico = () => {
       'sexo',
       'escolaridad',
       'estadoCivil',
-      'direccion',
+      'direccionCalle',
+      'direccionColonia',
+      'direccionMunicipioDelegacion',
+      'direccionCp',
+      'direccionCiudadEstado',
       'telefonoCelular',
     ],
     paciente: [
@@ -420,11 +438,126 @@ const EstudioSocioeconomico = () => {
       setActiveVehicleRow(0);
       setErrors((prev) => ({ ...prev, vehiculoCategoria: '' }));
     }
+  };
 
-    if (touched[name]) {
-      const msg = validateField(name, value);
-      setErrors((prev) => ({ ...prev, [name]: msg }));
+  useEffect(() => {
+    const nombre = busquedaPaciente.trim();
+    const controller = new AbortController();
+
+    if (nombre.length < 2) {
+      setPacientesBase([]);
+      setIndiceResaltado(-1);
+      setMostrarResultados(false);
+      setErrorPacientes('');
+      setCargandoPacientes(false);
+      return () => controller.abort();
     }
+
+    const cargarPacientes = async () => {
+      try {
+        setCargandoPacientes(true);
+        setErrorPacientes('');
+        const response = await fetch(
+          `http://localhost:4000/api/pacientes/estudio?query=${encodeURIComponent(nombre)}`,
+          { signal: controller.signal }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'No se pudieron cargar los pacientes.');
+        }
+
+        const data = await response.json();
+        const resultados = Array.isArray(data) ? data : [];
+        setPacientesBase(resultados);
+
+        if (resultados.length === 1 && ultimaBusquedaAutoSeleccionadaRef.current !== nombre.toLowerCase()) {
+          seleccionarPaciente(resultados[0]);
+          setMostrarResultados(false);
+          setIndiceResaltado(0);
+          ultimaBusquedaAutoSeleccionadaRef.current = nombre.toLowerCase();
+        } else {
+          setMostrarResultados(true);
+          setIndiceResaltado(resultados.length > 0 ? 0 : -1);
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Error al buscar pacientes por nombre:', error);
+          setErrorPacientes('No se pudo consultar pacientes por nombre.');
+          setMostrarResultados(true);
+        }
+      } finally {
+        setCargandoPacientes(false);
+      }
+    };
+
+    cargarPacientes();
+    return () => controller.abort();
+  }, [busquedaPaciente]);
+
+  const handleBusquedaPacienteKeyDown = (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setMostrarResultados(true);
+      setIndiceResaltado((prev) => {
+        const siguiente = prev + 1;
+        return siguiente >= pacientesBase.length ? 0 : siguiente;
+      });
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setMostrarResultados(true);
+      setIndiceResaltado((prev) => {
+        const anterior = prev - 1;
+        return anterior < 0 ? pacientesBase.length - 1 : anterior;
+      });
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      setMostrarResultados(false);
+      return;
+    }
+
+    if (event.key === 'Enter' && pacientesBase.length > 0) {
+      event.preventDefault();
+      const indiceObjetivo = indiceResaltado >= 0 ? indiceResaltado : 0;
+      seleccionarPaciente(pacientesBase[indiceObjetivo]);
+      setMostrarResultados(false);
+    }
+  };
+
+  const seleccionarPaciente = (paciente) => {
+    setPacienteSeleccionadoId(paciente.id);
+    setBusquedaPaciente(paciente.nombreCompleto || '');
+    setIsDirty(true);
+    setActiveTab('solicitante');
+    setFormData((prev) => ({
+      ...prev,
+      nombreSolicitante: paciente.solicitante?.nombre || '',
+      lugarNacimiento: paciente.solicitante?.lugar || '',
+      ocupacion: paciente.solicitante?.ocupacion || '',
+      direccionCalle: paciente.solicitante?.domicilioParticular || '',
+      direccionNoExt: '',
+      direccionNoInt: '',
+      direccionColonia: '',
+      direccionMunicipioDelegacion: '',
+      direccionCp: '',
+      direccionCiudadEstado: '',
+      telefonoCasa: paciente.solicitante?.telefono || '',
+      telefonoCelular: paciente.solicitante?.celular || '',
+      pacienteNombre: paciente.nombreCompleto || '',
+      pacienteLugarNacimiento: paciente.origen || '',
+      pacienteEdad: paciente.edad ? String(paciente.edad) : '',
+      pacienteEscolaridad: paciente.escolaridad || '',
+      pacienteOcupacion: paciente.ocupacion || '',
+      pacienteEstadoCivil: paciente.estadoCivil || '',
+      pacienteDireccion: paciente.domicilioParticular || '',
+      pacienteTelefonoCelular: paciente.telefonoContacto || '',
+      sustanciaConsumo: paciente.sustanciaConsumo || '',
+    }));
   };
 
   const handleBlur = (name) => {
@@ -685,10 +818,16 @@ const EstudioSocioeconomico = () => {
       escolaridad: '',
       ocupacion: '',
       estadoCivil: '',
-      direccion: '',
+      direccionCalle: '',
+      direccionNoExt: '',
+      direccionNoInt: '',
+      direccionColonia: '',
+      direccionMunicipioDelegacion: '',
+      direccionCp: '',
+      direccionCiudadEstado: '',
       telefonoCasa: '',
       telefonoCelular: '',
-      habitantesDomicilio: '',
+      cuentaConTarjeta: '',
       pacienteNombre: '',
       pacienteFechaNacimiento: '',
       pacienteLugarNacimiento: '',
@@ -847,14 +986,82 @@ const EstudioSocioeconomico = () => {
         
         {/* --- BUSCADOR DE SOLICITANTE --- */}
         <section className="mb-8">
-          <div className="relative group">
+          <div className="relative group z-20">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#7E1D3B] transition-colors" size={20}/>
             <input 
               type="text" 
-              placeholder="Buscar Solicitante por Nombre o Folio..." 
+              value={busquedaPaciente}
+              onChange={(e) => setBusquedaPaciente(e.target.value)}
+              onFocus={() => {
+                if (busquedaPaciente.trim().length >= 2) {
+                  setMostrarResultados(true);
+                }
+              }}
+              onBlur={() => {
+                window.setTimeout(() => setMostrarResultados(false), 120);
+              }}
+              onKeyDown={handleBusquedaPacienteKeyDown}
+              placeholder="Escribe el nombre del paciente (minimo 2 letras)..." 
               className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-[#7E1D3B]/20 focus:border-[#7E1D3B] transition-all text-sm hover:shadow-md"
             />
+            {mostrarResultados && busquedaPaciente.trim().length >= 2 && (
+              <div className="absolute left-0 right-0 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
+                <div className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                  Resultados por nombre
+                </div>
+
+                {cargandoPacientes && (
+                  <p className="px-4 py-3 text-sm text-slate-500">Buscando pacientes...</p>
+                )}
+
+                {errorPacientes && (
+                  <p className="px-4 py-3 text-sm text-rose-700 bg-rose-50">{errorPacientes}</p>
+                )}
+
+                {!cargandoPacientes && !errorPacientes && pacientesBase.length === 0 && (
+                  <p className="px-4 py-3 text-sm text-slate-500">No se encontraron pacientes con ese nombre.</p>
+                )}
+
+                {!cargandoPacientes && !errorPacientes && pacientesBase.length > 0 && (
+                  <ul className="max-h-72 overflow-y-auto">
+                    {pacientesBase.map((paciente, index) => {
+                      const activo = pacienteSeleccionadoId === paciente.id;
+                      const resaltado = index === indiceResaltado;
+
+                      return (
+                        <li key={paciente.id}>
+                          <button
+                            type="button"
+                            onMouseEnter={() => setIndiceResaltado(index)}
+                            onClick={() => {
+                              seleccionarPaciente(paciente);
+                              setMostrarResultados(false);
+                            }}
+                            className={`w-full border-b border-slate-100 px-4 py-2 text-left transition last:border-b-0 ${
+                              resaltado || activo
+                                ? 'bg-[#7E1D3B]/10'
+                                : 'bg-white hover:bg-slate-50'
+                            }`}
+                          >
+                            <p className="text-sm font-semibold text-slate-900">{paciente.nombreCompleto}</p>
+                            <p className="text-xs text-slate-500">
+                              Solicitante: {paciente.solicitante?.nombre || 'Sin nombre'} • Tel: {paciente.telefonoContacto || paciente.solicitante?.telefono || '--'}
+                            </p>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
+
+          {!errorPacientes && busquedaPaciente.trim().length < 2 && (
+            <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              Escribe al menos 2 letras del nombre del paciente para iniciar la busqueda.
+            </p>
+          )}
         </section>
 
         <nav className="flex flex-wrap gap-2 mb-8 bg-white border border-slate-200 p-1.5 rounded-2xl shadow-sm">
@@ -958,15 +1165,31 @@ const EstudioSocioeconomico = () => {
                   options={['Soltero(a)', 'Casado(a)', 'Divorciado(a)', 'Viudo(a)', 'Unión Libre']}
                 />
 
-                <div className="md:col-span-2 xl:col-span-3">
-                  <InputGroup label="Dirección Actual" name="direccion" value={formData.direccion} error={errors.direccion} required onChange={handleChange} onBlur={handleBlur} placeholder="Calle, Número, Colonia, C.P." />
-                </div>
-
                 <InputGroup label="Número Telefónico (Casa)" name="telefonoCasa" value={formData.telefonoCasa} error={errors.telefonoCasa} onChange={handleChange} onBlur={handleBlur} placeholder="000-000-0000" />
                 <InputGroup label="Teléfono Celular" name="telefonoCelular" value={formData.telefonoCelular} error={errors.telefonoCelular} required onChange={handleChange} onBlur={handleBlur} placeholder="000-000-0000" />
+                <SelectGroup
+                  label="Cuenta con alguna tarjeta? (crédito, débito, ahorro)"
+                  name="cuentaConTarjeta"
+                  value={formData.cuentaConTarjeta}
+                  error={errors.cuentaConTarjeta}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  options={['No', 'Crédito', 'Débito', 'Ahorro']}
+                />
 
                   <div className="md:col-span-2 xl:col-span-3 bg-rose-50/70 p-4 rounded-2xl border border-rose-100/70">
-                   <InputGroup label="Personas que habitan en el domicilio" name="habitantesDomicilio" value={formData.habitantesDomicilio} error={errors.habitantesDomicilio} onChange={handleChange} onBlur={handleBlur} placeholder="Ej. 4 personas (Padres y hermanos)" />
+                   <p className="mb-3 text-sm font-bold text-[#7E1D3B]">Dirección actual</p>
+                   <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-3">
+                     <InputGroup label="Calle" name="direccionCalle" value={formData.direccionCalle} error={errors.direccionCalle} required onChange={handleChange} onBlur={handleBlur} placeholder="Calle" />
+                     <InputGroup label="No. Ext." name="direccionNoExt" value={formData.direccionNoExt} error={errors.direccionNoExt} onChange={handleChange} onBlur={handleBlur} placeholder="No. Ext." />
+                     <InputGroup label="No. Int." name="direccionNoInt" value={formData.direccionNoInt} error={errors.direccionNoInt} onChange={handleChange} onBlur={handleBlur} placeholder="No. Int." />
+                   </div>
+                   <div className="mt-4 grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-4">
+                     <InputGroup label="Colonia" name="direccionColonia" value={formData.direccionColonia} error={errors.direccionColonia} required onChange={handleChange} onBlur={handleBlur} placeholder="Colonia" />
+                     <InputGroup label="Mpio. o Delegación" name="direccionMunicipioDelegacion" value={formData.direccionMunicipioDelegacion} error={errors.direccionMunicipioDelegacion} required onChange={handleChange} onBlur={handleBlur} placeholder="Municipio o Delegación" />
+                     <InputGroup label="C.P." name="direccionCp" value={formData.direccionCp} error={errors.direccionCp} required onChange={handleChange} onBlur={handleBlur} placeholder="C.P." />
+                     <InputGroup label="Ciudad o Estado" name="direccionCiudadEstado" value={formData.direccionCiudadEstado} error={errors.direccionCiudadEstado} required onChange={handleChange} onBlur={handleBlur} placeholder="Ciudad o Estado" />
+                   </div>
                 </div>
               </div>
             </div>

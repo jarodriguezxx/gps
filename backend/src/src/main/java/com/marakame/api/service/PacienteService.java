@@ -1,7 +1,9 @@
 package com.marakame.api.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,20 @@ public class PacienteService {
 
     @Autowired
     private SolicitanteRepository solicitanteRepository;
+
+    public List<Paciente> obtenerPacientesParaEstudio(String query) {
+        String filtro = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+
+        return pacienteRepository.findAll().stream()
+            .filter(paciente -> {
+                if (filtro.isBlank()) {
+                    return true;
+                }
+
+                return contiene(paciente.getNombreCompleto(), filtro);
+            })
+            .collect(Collectors.toList());
+    }
 
     @Transactional // Esto asegura que si algo falla, no se guarde nada a medias
     public void guardarNuevoExpediente(PacienteDTO dto) {
@@ -87,5 +103,9 @@ public class PacienteService {
         seguimiento.setTipoAccion(tipoAccion);
 
         seguimientoRepository.save(seguimiento);
+    }
+
+    private boolean contiene(String texto, String filtro) {
+        return texto != null && texto.toLowerCase(Locale.ROOT).contains(filtro);
     }
 }
