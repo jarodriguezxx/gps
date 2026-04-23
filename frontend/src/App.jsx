@@ -21,6 +21,7 @@ import RequisicionesAlmacen from './views/financiero/RequisicionesAlmacen';
 import DepositoBancario from './views/financiero/DepositoBancario';
 import AlmacenDashboard from './views/almacen/AlmacenDashboard';
 
+
 import MedicoInicio from './views/Medico/Medico-inicio';
 import EvaluacionNutricional from './views/Medico/Nutriologia/EvaluacionNutricional';
 import InventarioPertenencias from './views/Medico/InventarioPertenencias';
@@ -31,6 +32,8 @@ import ExpedienteMedico from './views/Medico/ExpedienteMedico';
 import ConsultaDiaria from './views/Medico/ConsultaDiaria';
 import ControlTensionArterial from './views/Medico/ControlTensionArterial';
 import ControlGlicemia from './views/Medico/ControlGlicemia';
+import HistorialPreAdmision from './views/Medico/HistorialPreAdmision.jsx'; 
+
 
 //Clinico
 import PsicologiaInicio from './views/Clinico/PsicologiaInicio'; 
@@ -65,6 +68,7 @@ const quickViews = [
   { label: 'Historial Paciente', path: '/medico/historial-paciente' },
   { label: 'Nutriología', path: '/nutriologia' },
   { label: 'Evaluación Nutri', path: '/nutriologia/evaluacion-nutricional' },
+  { label: 'Historial Pre-Admisión', path: '/medico/historial-pre-admision' },
   { label: 'Inicio Psicología', path: '/psicologia' },
   { label: 'Psi. Documentos', path: '/psicologia/paciente/HGU-18/documentos' },
   { label: 'Psi. Notas Evol.', path: '/psicologia/paciente/HGU-18/notas-evolucion' },
@@ -175,6 +179,8 @@ function App() {
         <Route path="/medico/consulta-diaria"                  element={<ConsultaDiaria />} />
         <Route path="/medico/pacientes/:id/tension" element={<ControlTensionArterial />} />
         <Route path="/medico/pacientes/:id/glicemia" element={<ControlGlicemia />} /> 
+        <Route path="/medico/historial-pre-admision" element={<HistorialPreAdmision />} />
+        
 
 
         <Route path="/nutriologia"                             element={<NutriologiaInicio />} />
