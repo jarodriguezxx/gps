@@ -126,7 +126,9 @@ const OrdenCompra = () => {
 
       return {
         ...prev,
-        articulos: prev.articulos.filter((articulo) => articulo.id !== articuloId),
+        articulos: prev.articulos.filter(
+          (articulo) => articulo.id !== articuloId,
+        ),
       };
     });
   };
