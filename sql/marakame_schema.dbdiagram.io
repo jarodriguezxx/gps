@@ -96,6 +96,13 @@ Table pacientes {
   celular varchar(20)
   email varchar(150)
   direccion text
+  direccion_calle varchar(150)
+  direccion_no_ext varchar(30)
+  direccion_no_int varchar(30)
+  direccion_colonia varchar(150)
+  direccion_municipio_delegacion varchar(150)
+  direccion_cp varchar(10)
+  direccion_ciudad_estado varchar(150)
   municipio varchar(100)
   estado_paciente estado_paciente [default: 'activo']
   estado_paciente_texto varchar(20)
@@ -106,6 +113,42 @@ Table pacientes {
     numero_expediente
     num_identificacion
     nombre
+  }
+}
+
+Table solicitantes {
+  id int [pk, increment]
+  nombre varchar(150) [not null]
+  lugar varchar(150)
+  ocupacion varchar(150)
+  direccion_calle varchar(150)
+  direccion_no_ext varchar(30)
+  direccion_no_int varchar(30)
+  direccion_colonia varchar(150)
+  direccion_municipio_delegacion varchar(150)
+  direccion_cp varchar(10)
+  direccion_ciudad_estado varchar(150)
+  domicilio_particular text
+  parentesco_paciente varchar(80)
+  telefono varchar(20)
+  celular varchar(20)
+  created_at timestamp [default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [default: 'CURRENT_TIMESTAMP']
+}
+
+Table estudios_socioeconomicos_pdf {
+  id int [pk, increment]
+  paciente_id int [ref: > pacientes.id, not null]
+  nombre_archivo varchar(255) [not null]
+  mime_type varchar(100) [not null]
+  contenido_pdf blob [not null]
+  generado_en timestamp [not null]
+  created_at timestamp [default: 'CURRENT_TIMESTAMP']
+  updated_at timestamp [default: 'CURRENT_TIMESTAMP']
+
+  indexes {
+    paciente_id
+    generado_en
   }
 }
 
