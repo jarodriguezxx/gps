@@ -49,8 +49,8 @@ export const REQUISICIONES_COMPLETO: Requisicion[] = [
     area: "MÉDICA",
     solicitante: "Dr. Armando Paredes",
     estado: "PENDIENTE",
-    tamanio: "MAYOR",
-    tipo: "ORDINARIA",
+    tamanio: "MENOR",
+    tipo: "EXTRAORDINARIA",
     articulos: [
       {
         id: "ART-001",
