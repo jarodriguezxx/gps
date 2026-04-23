@@ -142,11 +142,17 @@ const QuickNavigator = () => {
 function App() {
   const [requisiciones, setRequisiciones] = useState([]);
 
-  useEffect(() => {
+  const cargarRequisiciones = () => {
     fetch(`${API_BASE}/requisiciones`)
       .then(res => res.json())
       .then(data => setRequisiciones(data.map(r => ({ ...r, fecha: new Date(r.fecha) }))))
       .catch(err => console.error('Error cargando requisiciones:', err));
+  };
+
+  useEffect(() => {
+    cargarRequisiciones();
+    const intervalo = setInterval(cargarRequisiciones, 30000);
+    return () => clearInterval(intervalo);
   }, []);
 
   return (
@@ -194,7 +200,7 @@ function App() {
           <Route index element={<ListaRequisiciones requisiciones={requisiciones}/>}/>
           <Route path='proveedores' element = {<Proveedores/>}/>
           <Route path='historial' element = {<Historial/>}/>
-          <Route path='requisicion/:id' element={<DetallesRequisicion requisiciones={requisiciones}/>}/>
+          <Route path='requisicion/:id' element={<DetallesRequisicion requisiciones={requisiciones} refrescar={cargarRequisiciones}/>}/>
           <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
         </Route>
 
