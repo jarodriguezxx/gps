@@ -125,7 +125,7 @@ const TarjetaCotizacion = ({
 };
 interface Props {
   requisiciones: tipos.Requisicion[];
-  refrescar: () => void;
+  refrescar: () => Promise<void>;
 }
 
 const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
@@ -367,7 +367,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                     fecha: new Date(data.fecha as unknown as string),
                   };
                   setDatos(parsed);
-                  refrescar();
+                  await refrescar();
                   navigate(-1);
                 } catch (e: any) {
                   console.log("error al enviar requisición", e);
