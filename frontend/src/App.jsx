@@ -31,6 +31,12 @@ import ExpedienteMedico from './views/Medico/ExpedienteMedico';
 import ConsultaDiaria from './views/Medico/ConsultaDiaria';
 import ControlTensionArterial from './views/Medico/ControlTensionArterial';
 import ControlGlicemia from './views/Medico/ControlGlicemia';
+
+//Clinico
+import PsicologiaInicio from './views/Clinico/PsicologiaInicio'; 
+import GestionDocumentosPsicologia from './views/Clinico/GestionDocumentosPsicologia';
+import NotasEvolucionPsicologia from './views/Clinico/NotasEvolucionPsicologia';
+
 // Importaciones para Recursos Materiales
 import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
 import Proveedores from './views/rec-materiales/Proveedores';
@@ -59,6 +65,9 @@ const quickViews = [
   { label: 'Historial Paciente', path: '/medico/historial-paciente' },
   { label: 'Nutriología', path: '/nutriologia' },
   { label: 'Evaluación Nutri', path: '/nutriologia/evaluacion-nutricional' },
+  { label: 'Inicio Psicología', path: '/psicologia' },
+  { label: 'Psi. Documentos', path: '/psicologia/paciente/HGU-18/documentos' },
+  { label: 'Psi. Notas Evol.', path: '/psicologia/paciente/HGU-18/notas-evolucion' },
   { label: 'RH - Alta', path: '/rh/alta-personal' },
   { label: 'RH - Baja', path: '/rh/baja-personal' },
   { label: 'RH - Catálogo', path: '/rh/catalogo-roles' },
@@ -167,10 +176,15 @@ function App() {
         <Route path="/medico/pacientes/:id/tension" element={<ControlTensionArterial />} />
         <Route path="/medico/pacientes/:id/glicemia" element={<ControlGlicemia />} /> 
 
+
         <Route path="/nutriologia"                             element={<NutriologiaInicio />} />
         <Route path="/nutriologia/evaluacion-nutricional"      element={<EvaluacionNutricional />} />
         <Route path="/medico/nutriologia/evaluacion-nutricional" element={<EvaluacionNutricional />} />
         <Route path="/medico/cuestionario-salud"               element={<EvaluacionNutricional />} />
+
+        <Route path="/psicologia" element={<PsicologiaInicio />} />   
+        <Route path="/psicologia/paciente/:id/documentos" element={<GestionDocumentosPsicologia />} />
+        <Route path="/psicologia/paciente/:id/notas-evolucion" element={<NotasEvolucionPsicologia />} />
 
         <Route path="/financiero/archivo-contable"             element={<ArchivoContable />} />
         <Route path="/financiero/digitalizar-comprobantes"     element={<DigitalizarComprobantes />} />
