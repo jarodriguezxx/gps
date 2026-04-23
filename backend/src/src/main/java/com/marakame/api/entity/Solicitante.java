@@ -1,4 +1,5 @@
 package com.marakame.api.entity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -13,12 +14,35 @@ public class Solicitante {
     private Long id;
 
     private String nombre;
+    @Column(name = "fecha_nacimiento")
+    private String fechaNacimiento;
+    private Integer edad;
+    private String sexo;
+    private String escolaridad;
+    @Column(name = "estado_civil")
+    private String estadoCivil;
     private String lugar;
     private String ocupacion;
+    @Column(name = "direccion_calle")
+    private String direccionCalle;
+    @Column(name = "direccion_no_ext")
+    private String direccionNoExt;
+    @Column(name = "direccion_no_int")
+    private String direccionNoInt;
+    @Column(name = "direccion_colonia")
+    private String direccionColonia;
+    @Column(name = "direccion_municipio_delegacion")
+    private String direccionMunicipioDelegacion;
+    @Column(name = "direccion_cp")
+    private String direccionCp;
+    @Column(name = "direccion_ciudad_estado")
+    private String direccionCiudadEstado;
     private String domicilioParticular;
     private String parentescoPaciente;
     private String telefono;
     private String celular;
+    @Column(name = "cuenta_con_tarjeta")
+    private String cuentaConTarjeta;
 
     // Getters y Setters...
     // Getter para leer el ID
@@ -42,6 +66,47 @@ public class Solicitante {
 
 
     }
+
+    public String getFechaNacimiento() {
+        return fechaNacimiento;
+    }
+
+    public void setFechaNacimiento(String fechaNacimiento) {
+        this.fechaNacimiento = fechaNacimiento;
+    }
+
+    public Integer getEdad() {
+        return edad;
+    }
+
+    public void setEdad(Integer edad) {
+        this.edad = edad;
+    }
+
+    public String getSexo() {
+        return sexo;
+    }
+
+    public void setSexo(String sexo) {
+        this.sexo = sexo;
+    }
+
+    public String getEscolaridad() {
+        return escolaridad;
+    }
+
+    public void setEscolaridad(String escolaridad) {
+        this.escolaridad = escolaridad;
+    }
+
+    public String getEstadoCivil() {
+        return estadoCivil;
+    }
+
+    public void setEstadoCivil(String estadoCivil) {
+        this.estadoCivil = estadoCivil;
+    }
+
     // Getter para leer el lugar
     public String getLugar() {
         return lugar;
@@ -60,6 +125,62 @@ public class Solicitante {
     // Setter para modificar la ocupacion
     public void setOcupacion(String ocupacion) {
         this.ocupacion = ocupacion;
+    }
+
+    public String getDireccionCalle() {
+        return direccionCalle;
+    }
+
+    public void setDireccionCalle(String direccionCalle) {
+        this.direccionCalle = direccionCalle;
+    }
+
+    public String getDireccionNoExt() {
+        return direccionNoExt;
+    }
+
+    public void setDireccionNoExt(String direccionNoExt) {
+        this.direccionNoExt = direccionNoExt;
+    }
+
+    public String getDireccionNoInt() {
+        return direccionNoInt;
+    }
+
+    public void setDireccionNoInt(String direccionNoInt) {
+        this.direccionNoInt = direccionNoInt;
+    }
+
+    public String getDireccionColonia() {
+        return direccionColonia;
+    }
+
+    public void setDireccionColonia(String direccionColonia) {
+        this.direccionColonia = direccionColonia;
+    }
+
+    public String getDireccionMunicipioDelegacion() {
+        return direccionMunicipioDelegacion;
+    }
+
+    public void setDireccionMunicipioDelegacion(String direccionMunicipioDelegacion) {
+        this.direccionMunicipioDelegacion = direccionMunicipioDelegacion;
+    }
+
+    public String getDireccionCp() {
+        return direccionCp;
+    }
+
+    public void setDireccionCp(String direccionCp) {
+        this.direccionCp = direccionCp;
+    }
+
+    public String getDireccionCiudadEstado() {
+        return direccionCiudadEstado;
+    }
+
+    public void setDireccionCiudadEstado(String direccionCiudadEstado) {
+        this.direccionCiudadEstado = direccionCiudadEstado;
     }
 
     // Getter para leer el domicilioParticular
@@ -100,6 +221,14 @@ public class Solicitante {
     // Setter para modificar el celular
     public void setCelular(String celular) {
         this.celular = celular;
+    }
+
+    public String getCuentaConTarjeta() {
+        return cuentaConTarjeta;
+    }
+
+    public void setCuentaConTarjeta(String cuentaConTarjeta) {
+        this.cuentaConTarjeta = cuentaConTarjeta;
     }
 
 }
