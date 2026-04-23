@@ -20,6 +20,8 @@ interface TarjetaCotizacionProps {
   titulo: string;
   onArchivoChange: (archivo: File | null) => void;
   archivoInicial: File | null;
+  onEliminarGuardado?: () => void;
+  yaGuardadoEnBD?: boolean;
 }
 
 const TarjetaCotizacion = ({
@@ -27,6 +29,8 @@ const TarjetaCotizacion = ({
   titulo,
   onArchivoChange,
   archivoInicial,
+  onEliminarGuardado,
+  yaGuardadoEnBD = false,
 }: TarjetaCotizacionProps) => {
   const [archivo, setArchivo] = useState<File | null>(archivoInicial);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +102,8 @@ const TarjetaCotizacion = ({
               if (archivo) {
                 setArchivo(null);
                 onArchivoChange(null);
+                if (yaGuardadoEnBD) onEliminarGuardado?.();
+              
                 return;
               }
               inputRef.current?.click();
@@ -362,6 +368,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                   };
                   setDatos(parsed);
                   refrescar();
+                  navigate(-1);
                 } catch (e: any) {
                   console.log("error al enviar requisición", e);
                 }
@@ -642,9 +649,21 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                     archivoInicial={archivosCotizaciones["1"]}
                     numero="1"
                     titulo="Cotización 1"
-                    onArchivoChange={(file) =>
-                      actualizarArchivoGlobal("1", file)
-                    }
+                    onArchivoChange={(file) => actualizarArchivoGlobal("1", file)}
+                    yaGuardadoEnBD={datos?.cotizacionPath != null}
+                    onEliminarGuardado={async () => {
+                      if (!id) return;
+                      try {
+                        const res = await fetch(`${API_BASE}/requisiciones/${id}/cotizacion`, { method: "DELETE" });
+                        if (!res.ok) throw new Error(await res.text());
+                        const data: tipos.Requisicion = await res.json();
+                        setDatos({ ...data, fecha: new Date(data.fecha as unknown as string) });
+                        setArchivosCotizacionesGuardadas(prev => ({ ...prev, "1": null }));
+                        refrescar();
+                      } catch (e: any) {
+                        console.log("error al eliminar cotización", e);
+                      }
+                    }}
                   />
                   {rol === "compras-inventario" && (
                     <>
