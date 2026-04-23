@@ -50,6 +50,17 @@ public class RequisicionController {
         }
     }
 
+    @DeleteMapping("/{id}/cotizacion")
+    public ResponseEntity<?> eliminarCotizacion(@PathVariable UUID id) {
+        try {
+            return ResponseEntity.ok(service.eliminarCotizacion(id));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-eliminando-archivo");
+        }
+    }
+
     @PostMapping(value = "/{id}/cotizacion", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> subirCotizacion(
             @PathVariable UUID id,

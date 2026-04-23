@@ -55,6 +55,18 @@ public class RequisicionService {
     }
 
     @Transactional
+    public Requisicion eliminarCotizacion(UUID id) throws IOException {
+        Requisicion req = repository.findById(id)
+                .orElseThrow(NoSuchElementException::new);
+
+        if (req.getCotizacionPath() != null) {
+            Files.deleteIfExists(Paths.get(req.getCotizacionPath()));
+            req.setCotizacionPath(null);
+        }
+        return repository.save(req);
+    }
+
+    @Transactional
     public Requisicion guardarCotizacion(UUID id, MultipartFile archivo) throws IOException {
         if (!"application/pdf".equals(archivo.getContentType()))
             throw new IllegalArgumentException("solo-pdf");

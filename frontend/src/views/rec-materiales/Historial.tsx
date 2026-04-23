@@ -1,9 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { REQUISICIONES_COMPLETO, Estado } from "../../types/requisicion";
+import { Requisicion, Estado } from "../../types/requisicion";
 import { ui, colors } from "../../config/theme";
 
-const Historial = () => {
+interface Props {
+  requisiciones: Requisicion[];
+}
+
+const Historial = ({ requisiciones }: Props) => {
   const navigate = useNavigate();
   const { rol } = useParams<{ rol: string }>();
 
@@ -16,14 +20,12 @@ const Historial = () => {
 
   // Obtener áreas únicas
   const areasUnicas = useMemo(() => {
-    return Array.from(
-      new Set(REQUISICIONES_COMPLETO.map((r) => r.area)),
-    ).sort();
-  }, []);
+    return Array.from(new Set(requisiciones.map((r) => r.area))).sort();
+  }, [requisiciones]);
 
   // Filtrar requisiciones
   const requisicionesFiltradas = useMemo(() => {
-    return REQUISICIONES_COMPLETO.filter((req) => {
+    return requisiciones.filter((req) => {
       const cumpleBusqueda =
         busqueda === "" ||
         req.id.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -50,17 +52,12 @@ const Historial = () => {
   // Estadísticas
   const stats = useMemo(() => {
     return {
-      total: REQUISICIONES_COMPLETO.length,
-      pendientes: REQUISICIONES_COMPLETO.filter((r) => r.estado === "PENDIENTE")
-        .length,
-      autorizadas: REQUISICIONES_COMPLETO.filter(
-        (r) => r.estado === "AUTORIZADA",
-      ).length,
-      finalizadas: REQUISICIONES_COMPLETO.filter(
-        (r) => r.estado === "FINALIZADA",
-      ).length,
+      total: requisiciones.length,
+      pendientes: requisiciones.filter((r) => r.estado === "PENDIENTE").length,
+      autorizadas: requisiciones.filter((r) => r.estado === "AUTORIZADA").length,
+      finalizadas: requisiciones.filter((r) => r.estado === "FINALIZADA").length,
     };
-  }, []);
+  }, [requisiciones]);
 
   // Badge de estado con colores
   const obtenerEstiloBadge = (estado: Estado) => {
@@ -80,7 +77,7 @@ const Historial = () => {
 
   // Navegar a detalles
   const irADetalles = (id: string) => {
-    navigate(`/${rol}/requisicion/${id}`);
+    navigate(`../requisicion/${id}`);
   };
 
   return (
@@ -286,7 +283,7 @@ const Historial = () => {
         <p className="text-xs text-slate-600">
           Se muestran{" "}
           <span className="font-bold">{requisicionesFiltradas.length}</span> de{" "}
-          <span className="font-bold">{REQUISICIONES_COMPLETO.length}</span>{" "}
+          <span className="font-bold">{requisiciones.length}</span>{" "}
           requisiciones
         </p>
         <p className="text-xs text-slate-500">
