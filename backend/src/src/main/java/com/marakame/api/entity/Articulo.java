@@ -16,9 +16,9 @@ public class Articulo {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @JsonProperty("id")
     private UUID id;
 
-    // Unión con el padre
     @ManyToOne
     @JoinColumn(name = "requisicion_id")
     @JsonBackReference("requisicion-articulos")
@@ -29,8 +29,18 @@ public class Articulo {
     private String articuloRequisitado;
 
     @Enumerated(EnumType.STRING)
+    @JsonProperty("unidad")
     private UnidadesArticulos unidad;
 
     @Column(name = "articulos_solicitados")
+    @JsonProperty("articulosSolicitados")
     private Integer articulosSolicitados;
+
+    @Column(name = "articulos_entregados")
+    @JsonProperty("articulosEntregados")
+    private Integer articulosEntregados;
+
+    @Column(name = "articulos_pendientes")
+    @JsonProperty("articulosPendientes")
+    private Integer articulosPendientes;
 }

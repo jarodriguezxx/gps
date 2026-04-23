@@ -4,6 +4,8 @@ target/
 .mvn/
 .idea/
 
+.claude/
+backend/*.log
 # React / Node
 node_modules/
 dist/
