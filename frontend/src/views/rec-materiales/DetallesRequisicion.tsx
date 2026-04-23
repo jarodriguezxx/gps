@@ -117,12 +117,15 @@ const TarjetaCotizacion = ({
     </div>
   );
 };
-// TODO manejar cuando la url no existe
-const DetallesRequisicion = () => {
+interface Props {
+  requisiciones: tipos.Requisicion[];
+}
+
+const DetallesRequisicion = ({ requisiciones }: Props) => {
   // Recuperar el id que está incrustado en la URL
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const rol = useOutletContext();
+  const rol = useOutletContext<string>();
   // Setear los datos cada que haya un cambio
   const [datos, setDatos] = useState<tipos.Requisicion | null>(null);
   const [modal, setModal] = useState(false);
@@ -205,44 +208,33 @@ const DetallesRequisicion = () => {
     setArchivosFacturasGuardadas({ ...archivosFacturas });
   };
 
-  // Una vez que se tiene el id, consultar en la base de datos ese id
-  useEffect(
-    () => {
-      if (id) {
-        fetch(`${API_BASE}/requisiciones/${id}`)
-          .then((res) => {
-            if (!res.ok) throw new Error();
-            return res.json();
-          })
-          .then((data: tipos.Requisicion) => {
-            const parsed = {
-              ...data,
-              fecha: new Date(data.fecha as unknown as string),
-            };
-            setDatos(parsed);
-            if (rol === "rec-materiales") {
-              setSubirCotizacion(
-                parsed.estado === "PENDIENTE" &&
-                  parsed.tipo === "EXTRAORDINARIA",
-              );
-              return;
-            }
-            if (rol === "compras-inventario") {
-              setSubirCotizacion(
-                parsed.estado === "PRE-AUTORIZADA" ||
-                  (parsed.estado === "AUTORIZADA" &&
-                    parsed.tipo === "ORDINARIA" &&
-                    parsed.tamanio === "MAYOR"),
-              );
-              return;
-            }
-          })
-          .catch(() => console.log("Página no encontrada"));
-      }
-    },
-    [id, rol],
-    //Si el id cambia, se vuelve a consultar
-  );
+  useEffect(() => {
+    if (!id || !requisiciones.length) return;
+    const encontrada = requisiciones.find((r) => r.id === id);
+    if (!encontrada) {
+      console.log("Página no encontrada");
+      return;
+    }
+    const parsed = {
+      ...encontrada,
+      fecha: encontrada.fecha instanceof Date
+        ? encontrada.fecha
+        : new Date(encontrada.fecha as unknown as string),
+    };
+    setDatos(parsed);
+    if (rol === "rec-materiales") {
+      setSubirCotizacion(
+        parsed.estado === "PENDIENTE" && parsed.tipo === "EXTRAORDINARIA",
+      );
+    } else if (rol === "compras-inventario") {
+      setSubirCotizacion(
+        parsed.estado === "PRE-AUTORIZADA" ||
+          (parsed.estado === "AUTORIZADA" &&
+            parsed.tipo === "ORDINARIA" &&
+            parsed.tamanio === "MAYOR"),
+      );
+    }
+  }, [id, rol, requisiciones]);
 
   const articulos = datos?.articulos;
   let i = 0;
