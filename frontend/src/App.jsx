@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { API_BASE } from './config/api.ts';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import AdmisionesInicio from './views/admisiones/Admisiones-inicio';
 import Login from './views/login';
@@ -38,7 +39,6 @@ import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
 import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion';
 import OrdenCompra from './views/rec-materiales/OrdenCompra';
 import Historial from './views/rec-materiales/Historial';
-import { REQUISICIONES_COMPLETO } from '../src/types/requisicion.ts'
 
 
 
@@ -140,6 +140,21 @@ const QuickNavigator = () => {
 };
 
 function App() {
+  const [requisiciones, setRequisiciones] = useState([]);
+
+  const cargarRequisiciones = () => {
+    return fetch(`${API_BASE}/requisiciones`)
+      .then(res => res.json())
+      .then(data => setRequisiciones(data.map(r => ({ ...r, fecha: new Date(r.fecha) }))))
+      .catch(err => console.error('Error cargando requisiciones:', err));
+  };
+
+  useEffect(() => {
+    cargarRequisiciones();
+    const intervalo = setInterval(cargarRequisiciones, 30000);
+    return () => clearInterval(intervalo);
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -181,11 +196,11 @@ function App() {
         <Route path="/financiero/deposito-bancario"            element={<DepositoBancario />} />
 
 {/* Rutas para Recursos Materiales y Compras/Inventario */}
-        <Route path='/rec-materiales/:rol' element={<RecMaterialesDashboard/>}>
-          <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
+        <Route path='/materiales/:rol' element={<RecMaterialesDashboard/>}>
+          <Route index element={<ListaRequisiciones requisiciones={requisiciones}/>}/>
           <Route path='proveedores' element = {<Proveedores/>}/>
-          <Route path='historial' element = {<Historial/>}/>
-          <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
+          <Route path='historial' element={<Historial requisiciones={requisiciones}/>}/>
+          <Route path='requisicion/:id' element={<DetallesRequisicion requisiciones={requisiciones} refrescar={cargarRequisiciones}/>}/>
           <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
         </Route>
 
