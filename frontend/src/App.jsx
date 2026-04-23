@@ -148,7 +148,7 @@ function App() {
   const [requisiciones, setRequisiciones] = useState([]);
 
   const cargarRequisiciones = () => {
-    fetch(`${API_BASE}/requisiciones`)
+    return fetch(`${API_BASE}/requisiciones`)
       .then(res => res.json())
       .then(data => setRequisiciones(data.map(r => ({ ...r, fecha: new Date(r.fecha) }))))
       .catch(err => console.error('Error cargando requisiciones:', err));
