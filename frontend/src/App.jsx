@@ -194,7 +194,7 @@ function App() {
           <Route index element={<ListaRequisiciones requisiciones={requisiciones}/>}/>
           <Route path='proveedores' element = {<Proveedores/>}/>
           <Route path='historial' element = {<Historial/>}/>
-          <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
+          <Route path='requisicion/:id' element={<DetallesRequisicion requisiciones={requisiciones}/>}/>
           <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
         </Route>
 
