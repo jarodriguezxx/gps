@@ -119,9 +119,10 @@ const TarjetaCotizacion = ({
 };
 interface Props {
   requisiciones: tipos.Requisicion[];
+  refrescar: () => void;
 }
 
-const DetallesRequisicion = ({ requisiciones }: Props) => {
+const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
   // Recuperar el id que está incrustado en la URL
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -193,6 +194,7 @@ const DetallesRequisicion = ({ requisiciones }: Props) => {
         setDatos(parsed);
         setArchivosCotizacionesGuardadas({ ...archivosCotizaciones });
         setModal(false);
+        refrescar();
       } catch (e: any) {
         console.log("error al subir cotización", e);
       }
@@ -359,6 +361,7 @@ const DetallesRequisicion = ({ requisiciones }: Props) => {
                     fecha: new Date(data.fecha as unknown as string),
                   };
                   setDatos(parsed);
+                  refrescar();
                 } catch (e: any) {
                   console.log("error al enviar requisición", e);
                 }
