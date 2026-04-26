@@ -229,11 +229,18 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
             body: formData,
           });
           if (!res.ok) throw new Error(await res.text());
-          const adjunto: AdjuntoGuardado = await res.json();
-          setAdjuntosGuardados((prev) => [...prev, adjunto]);
         } catch (e) {
           console.log("error al subir adjunto", e);
         }
+      }
+      try {
+        const adjRes = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos`);
+        if (adjRes.ok) {
+          const lista: AdjuntoGuardado[] = await adjRes.json();
+          setAdjuntosGuardados(lista);
+        }
+      } catch (e) {
+        console.log("error al obtener adjuntos", e);
       }
       setArchivosCotizaciones({ "1": null, "2": null, "3": null });
       setModal(false);
@@ -700,48 +707,98 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                   Cotizaciones requeridas ({cotizacionesPendientes})
                 </p>
                 {/* Contenedor de las tarjetas */}
-                <div className=" w-full flex gap-6 flex-row justify-between items-center">
-                  <TarjetaCotizacion
-                    archivoInicial={archivosCotizaciones["1"]}
-                    numero="1"
-                    titulo="Cotización 1"
-                    onArchivoChange={(file) => actualizarArchivoGlobal("1", file)}
-                    yaGuardadoEnBD={datos?.cotizacionPath != null}
-                    onEliminarGuardado={async () => {
-                      if (!id) return;
-                      try {
-                        const res = await fetch(`${API_BASE}/requisiciones/${id}/cotizacion`, { method: "DELETE" });
-                        if (!res.ok) throw new Error(await res.text());
-                        const data: tipos.Requisicion = await res.json();
-                        setDatos({ ...data, fecha: new Date(data.fecha as unknown as string) });
-                        setArchivosCotizacionesGuardadas(prev => ({ ...prev, "1": null }));
-                        refrescar();
-                      } catch (e: any) {
-                        console.log("error al eliminar cotización", e);
-                      }
-                    }}
-                  />
-                  {rol === "compras-inventario" && (
-                    <>
-                      <TarjetaCotizacion
-                        archivoInicial={archivosCotizaciones["2"]}
-                        numero="2"
-                        titulo="Cotización 2"
-                        onArchivoChange={(file) =>
-                          actualizarArchivoGlobal("2", file)
+                {esFlujoCotizacionesAdjuntos ? (
+                  <div className="w-full flex flex-col gap-3">
+                    {adjuntosGuardados.map((adj, idx) => (
+                      <div
+                        key={adj.id}
+                        className="border-slate-400 border bg-green-50 flex flex-row w-full justify-between items-center rounded-xl p-2"
+                      >
+                        <div className="flex w-full flex-row py-2 gap-4 h-12">
+                          <div className="h-full aspect-square flex justify-center items-center rounded-full bg-green-600">
+                            <p className="text-white font-bold text-xs">{idx + 1}</p>
+                          </div>
+                          <div className="w-full h-full flex flex-col justify-center gap-1">
+                            <p className={ui.text.body + " font-bold text-[12px]"}>
+                              Cotización {idx + 1}
+                            </p>
+                            <p className="text-[10px] text-green-700 truncate max-w-[200px]">
+                              {adj.nombreArchivo}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[11px] text-green-700 font-medium bg-green-100 border border-green-300 px-3 py-1 rounded-full mr-2 shrink-0">
+                          Guardado
+                        </span>
+                      </div>
+                    ))}
+                    {adjuntosGuardados.length < 3 && (
+                      <div className="w-full flex gap-6 flex-row">
+                        {Array.from(
+                          { length: 3 - adjuntosGuardados.length },
+                          (_, i) => {
+                            const slotKey = String(i + 1);
+                            const slotNum = adjuntosGuardados.length + i + 1;
+                            return (
+                              <TarjetaCotizacion
+                                key={slotKey}
+                                archivoInicial={archivosCotizaciones[slotKey] ?? null}
+                                numero={String(slotNum)}
+                                titulo={`Cotización ${slotNum}`}
+                                onArchivoChange={(file) =>
+                                  actualizarArchivoGlobal(slotKey, file)
+                                }
+                              />
+                            );
+                          },
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="w-full flex gap-6 flex-row justify-between items-center">
+                    <TarjetaCotizacion
+                      archivoInicial={archivosCotizaciones["1"]}
+                      numero="1"
+                      titulo="Cotización 1"
+                      onArchivoChange={(file) => actualizarArchivoGlobal("1", file)}
+                      yaGuardadoEnBD={datos?.cotizacionPath != null}
+                      onEliminarGuardado={async () => {
+                        if (!id) return;
+                        try {
+                          const res = await fetch(`${API_BASE}/requisiciones/${id}/cotizacion`, { method: "DELETE" });
+                          if (!res.ok) throw new Error(await res.text());
+                          const data: tipos.Requisicion = await res.json();
+                          setDatos({ ...data, fecha: new Date(data.fecha as unknown as string) });
+                          setArchivosCotizacionesGuardadas(prev => ({ ...prev, "1": null }));
+                          refrescar();
+                        } catch (e: any) {
+                          console.log("error al eliminar cotización", e);
                         }
-                      />
-                      <TarjetaCotizacion
-                        archivoInicial={archivosCotizaciones["3"]}
-                        numero="3"
-                        titulo="Cotización 3"
-                        onArchivoChange={(file) =>
-                          actualizarArchivoGlobal("3", file)
-                        }
-                      />
-                    </>
-                  )}
-                </div>
+                      }}
+                    />
+                    {rol === "compras-inventario" && (
+                      <>
+                        <TarjetaCotizacion
+                          archivoInicial={archivosCotizaciones["2"]}
+                          numero="2"
+                          titulo="Cotización 2"
+                          onArchivoChange={(file) =>
+                            actualizarArchivoGlobal("2", file)
+                          }
+                        />
+                        <TarjetaCotizacion
+                          archivoInicial={archivosCotizaciones["3"]}
+                          numero="3"
+                          titulo="Cotización 3"
+                          onArchivoChange={(file) =>
+                            actualizarArchivoGlobal("3", file)
+                          }
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
                 {requiereFacturas && (
                   <>
                     <div className="w-full flex bg-slate-200 h-px" />
