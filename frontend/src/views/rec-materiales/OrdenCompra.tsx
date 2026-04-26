@@ -14,7 +14,11 @@ const moneda = new Intl.NumberFormat("es-MX", {
   currency: "MXN",
 });
 
-const OrdenCompra = () => {
+interface OrdenCompraProps {
+  requisiciones?: requisicionTypes.Requisicion[];
+}
+
+const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const rol = useOutletContext() as string;
@@ -29,7 +33,7 @@ const OrdenCompra = () => {
       return;
     }
 
-    const requisicionEncontrada = requisicionTypes.REQUISICIONES_COMPLETO.find(
+    const requisicionEncontrada = requisiciones.find(
       (item) => item.id === id,
     );
 
