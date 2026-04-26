@@ -1,33 +1,38 @@
 import React, { useState } from 'react';
 import { Package, Inbox, Search, Undo2, CheckSquare, MonitorSmartphone, MapPin, Bell, Upload } from 'lucide-react';
-import marakameLogo from '../../assets/marakame.jpeg'; // Ajusta esta ruta si es necesario
+import marakameLogo from '../../assets/marakame.jpeg'; 
 
-// Importamos los componentes hijos
+// Importamos los componentes hijos (Ojo a los nuevos nombres del Paso 5 y 6)
 import PanelGeneral from './PanelGeneral';
 import Paso1Recepcion from './Paso1Recepcion';
 import Paso2Verificacion from './Paso2Verificacion';
-import Paso4ContraRecibo from './Paso4ContraRecibo';
 import Paso3Devolucion from './Paso3Devolucion';
-import Paso5Inventario from './Paso5Inventario';
-import Paso6Ubicacion from './Paso6Ubicacion';
+import Paso4ContraRecibo from './Paso4ContraRecibo';
+import Paso5Ubicacion from './Paso5Ubicacion';    // <-- Ahora es el 5
+import Paso6Inventario from './Paso6Inventario';  // <-- Ahora es el 6
 import Paso7Notificacion from './Paso7Notificacion';
 import Paso8Bajas from './Paso8Bajas';
 
-
+// AQUÍ ESTÁ EL MENÚ LATERAL: Ya tiene el orden correcto
 const navItems = [
   { label: 'Panel General', icon: Package, key: 'dashboard', section: 'General' },
   { label: '1. Recibir Consumibles', icon: Inbox, key: 'paso1', section: 'Procedimiento' },
   { label: '2. Revisar vs Requisición', icon: Search, key: 'paso2', section: 'Procedimiento' },
   { label: '3a. Devolver al Proveedor', icon: Undo2, key: 'paso3', section: 'Procedimiento' },
   { label: '4. Contra-recibo', icon: CheckSquare, key: 'paso4', section: 'Procedimiento' },
-  { label: '5. Inventario Digital', icon: MonitorSmartphone, key: 'paso5', section: 'Procedimiento' },
-  { label: '6. Ubicar en Almacén', icon: MapPin, key: 'paso6', section: 'Procedimiento' },
+  { label: '5. Ubicar en Almacén', icon: MapPin, key: 'paso5', section: 'Procedimiento' }, // <-- Cambiado
+  { label: '6. Inventario Maestro', icon: MonitorSmartphone, key: 'paso6', section: 'Procedimiento' }, // <-- Cambiado
   { label: '7. Notificar a Rec. Mat.', icon: Bell, key: 'paso7', section: 'Procedimiento' },
   { label: '8. Baja de Consumibles', icon: Upload, key: 'paso8', section: 'Procedimiento' },
 ];
 
 const AlmacenDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  
+  // --- ESTADO GLOBAL DEL MÓDULO ---
+  const [articulosParaInventario, setArticulosParaInventario] = useState([]);
+  const [recepcionActiva, setRecepcionActiva] = useState(null);
+  const [datosIncidencia, setDatosIncidencia] = useState(null);
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -46,6 +51,7 @@ const AlmacenDashboard = () => {
           </div>
 
           <div className="grid gap-4 px-4 py-5 md:grid-cols-[240px_1fr] md:px-6">
+            {/* Barra lateral de navegación */}
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
               {navItems.filter(i => i.section === 'General').map(({ label, icon: Icon, key }) => (
                 <button key={key} onClick={() => setActiveTab(key)}
@@ -68,20 +74,55 @@ const AlmacenDashboard = () => {
               ))}
             </aside>
 
-            {/* AQUÍ LLAMAMOS A LOS COMPONENTES EXTERNOS */}
+            {/* Renderizado dinámico de componentes */}
             <main>
               {activeTab === 'dashboard' && <PanelGeneral setActiveTab={setActiveTab} />}
-              {activeTab === 'paso1' && <Paso1Recepcion setActiveTab={setActiveTab} />}
-              {activeTab === 'paso2' && <Paso2Verificacion setActiveTab={setActiveTab} />}
-              {activeTab === 'paso3' && <Paso3Devolucion setActiveTab={setActiveTab} />}
-              {activeTab === 'paso4' && <Paso4ContraRecibo setActiveTab={setActiveTab} />}
-              {activeTab === 'paso5' && <Paso5Inventario setActiveTab={setActiveTab} />}
-              {activeTab === 'paso6' && <Paso6Ubicacion setActiveTab={setActiveTab} />} 
+              
+              {activeTab === 'paso1' && (
+                <Paso1Recepcion 
+                  setActiveTab={setActiveTab} 
+                  setRecepcionActiva={setRecepcionActiva} 
+                />
+              )}
+      
+              {activeTab === 'paso2' && (
+                <Paso2Verificacion 
+                  setActiveTab={setActiveTab} 
+                  setArticulosParaInventario={setArticulosParaInventario} 
+                  recepcionActiva={recepcionActiva} 
+                  setDatosIncidencia={setDatosIncidencia}
+                />
+              )}
+              
+              {activeTab === 'paso3' && (
+                <Paso3Devolucion 
+                  setActiveTab={setActiveTab} 
+                  recepcionActiva={recepcionActiva}
+                  datosIncidencia={datosIncidencia}
+                />
+              )}
+
+              {activeTab === 'paso4' && (
+                <Paso4ContraRecibo 
+                  setActiveTab={setActiveTab} 
+                  recepcionActiva={recepcionActiva} 
+                  articulosParaInventario={articulosParaInventario}
+                />
+              )}
+
+              {activeTab === 'paso7' && (
+  <Paso7Notificacion 
+    setActiveTab={setActiveTab} 
+    recepcionActiva={recepcionActiva} 
+    articulosParaInventario={articulosParaInventario}
+  />
+)}
+              
+              {/* AHORA EL 5 ES UBICACIÓN Y EL 6 ES INVENTARIO */}
+              {activeTab === 'paso5' && <Paso5Ubicacion setActiveTab={setActiveTab} />} 
+              {activeTab === 'paso6' && <Paso6Inventario setActiveTab={setActiveTab} />} 
               {activeTab === 'paso7' && <Paso7Notificacion setActiveTab={setActiveTab} />} 
               {activeTab === 'paso8' && <Paso8Bajas setActiveTab={setActiveTab} />} 
-              
-
-
             </main>
 
           </div>
