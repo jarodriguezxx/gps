@@ -22,6 +22,8 @@ const EstudioSocioeconomico = () => {
   const [pacienteSeleccionadoId, setPacienteSeleccionadoId] = useState(null);
   const [indiceResaltado, setIndiceResaltado] = useState(-1);
   const [mostrarResultados, setMostrarResultados] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+  const [guardandoEstudio, setGuardandoEstudio] = useState(false);
   const ultimaBusquedaAutoSeleccionadaRef = useRef('');
   const [householdMembers, setHouseholdMembers] = useState([
     { nombre: '', parentesco: '', edad: '', sexo: '', estadoCivil: '', ocupacionLugar: '' },
@@ -537,24 +539,33 @@ const EstudioSocioeconomico = () => {
     setFormData((prev) => ({
       ...prev,
       nombreSolicitante: paciente.solicitante?.nombre || '',
+      fechaNacimiento: paciente.solicitante?.fechaNacimiento || '',
       lugarNacimiento: paciente.solicitante?.lugar || '',
+      edad: paciente.solicitante?.edad ? String(paciente.solicitante.edad) : '',
+      sexo: paciente.solicitante?.sexo || '',
+      escolaridad: paciente.solicitante?.escolaridad || '',
       ocupacion: paciente.solicitante?.ocupacion || '',
-      direccionCalle: paciente.solicitante?.domicilioParticular || '',
-      direccionNoExt: '',
-      direccionNoInt: '',
-      direccionColonia: '',
-      direccionMunicipioDelegacion: '',
-      direccionCp: '',
-      direccionCiudadEstado: '',
+      estadoCivil: paciente.solicitante?.estadoCivil || '',
+      direccionCalle: paciente.solicitante?.direccionCalle || paciente.solicitante?.domicilioParticular || '',
+      direccionNoExt: paciente.solicitante?.direccionNoExt || '',
+      direccionNoInt: paciente.solicitante?.direccionNoInt || '',
+      direccionColonia: paciente.solicitante?.direccionColonia || '',
+      direccionMunicipioDelegacion: paciente.solicitante?.direccionMunicipioDelegacion || '',
+      direccionCp: paciente.solicitante?.direccionCp || '',
+      direccionCiudadEstado: paciente.solicitante?.direccionCiudadEstado || '',
       telefonoCasa: paciente.solicitante?.telefono || '',
       telefonoCelular: paciente.solicitante?.celular || '',
+      cuentaConTarjeta: paciente.solicitante?.cuentaConTarjeta || '',
       pacienteNombre: paciente.nombreCompleto || '',
+      pacienteFechaNacimiento: paciente.fechaNacimiento || '',
       pacienteLugarNacimiento: paciente.origen || '',
       pacienteEdad: paciente.edad ? String(paciente.edad) : '',
+      pacienteSexo: paciente.sexo || '',
       pacienteEscolaridad: paciente.escolaridad || '',
       pacienteOcupacion: paciente.ocupacion || '',
       pacienteEstadoCivil: paciente.estadoCivil || '',
       pacienteDireccion: paciente.domicilioParticular || '',
+      pacienteTelefonoCasa: paciente.telefonoCasa || '',
       pacienteTelefonoCelular: paciente.telefonoContacto || '',
       sustanciaConsumo: paciente.sustanciaConsumo || '',
     }));
@@ -796,9 +807,13 @@ const EstudioSocioeconomico = () => {
   const handleNextStep = () => {
     const isValid = validateCurrentTab();
     if (!isValid) {
-      window.alert('Completa los campos obligatorios de esta sección antes de continuar.');
+      setFeedback({
+        type: 'error',
+        message: 'Completa los campos obligatorios de esta sección antes de continuar.',
+      });
       return;
     }
+    setFeedback(null);
     if (!isLastStep) {
       setActiveTab(tabs[currentTabIndex + 1].id);
     }
@@ -941,19 +956,273 @@ const EstudioSocioeconomico = () => {
   const handleSaveDraft = () => {
     // Base para escalado: aquí luego se puede guardar sección por sección en backend.
     setIsDirty(false);
-    window.alert(`Borrador guardado para la sección "${activeTab}".`);
+    setFeedback({
+      type: 'success',
+      message: `Borrador guardado para la sección "${activeTab}".`,
+    });
   };
 
-  const handleSaveStudy = () => {
-    const isValid = validateCurrentTab();
-    if (!isValid) {
-      window.alert('Completa los campos obligatorios marcados antes de guardar.');
+  const cargarDatosDePrueba = () => {
+    setIsDirty(true);
+    setActiveTab('solicitante');
+    setFormData((prev) => ({
+      ...prev,
+      nombreSolicitante: 'María Fernanda López Rivera',
+      fechaNacimiento: '1985-04-18',
+      lugarNacimiento: 'Guadalajara, Jalisco',
+      edad: '40',
+      sexo: 'femenino',
+      escolaridad: 'Licenciatura',
+      ocupacion: 'Administrativa',
+      estadoCivil: 'Casado(a)',
+      direccionCalle: 'Av. del Lago',
+      direccionNoExt: '245',
+      direccionNoInt: '3B',
+      direccionColonia: 'Residencial Victoria',
+      direccionMunicipioDelegacion: 'Zapopan',
+      direccionCp: '45019',
+      direccionCiudadEstado: 'Jalisco',
+      telefonoCasa: '33 3812 4455',
+      telefonoCelular: '33 1122 3344',
+      cuentaConTarjeta: 'Débito',
+      pacienteNombre: 'Juan Pablo López Rivera',
+      pacienteFechaNacimiento: '2008-09-02',
+      pacienteLugarNacimiento: 'Guadalajara, Jalisco',
+      pacienteEdad: '17',
+      pacienteSexo: 'masculino',
+      pacienteEscolaridad: 'Preparatoria',
+      pacienteOcupacion: 'Estudiante',
+      pacienteEstadoCivil: 'Soltero(a)',
+      pacienteDireccion: 'Av. del Lago 245, Residencial Victoria, Zapopan, Jalisco',
+      pacienteTelefonoCasa: '33 3812 4455',
+      pacienteTelefonoCelular: '33 1122 3344',
+      laboralCuentaConEmpleo: 'si',
+      laboralLugarTrabajo: 'Empresa Logística del Centro',
+      laboralAntiguedad: '4 años',
+      laboralPuesto: 'Coordinadora administrativa',
+      laboralHorario: '08:00 a 16:00 hrs',
+      laboralDependientes: '2',
+      laboralIngresoMensual: '18500',
+      laboralOtrosIngresos: '2000',
+      laboralCategoriaOcupacion: 'profesionista',
+      laboralNumeroOcupacion: '2',
+      conyugeOcupacion: 'Comerciante',
+      conyugeLugarTrabajo: 'Mercado San Juan',
+      conyugeAntiguedad: '6 años',
+      conyugeIngresoMensual: '12000',
+      familiarAportaIngreso: 'si',
+      numeroIntegrantesAportan: '2',
+      balanceEconomico: '43000',
+      patrimonioCuentaAuto: 'si',
+      patrimonioCantidad: '1',
+      vehiculoCategoria: 'uno_dos',
+      vehiculoNumero: '1',
+      saludAsistenciaOpciones: ['seguro_social', 'consulta_privada'],
+      saludMontoConsultas: '700',
+      saludOtrosServicios: '250',
+      saludMiembrosConAsistencia: '3',
+      saludAdicAlcoholismoDetalle: 'No aplica',
+      saludAdicAlcoholismoFrecuencia: 'Ocasional',
+      saludAdicAlcoholismoSeveridad: 'Baja',
+      saludAdicTcaLudopatiaDetalle: 'No aplica',
+      saludAdicTcaLudopatiaFrecuencia: 'Ninguna',
+      saludAdicTcaLudopatiaSeveridad: 'Nula',
+      saludAdicDrogadiccionDetalle: 'No aplica',
+      saludAdicDrogadiccionFrecuencia: 'Ninguna',
+      saludAdicDrogadiccionSeveridad: 'Nula',
+      saludAdicOtrosDetalle: 'Sin datos relevantes',
+      saludAdicOtrosFrecuencia: 'Esporádica',
+      saludAdicOtrosSeveridad: 'Baja',
+      saludRelacionFamiliar: 'Estable',
+      viviendaRegimen: 'propia',
+      viviendaRegimenNumero: '1',
+      viviendaTipo: 'casa_habitacion',
+      viviendaTipoNumero: '0',
+      viviendaTotalHabitaciones: 'mas_cuatro',
+      viviendaTotalHabitacionesNumero: '2',
+      viviendaConformacion: ['solicitante', 'conyuge', 'hijos'],
+      viviendaBanos: '2',
+      viviendaRecamaras: '4',
+      viviendaEspecificarSinBanos: 'No aplica',
+      viviendaOtrasCaracteristicas: 'Patio y cochera',
+      viviendaMaterialPiso: 'vitropiso',
+      viviendaMaterialPisoNumero: '1',
+      viviendaMaterialMuros: 'concreto',
+      viviendaMaterialMurosNumero: '1',
+      viviendaMaterialTecho: 'concreto',
+      viviendaMaterialTechoNumero: '1',
+      familiarDiagnostico: 'Entorno familiar funcional con soporte económico estable.',
+      familiarObservacionesTrabajoSocial: 'Se observa red de apoyo suficiente para el proceso de ingreso.',
+      familiarObservacionesVisitaDomiciliaria: 'Vivienda limpia, organizada y con condiciones adecuadas para evaluación institucional.',
+    }));
+
+    setHouseholdMembers([
+      { nombre: 'María Fernanda López Rivera', parentesco: 'Madre', edad: '40', sexo: 'femenino', estadoCivil: 'Casado(a)', ocupacionLugar: 'Administrativa' },
+      { nombre: 'Juan Pablo López Rivera', parentesco: 'Hijo', edad: '17', sexo: 'masculino', estadoCivil: 'Soltero(a)', ocupacionLugar: 'Estudiante' },
+      { nombre: 'Carlos Alberto Rivera', parentesco: 'Esposo', edad: '42', sexo: 'masculino', estadoCivil: 'Casado(a)', ocupacionLugar: 'Comerciante' },
+    ]);
+
+    setIncomeContributors([
+      { parentesco: 'Solicitante', cantidadMensual: '18500' },
+      { parentesco: 'Cónyuge', cantidadMensual: '12000' },
+    ]);
+
+    setVehicleAssets([
+      { marca: 'Toyota', modelo: 'RAV4 2020', propietario: 'Solicitante' },
+      { marca: 'Nissan', modelo: 'Versa 2018', propietario: 'Cónyuge' },
+    ]);
+
+    setMonthlyIncomes({
+      solicitante: '18500',
+      conyuge: '12000',
+      hijos: '0',
+      otros: '2000',
+    });
+
+    setMonthlyExpenses({
+      alimentacion: '7000',
+      renta: '0',
+      luz: '650',
+      agua: '300',
+      combustible: '1500',
+      transporte: '700',
+      educacion: '2500',
+      telefono: '850',
+      gastosMedicos: '900',
+      esparcimiento: '1200',
+      otros: '1100',
+    });
+
+    setFoodFrequency({
+      carneRes: 'semanal',
+      carnePollo: 'diario',
+      carneCerdo: 'semanal',
+      pescado: 'mensual',
+      leche: 'diario',
+      cereales: 'diario',
+      huevo: 'diario',
+      frutas: 'diario',
+      verduras: 'diario',
+      leguminosas: 'semanal',
+    });
+
+    setFamilyReferences([
+      { nombre: 'Laura Medina', telefono: '33 4556 7788', relacion: 'Vecina', tiempoConocer: '10 años' },
+      { nombre: 'Ricardo Torres', telefono: '33 7788 9900', relacion: 'Hermano', tiempoConocer: '17 años' },
+    ]);
+
+    setFeedback({
+      type: 'success',
+      message: 'Se cargaron datos de prueba para Solicitante, Paciente y secciones principales.',
+    });
+  };
+
+  const handleSaveStudy = async () => {
+    if (guardandoEstudio) {
       return;
     }
 
-    // Base para escalado: preparado para guardar expediente completo.
-    setIsDirty(false);
-    window.alert('Estudio guardado correctamente.');
+    if (!pacienteSeleccionadoId) {
+      setFeedback({
+        type: 'warning',
+        message: 'Primero selecciona un paciente para actualizar Solicitante y Paciente.',
+      });
+      return;
+    }
+
+    try {
+      setGuardandoEstudio(true);
+      setFeedback({
+        type: 'info',
+        message: 'Guardando estudio y generando PDF, espera un momento...',
+      });
+      const payload = {
+        nombreSolicitante: formData.nombreSolicitante,
+        fechaNacimientoSolicitante: formData.fechaNacimiento,
+        edadSolicitante: formData.edad ? Number(formData.edad) : null,
+        sexoSolicitante: formData.sexo,
+        escolaridadSolicitante: formData.escolaridad,
+        estadoCivilSolicitante: formData.estadoCivil,
+        lugarNacimientoSolicitante: formData.lugarNacimiento,
+        ocupacionSolicitante: formData.ocupacion,
+        direccionCalleSolicitante: formData.direccionCalle,
+        direccionNoExtSolicitante: formData.direccionNoExt,
+        direccionNoIntSolicitante: formData.direccionNoInt,
+        direccionColoniaSolicitante: formData.direccionColonia,
+        direccionMunicipioDelegacionSolicitante: formData.direccionMunicipioDelegacion,
+        direccionCpSolicitante: formData.direccionCp,
+        direccionCiudadEstadoSolicitante: formData.direccionCiudadEstado,
+        telefonoCasaSolicitante: formData.telefonoCasa,
+        telefonoCelularSolicitante: formData.telefonoCelular,
+        cuentaConTarjetaSolicitante: formData.cuentaConTarjeta,
+        nombrePaciente: formData.pacienteNombre,
+        fechaNacimientoPaciente: formData.pacienteFechaNacimiento,
+        edadPaciente: formData.pacienteEdad ? Number(formData.pacienteEdad) : null,
+        sexoPaciente: formData.pacienteSexo,
+        estadoCivilPaciente: formData.pacienteEstadoCivil,
+        escolaridadPaciente: formData.pacienteEscolaridad,
+        ocupacionPaciente: formData.pacienteOcupacion,
+        lugarNacimientoPaciente: formData.pacienteLugarNacimiento,
+        direccionPaciente: formData.pacienteDireccion,
+        telefonoCasaPaciente: formData.pacienteTelefonoCasa,
+        telefonoCelularPaciente: formData.pacienteTelefonoCelular,
+      };
+
+      const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteSeleccionadoId}/estudio-basico`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'No fue posible actualizar los datos.');
+      }
+
+      const pdfPayload = {
+        estudio: {
+          formData,
+          householdMembers,
+          incomeContributors,
+          vehicleAssets,
+          monthlyIncomes,
+          monthlyExpenses,
+          foodFrequency,
+          familyReferences,
+        },
+      };
+
+      const pdfResponse = await fetch(`http://localhost:4000/api/pacientes/${pacienteSeleccionadoId}/estudio-socioeconomico/pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(pdfPayload),
+      });
+
+      if (!pdfResponse.ok) {
+        const errorText = await pdfResponse.text();
+        throw new Error(errorText || 'No fue posible generar el PDF del estudio.');
+      }
+
+      const pdfData = await pdfResponse.json();
+
+      setIsDirty(false);
+      setGuardandoEstudio(false);
+      setFeedback({
+        type: 'success',
+        message: `Se actualizó Solicitante y Paciente y se generó el PDF ${pdfData?.nombreArchivo || ''}.`,
+      });
+    } catch (error) {
+      console.error('Error guardando estudio basico:', error);
+      setGuardandoEstudio(false);
+      setFeedback({
+        type: 'error',
+        message: 'No se pudo guardar. Verifica backend o conexión.',
+      });
+    }
   };
 
   useEffect(() => {
@@ -983,6 +1252,31 @@ const EstudioSocioeconomico = () => {
       </header>
 
         <main className="space-y-5">
+
+        {feedback && (
+          <section
+            className={`mb-4 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-sm ${
+              feedback.type === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : feedback.type === 'info'
+                ? 'border-sky-200 bg-sky-50 text-sky-800'
+                : feedback.type === 'warning'
+                ? 'border-amber-200 bg-amber-50 text-amber-800'
+                : 'border-rose-200 bg-rose-50 text-rose-800'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <p>{feedback.message}</p>
+              <button
+                type="button"
+                onClick={() => setFeedback(null)}
+                className="rounded-md px-2 py-1 text-xs font-bold uppercase tracking-wide opacity-80 hover:opacity-100"
+              >
+                Cerrar
+              </button>
+            </div>
+          </section>
+        )}
         
         {/* --- BUSCADOR DE SOLICITANTE --- */}
         <section className="mb-8">
@@ -2147,6 +2441,14 @@ const EstudioSocioeconomico = () => {
           </button>
 
           <div className="flex flex-wrap items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={cargarDatosDePrueba}
+              className="px-6 py-2 bg-slate-900 text-white font-bold rounded-xl shadow-sm hover:bg-slate-800 transition-all flex items-center gap-2"
+            >
+              Cargar datos de prueba
+            </button>
+
             {!isFirstStep ? (
               <button
                 type="button"
@@ -2169,9 +2471,10 @@ const EstudioSocioeconomico = () => {
               <button
                 type="button"
                 onClick={handleSaveStudy}
-                className="px-6 py-2 bg-[#7E1D3B] text-white font-bold rounded-xl shadow-lg shadow-rose-900/20 hover:bg-[#63162e] transition-all flex items-center gap-2"
+                disabled={guardandoEstudio}
+                className={`px-6 py-2 bg-[#7E1D3B] text-white font-bold rounded-xl shadow-lg shadow-rose-900/20 hover:bg-[#63162e] transition-all flex items-center gap-2 ${guardandoEstudio ? 'cursor-wait opacity-70 hover:bg-[#7E1D3B]' : ''}`}
               >
-                <Save size={18}/> Guardar Estudio
+                <Save size={18}/> {guardandoEstudio ? 'Guardando...' : 'Guardar Estudio'}
               </button>
             ) : (
               <button

@@ -36,11 +36,65 @@ public class SolicitanteController {
         nuevo.setNombre(dto.nombre());
         nuevo.setLugar(dto.lugar());
         nuevo.setOcupacion(dto.ocupacion());
-        nuevo.setDomicilioParticular(dto.domicilioParticular());
+        nuevo.setDireccionCalle(dto.direccionCalle());
+        nuevo.setDireccionNoExt(dto.direccionNoExt());
+        nuevo.setDireccionNoInt(dto.direccionNoInt());
+        nuevo.setDireccionColonia(dto.direccionColonia());
+        nuevo.setDireccionMunicipioDelegacion(dto.direccionMunicipioDelegacion());
+        nuevo.setDireccionCp(dto.direccionCp());
+        nuevo.setDireccionCiudadEstado(dto.direccionCiudadEstado());
+        nuevo.setDomicilioParticular(construirDireccionCompleta(
+            dto.direccionCalle(),
+            dto.direccionNoExt(),
+            dto.direccionNoInt(),
+            dto.direccionColonia(),
+            dto.direccionMunicipioDelegacion(),
+            dto.direccionCp(),
+            dto.direccionCiudadEstado(),
+            dto.domicilioParticular()
+        ));
         nuevo.setParentescoPaciente(dto.parentescoPaciente());
         nuevo.setTelefono(dto.telefono());
         nuevo.setCelular(dto.celular());
         
         return solicitanteRepository.save(nuevo); // Se guarda en PostgreSQL
+    }
+
+    private String construirDireccionCompleta(
+        String calle,
+        String noExt,
+        String noInt,
+        String colonia,
+        String municipioDelegacion,
+        String cp,
+        String ciudadEstado,
+        String fallback
+    ) {
+        StringBuilder direccion = new StringBuilder();
+
+        agregarParte(direccion, calle);
+        agregarParte(direccion, noExt == null || noExt.isBlank() ? null : "No. Ext. " + noExt);
+        agregarParte(direccion, noInt == null || noInt.isBlank() ? null : "No. Int. " + noInt);
+        agregarParte(direccion, colonia);
+        agregarParte(direccion, municipioDelegacion);
+        agregarParte(direccion, cp);
+        agregarParte(direccion, ciudadEstado);
+
+        if (direccion.length() > 0) {
+            return direccion.toString();
+        }
+
+        return fallback;
+    }
+
+    private void agregarParte(StringBuilder direccion, String parte) {
+        if (parte == null || parte.isBlank()) {
+            return;
+        }
+
+        if (direccion.length() > 0) {
+            direccion.append(", ");
+        }
+        direccion.append(parte.trim());
     }
 }

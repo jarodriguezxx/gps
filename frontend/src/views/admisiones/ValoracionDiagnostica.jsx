@@ -1,7 +1,193 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Save, X, User, Phone, Activity, HeartPulse, Clipboard, Search, ArrowRight } from 'lucide-react';
 import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
+
+const structuredAddressDefaults = {
+  solicitanteDireccionCalle: '',
+  solicitanteDireccionNoExt: '',
+  solicitanteDireccionNoInt: '',
+  solicitanteDireccionColonia: '',
+  solicitanteDireccionMunicipioDelegacion: '',
+  solicitanteDireccionCp: '',
+  solicitanteDireccionCiudadEstado: '',
+  prospectoDireccionCalle: '',
+  prospectoDireccionNoExt: '',
+  prospectoDireccionNoInt: '',
+  prospectoDireccionColonia: '',
+  prospectoDireccionMunicipioDelegacion: '',
+  prospectoDireccionCp: '',
+  prospectoDireccionCiudadEstado: '',
+};
+
+const formatStructuredAddress = (address) => {
+  const parts = [
+    address.calle,
+    address.noExt ? `No. Ext. ${address.noExt}` : '',
+    address.noInt ? `No. Int. ${address.noInt}` : '',
+    address.colonia,
+    address.municipioDelegacion,
+    address.cp,
+    address.ciudadEstado,
+  ].filter((part) => String(part || '').trim());
+
+  return parts.join(', ');
+};
+
+const toLocalDateTimeValue = (date) => {
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const isPastLocalDateTime = (value) => {
+  if (!value) {
+    return false;
+  }
+
+  const selectedDate = new Date(value);
+  if (Number.isNaN(selectedDate.getTime())) {
+    return false;
+  }
+
+  return selectedDate.getTime() < Date.now();
+};
+
+const isValidPhoneValue = (value) => /^[0-9\-\s()+]{7,20}$/.test(String(value || '').trim());
+
+const getSystemDateValue = () => {
+  const now = new Date();
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+};
+
+const getSystemDayValue = () => {
+  const now = new Date();
+  return new Intl.DateTimeFormat('es-MX', { weekday: 'long' }).format(now);
+};
+
+const requiredTextFields = {
+  solicitante: [
+    { name: 'fuenteReferencia', label: 'Fuente de referencia' },
+    { name: 'nombreSolicitante', label: 'Nombre de quien solicita información' },
+    { name: 'solicitanteDireccionCalle', label: 'Calle del solicitante' },
+    { name: 'solicitanteDireccionNoExt', label: 'No. Ext. del solicitante' },
+    { name: 'solicitanteDireccionColonia', label: 'Colonia del solicitante' },
+    { name: 'solicitanteDireccionMunicipioDelegacion', label: 'Mpio. o delegación del solicitante' },
+    { name: 'solicitanteDireccionCp', label: 'C.P. del solicitante' },
+    { name: 'solicitanteDireccionCiudadEstado', label: 'Ciudad o estado del solicitante' },
+    { name: 'telefonoSolicitante', label: 'Número teléfono del solicitante' },
+    { name: 'celularSolicitante', label: 'Número celular del solicitante' },
+    { name: 'lugarVisita', label: 'Lugar de donde nos visitan' },
+    { name: 'dedicacionSolicitante', label: 'A qué se dedica el solicitante' },
+    { name: 'parentesco', label: 'Parentesco con el paciente' },
+  ],
+  prospecto: [
+    { name: 'nombrePaciente', label: 'Nombre completo del prospecto' },
+    { name: 'edadPaciente', label: 'Edad del prospecto' },
+    { name: 'estadoCivilPaciente', label: 'Estado civil del prospecto' },
+    { name: 'hijosCount', label: 'Cuántos hijos tiene' },
+    { name: 'escolaridadPaciente', label: 'Escolaridad' },
+    { name: 'origenPaciente', label: 'Origen' },
+    { name: 'prospectoDireccionCalle', label: 'Calle del prospecto' },
+    { name: 'prospectoDireccionNoExt', label: 'No. Ext. del prospecto' },
+    { name: 'prospectoDireccionColonia', label: 'Colonia del prospecto' },
+    { name: 'prospectoDireccionMunicipioDelegacion', label: 'Mpio. o delegación del prospecto' },
+    { name: 'prospectoDireccionCp', label: 'C.P. del prospecto' },
+    { name: 'prospectoDireccionCiudadEstado', label: 'Ciudad o estado del prospecto' },
+    { name: 'pacienteTelefonoCelular', label: 'Teléfono de contacto del prospecto' },
+    { name: 'dedicacionPaciente', label: 'Ocupación' },
+    { name: 'sustanciaConsumo', label: 'Sustancia de consumo' },
+    { name: 'internamiento', label: '¿Está dispuesto a internarse?' },
+    { name: 'tratamientoAnterior', label: '¿Ha estado en tratamiento anteriormente?' },
+    { name: 'posibilidadesEconomicas', label: 'Posibilidades económicas' },
+    { name: 'llamarPaciente', label: 'Tipo de llamada inicial' },
+    { name: 'acuerdo', label: 'Acuerdo' },
+  ],
+};
+
+const getFieldValue = (formData, name) => formData[name];
+
+const findFirstValidationIssue = (formData) => {
+  for (const field of requiredTextFields.solicitante) {
+    const value = getFieldValue(formData, field.name);
+    if (!String(value ?? '').trim()) {
+      return { tab: 'solicitante', label: field.label };
+    }
+  }
+
+  if (!isValidPhoneValue(formData.telefonoSolicitante)) {
+    return { tab: 'solicitante', label: 'Número teléfono del solicitante' };
+  }
+
+  if (!isValidPhoneValue(formData.celularSolicitante)) {
+    return { tab: 'solicitante', label: 'Número celular del solicitante' };
+  }
+
+  if (String(formData.fuenteReferencia).trim() === 'otro' && !String(formData.fuenteReferenciaOtro || '').trim()) {
+    return { tab: 'solicitante', label: 'Otro: especifique' };
+  }
+
+  for (const field of requiredTextFields.prospecto) {
+    const value = getFieldValue(formData, field.name);
+    if (!String(value ?? '').trim()) {
+      return { tab: 'prospecto', label: field.label };
+    }
+  }
+
+  if (!Number.isFinite(Number(formData.edadPaciente)) || Number(formData.edadPaciente) < 0) {
+    return { tab: 'prospecto', label: 'Edad del prospecto' };
+  }
+
+  if (!Number.isFinite(Number(formData.hijosCount)) || Number(formData.hijosCount) < 0) {
+    return { tab: 'prospecto', label: 'Cuántos hijos tiene' };
+  }
+
+  if (!isValidPhoneValue(formData.pacienteTelefonoCelular)) {
+    return { tab: 'prospecto', label: 'Teléfono de contacto del prospecto' };
+  }
+
+  if (String(formData.sustanciaConsumo).trim() === 'otros' && !String(formData.sustanciaEspecifica || '').trim()) {
+    return { tab: 'prospecto', label: 'Especifique la sustancia' };
+  }
+
+  if (String(formData.internamiento).trim() === 'no' || String(formData.internamiento).trim() === 'duda') {
+    if (!String(formData.criterioInternamiento || '').trim()) {
+      return { tab: 'prospecto', label: 'Se requiere intervenir' };
+    }
+
+    if (!String(formData.conclusionIntervencion || '').trim()) {
+      return { tab: 'prospecto', label: 'Conclusión' };
+    }
+  }
+
+  if (String(formData.llamarPaciente).trim() === 'nosotros' || String(formData.llamarPaciente).trim() === 'prospecto') {
+    if (!String(formData.fechaLlamada || '').trim()) {
+      return { tab: 'prospecto', label: 'Fecha de llamada' };
+    }
+  } else {
+    if (!String(formData.estadoSeguimiento || '').trim()) {
+      return { tab: 'prospecto', label: 'Estado de seguimiento' };
+    }
+
+    if (String(formData.estadoSeguimiento).trim() === 'espera_visita' && !String(formData.fechaEsperaVisita || '').trim()) {
+      return { tab: 'prospecto', label: 'Fecha de visita del prospecto' };
+    }
+
+    if (String(formData.estadoSeguimiento).trim() === 'Posible_Ingreso' && !String(formData.fechaPosibleIngreso || '').trim()) {
+      return { tab: 'prospecto', label: 'Fecha de posible ingreso' };
+    }
+  }
+
+  if (!String(formData.fechaLlamada || formData.fechaEsperaVisita || formData.fechaPosibleIngreso || formData.fechaLlamadaPaciente || '').trim()) {
+    return { tab: 'prospecto', label: 'Fecha de cita o llamada' };
+  }
+
+  if ([formData.fechaLlamada, formData.fechaLlamadaPaciente, formData.fechaEsperaLlamada, formData.fechaEsperaVisita, formData.fechaPosibleIngreso].some(isPastLocalDateTime)) {
+    return { tab: 'prospecto', label: 'Fecha de cita o llamada' };
+  }
+
+  return null;
+};
 
 const ValoracionDiagnostica = () => {
   const navigate = useNavigate();
@@ -13,9 +199,10 @@ const ValoracionDiagnostica = () => {
   const [tab, setTab] = useState('solicitante');
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
-    fechaAtencion: '',
-    diaSemanana: '',
-    nombreQuienAtiende: '',
+    ...structuredAddressDefaults,
+    fechaAtencion: getSystemDateValue(),
+    diaSemanana: getSystemDayValue(),
+    nombreQuienAtiende: 'Pendiente de login',
     fuenteReferencia: '',
     fuenteReferenciaOtro: '',
     nombreSolicitante: '',
@@ -49,9 +236,16 @@ const ValoracionDiagnostica = () => {
     fechaPosibleIngreso: '',
     estadoSeguimiento: '',
     acuerdo: '',
-    nombreMedicoValoro: '',
-    conclusionMedica: '',
   });
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      fechaAtencion: getSystemDateValue(),
+      diaSemanana: getSystemDayValue(),
+      nombreQuienAtiende: prev.nombreQuienAtiende || 'Pendiente de login',
+    }));
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -71,21 +265,10 @@ const ValoracionDiagnostica = () => {
   };
 
   const handleSavePaciente = async () => {
-    if (!formData.nombreSolicitante?.trim()) {
-      window.alert('Agrega el nombre del solicitante antes de guardar.');
-      setTab('solicitante');
-      return;
-    }
-
-    if (!formData.nombrePaciente?.trim()) {
-      window.alert('Agrega el nombre del paciente antes de guardar.');
-      setTab('paciente');
-      return;
-    }
-
-    if (!formData.estadoSeguimiento?.trim() && !formData.llamarPaciente?.trim()) {
-      window.alert('Selecciona el estado de seguimiento o el tipo de llamada.');
-      setTab('paciente');
+    const validationIssue = findFirstValidationIssue(formData);
+    if (validationIssue) {
+      window.alert(`Completa el campo: ${validationIssue.label}.`);
+      setTab(validationIssue.tab);
       return;
     }
 
@@ -93,7 +276,22 @@ const ValoracionDiagnostica = () => {
       nombre: formData.nombreSolicitante,
       lugar: formData.lugarVisita,
       ocupacion: formData.dedicacionSolicitante,
-      domicilioParticular: formData.domicilioSolicitante,
+      direccionCalle: formData.solicitanteDireccionCalle,
+      direccionNoExt: formData.solicitanteDireccionNoExt,
+      direccionNoInt: formData.solicitanteDireccionNoInt,
+      direccionColonia: formData.solicitanteDireccionColonia,
+      direccionMunicipioDelegacion: formData.solicitanteDireccionMunicipioDelegacion,
+      direccionCp: formData.solicitanteDireccionCp,
+      direccionCiudadEstado: formData.solicitanteDireccionCiudadEstado,
+      domicilioParticular: formatStructuredAddress({
+        calle: formData.solicitanteDireccionCalle,
+        noExt: formData.solicitanteDireccionNoExt,
+        noInt: formData.solicitanteDireccionNoInt,
+        colonia: formData.solicitanteDireccionColonia,
+        municipioDelegacion: formData.solicitanteDireccionMunicipioDelegacion,
+        cp: formData.solicitanteDireccionCp,
+        ciudadEstado: formData.solicitanteDireccionCiudadEstado,
+      }) || formData.domicilioSolicitante,
       parentescoPaciente: formData.parentesco,
       telefono: formData.telefonoSolicitante,
       celular: formData.celularSolicitante,
@@ -106,7 +304,22 @@ const ValoracionDiagnostica = () => {
       hijos: formData.hijosCount ? Number(formData.hijosCount) : null,
       escolaridad: formData.escolaridadPaciente,
       origen: formData.origenPaciente,
-      domicilio: formData.domicilioPaciente,
+      direccionCalle: formData.prospectoDireccionCalle,
+      direccionNoExt: formData.prospectoDireccionNoExt,
+      direccionNoInt: formData.prospectoDireccionNoInt,
+      direccionColonia: formData.prospectoDireccionColonia,
+      direccionMunicipioDelegacion: formData.prospectoDireccionMunicipioDelegacion,
+      direccionCp: formData.prospectoDireccionCp,
+      direccionCiudadEstado: formData.prospectoDireccionCiudadEstado,
+      domicilio: formatStructuredAddress({
+        calle: formData.prospectoDireccionCalle,
+        noExt: formData.prospectoDireccionNoExt,
+        noInt: formData.prospectoDireccionNoInt,
+        colonia: formData.prospectoDireccionColonia,
+        municipioDelegacion: formData.prospectoDireccionMunicipioDelegacion,
+        cp: formData.prospectoDireccionCp,
+        ciudadEstado: formData.prospectoDireccionCiudadEstado,
+      }) || formData.domicilioPaciente,
       telefono: formData.pacienteTelefonoCelular,
       ocupacion: formData.dedicacionPaciente,
       sustancia: formData.sustanciaConsumo,
@@ -183,7 +396,7 @@ const ValoracionDiagnostica = () => {
                 Estudio socioeconómico
               </button>
               <button type="button" onClick={() => navigate('/admisiones/valoracion-diagnostica')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isValoracionActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
-                Valoración diagnóstica
+                Llamada inicial
               </button>
             </aside>
 
@@ -199,6 +412,7 @@ const ValoracionDiagnostica = () => {
               name="fechaAtencion"
               value={formData.fechaAtencion}
               onChange={handleInputChange}
+              readOnly
               className="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
             />
           </div>
@@ -209,18 +423,19 @@ const ValoracionDiagnostica = () => {
               name="diaSemanana"
               value={formData.diaSemanana}
               onChange={handleInputChange}
-              placeholder="Ej. Lunes"
+              readOnly
               className="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Nombre de quien atiende *</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Nombre de quien atiende</label>
             <input
               type="text"
               name="nombreQuienAtiende"
               value={formData.nombreQuienAtiende}
               onChange={handleInputChange}
-              placeholder="Nombre del recepcionista"
+              readOnly
+              placeholder="Se completará con login"
               className="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
             />
           </div>
@@ -238,14 +453,14 @@ const ValoracionDiagnostica = () => {
             <Phone size={20} /> Datos del Solicitante
           </button>
           <button
-            onClick={() => setTab('paciente')}
+            onClick={() => setTab('prospecto')}
             className={`flex-1 py-3.5 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm text-base ${
-              tab === 'paciente'
+              tab === 'prospecto'
                 ? 'bg-[#7E1D3B] text-white shadow-sm'
                 : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'
             }`}
           >
-            <User size={20} /> Datos del Paciente
+            <User size={20} /> Datos del Prospecto
           </button>
         </div>
             
@@ -291,12 +506,11 @@ const ValoracionDiagnostica = () => {
                   onChange={handleInputChange}
                   placeholder="Nombre completo"
                 />
-                <InputGroup
-                  label="Domicilio particular"
-                  name="domicilioSolicitante"
-                  value={formData.domicilioSolicitante}
+                <AddressSection
+                  title="Dirección actual"
+                  prefix="solicitanteDireccion"
+                  values={formData}
                   onChange={handleInputChange}
-                  placeholder="Calle, número, etc."
                 />
                 <InputGroup
                   label="Número teléfono"
@@ -353,18 +567,18 @@ const ValoracionDiagnostica = () => {
               </div>
             </div>
           ) : (
-            // SECCIÓN: PACIENTE
+            // SECCIÓN: PROSPECTO
             <div className="space-y-8">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                 <InputGroup
-                  label="Nombre completo del paciente"
+                  label="Nombre completo del prospecto"
                   name="nombrePaciente"
                   value={formData.nombrePaciente}
                   onChange={handleInputChange}
                   placeholder="Nombre completo"
                 />
                 <InputGroup
-                  label="Edad del paciente"
+                  label="Edad del prospecto"
                   name="edadPaciente"
                   value={formData.edadPaciente}
                   onChange={handleInputChange}
@@ -418,21 +632,20 @@ const ValoracionDiagnostica = () => {
                   placeholder="Mexico"
                 />
                 <InputGroup
-                  label="Domicilio particular"
-                  name="domicilioPaciente"
-                  value={formData.domicilioPaciente}
-                  onChange={handleInputChange}
-                  placeholder="Calle, número, etc."
-                />
-                <InputGroup
-                  label="Telefono de contacto"
+                  label="Teléfono de contacto"
                   name="pacienteTelefonoCelular"
                   value={formData.pacienteTelefonoCelular}
                   onChange={handleInputChange}
                   placeholder="(123) 456-7890"
                 />
+                <AddressSection
+                  title="Dirección actual"
+                  prefix="prospectoDireccion"
+                  values={formData}
+                  onChange={handleInputChange}
+                />
                 <InputGroup
-                  label="Ocupacion"
+                  label="Ocupación"
                   name="dedicacionPaciente"
                   value={formData.dedicacionPaciente}
                   onChange={handleInputChange}
@@ -534,13 +747,19 @@ const ValoracionDiagnostica = () => {
                     />
                   </div>
                 )}
-                <InputGroup
-                label="Ha estado en tratamiento anteriormente"
-                name="tratamientoAnterior"
-                value={formData.tratamientoAnterior}
-                onChange={handleInputChange}
-                placeholder="...."
-              />
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-2 ml-1">¿Ha estado en tratamiento anteriormente?</label>
+                  <select
+                    name="tratamientoAnterior"
+                    value={formData.tratamientoAnterior}
+                    onChange={handleInputChange}
+                    className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
+                  >
+                    <option value="">Sin seleccionar</option>
+                    <option value="si">Sí</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
                  <InputGroup
                 label="Posibilidades Económicas"
                 name="posibilidadesEconomicas"
@@ -554,7 +773,7 @@ const ValoracionDiagnostica = () => {
               <label className="text-[#7E1D3B] font-bold text-lg border-b border-slate-100 pb-3">Seguimiento y Programación</label>
               <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8 shadow-sm">
                 <div>
-                  <p className="mb-4 font-bold text-sm text-slate-700 uppercase">Tipo de llamada</p>
+                  <p className="mb-4 font-bold text-sm text-slate-700 uppercase">Tipo de llamada inicial</p>
                   <select
                     name="llamarPaciente"
                     value={formData.llamarPaciente}
@@ -563,18 +782,18 @@ const ValoracionDiagnostica = () => {
                   >
                     <option value="">Sin seleccionar</option>
                     <option value="nosotros">Nosotros le llamamos</option>
-                    <option value="paciente">El paciente nos llama</option>
+                    <option value="prospecto">El prospecto nos llama</option>
                   </select>
                 </div>
                  <div className="space-y-4">
                  
                   <div className="space-y-3">
                     <InputGroup
-                label="otro"
+                label="Acuerdo"
                 name="acuerdo"
                 value={formData.acuerdo}
                 onChange={handleInputChange}
-                placeholder="en que se acordó con el paciente para su  internamiento"
+                placeholder="En qué se acordó con el prospecto para su internamiento"
               />
                   </div>
                 </div>
@@ -602,13 +821,14 @@ const ValoracionDiagnostica = () => {
                   {formData.llamarPaciente && (
                     <div>
                       <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">
-                        {formData.llamarPaciente === 'nosotros' ? 'Fecha programada de nuestra llamada' : 'Fecha de llamada del paciente'}
+                        {formData.llamarPaciente === 'nosotros' ? 'Fecha programada de nuestra llamada inicial' : 'Fecha de llamada del prospecto'}
                       </label>
                       <input
                         type="datetime-local"
                         name="fechaLlamada"
                         value={formData.fechaLlamada}
                         onChange={handleInputChange}
+                        min={toLocalDateTimeValue(new Date())}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
@@ -616,12 +836,13 @@ const ValoracionDiagnostica = () => {
                   {/*llamda del pacinete hora */}
                   {!formData.llamarPaciente && formData.estadoSeguimiento === 'espera_visita' && (
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de visita del paciente</label>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de visita del prospecto</label>
                       <input
                         type="datetime-local"
                         name="fechaEsperaVisita"
                         value={formData.fechaEsperaVisita}
                         onChange={handleInputChange}
+                        min={toLocalDateTimeValue(new Date())}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
@@ -629,12 +850,13 @@ const ValoracionDiagnostica = () => {
                    {/*Posible ingreso */}
                   {!formData.llamarPaciente && formData.estadoSeguimiento === 'Posible_Ingreso' && (
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de Posible Ingreso</label>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de posible ingreso</label>
                       <input
                         type="datetime-local"
                         name="fechaPosibleIngreso"
                         value={formData.fechaPosibleIngreso}
                         onChange={handleInputChange}
+                        min={toLocalDateTimeValue(new Date())}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
@@ -642,27 +864,7 @@ const ValoracionDiagnostica = () => {
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm">
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  <InputGroup
-                    label="Nombre del medico que lo valoro"
-                    name="nombreMedicoValoro"
-                    value={formData.nombreMedicoValoro}
-                    onChange={handleInputChange}
-                    placeholder="Nombre completo del medico"
-                  />
-                  <InputGroup
-                    label=" Conclusion medica"
-                    name="conclusionMedica"
-                    value={formData.conclusionMedica}
-                    onChange={handleInputChange}
-                    placeholder="Escriba la conclusion medica"
-                  />
-                </div>
-              </div>
-
-
-             
+              
             </div>
           )}
         </div>
@@ -705,6 +907,91 @@ const InputGroup = ({ label, name, value, onChange, placeholder, type = 'text' }
       className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
       placeholder={placeholder}
     />
+  </div>
+);
+
+const AddressSection = ({ title, prefix, values, onChange }) => (
+  <div className="rounded-2xl border border-rose-100 bg-rose-50/50 p-5 shadow-sm md:col-span-2 xl:col-span-3">
+    <h4 className="mb-4 text-base font-bold text-[#7E1D3B]">{title}</h4>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="xl:col-span-2">
+        <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Calle *</label>
+        <input
+          type="text"
+          name={`${prefix}Calle`}
+          value={values[`${prefix}Calle`] || ''}
+          onChange={onChange}
+          placeholder="Calle"
+          className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">No. Ext.</label>
+        <input
+          type="text"
+          name={`${prefix}NoExt`}
+          value={values[`${prefix}NoExt`] || ''}
+          onChange={onChange}
+          placeholder="No. Ext."
+          className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">No. Int.</label>
+        <input
+          type="text"
+          name={`${prefix}NoInt`}
+          value={values[`${prefix}NoInt`] || ''}
+          onChange={onChange}
+          placeholder="No. Int."
+          className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Colonia *</label>
+        <input
+          type="text"
+          name={`${prefix}Colonia`}
+          value={values[`${prefix}Colonia`] || ''}
+          onChange={onChange}
+          placeholder="Colonia"
+          className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Mpio. o delegación *</label>
+        <input
+          type="text"
+          name={`${prefix}MunicipioDelegacion`}
+          value={values[`${prefix}MunicipioDelegacion`] || ''}
+          onChange={onChange}
+          placeholder="Municipio o Delegación"
+          className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">C.P. *</label>
+        <input
+          type="text"
+          name={`${prefix}Cp`}
+          value={values[`${prefix}Cp`] || ''}
+          onChange={onChange}
+          placeholder="C.P."
+          className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Ciudad o estado *</label>
+        <input
+          type="text"
+          name={`${prefix}CiudadEstado`}
+          value={values[`${prefix}CiudadEstado`] || ''}
+          onChange={onChange}
+          placeholder="Ciudad o Estado"
+          className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
+        />
+      </div>
+    </div>
   </div>
 );
 

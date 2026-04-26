@@ -115,11 +115,11 @@ const headerActions = (
             
             {/* Botón de Nuevo Ingreso */}
             <button 
-                onClick={() => navigate('/admisiones/Valoracion-diagnostica')}
+				onClick={() => navigate('/admisiones/valoracion-diagnostica')}
                 className="flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:bg-[#63162e]"
             >
                 <Plus size={18} />
-                Nuevo Ingreso
+				Llamada inicial
             </button>
         </div>
     );
@@ -176,7 +176,7 @@ const headerActions = (
 									: 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
 							}`}
 						>
-							Valoración diagnóstica
+							Llamada inicial
 						</button>
 
 						<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

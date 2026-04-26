@@ -1,4 +1,5 @@
 package com.marakame.api.entity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -15,12 +16,31 @@ public class Paciente {
     private Long id;
 
     private String nombreCompleto;
+    @Column(name = "fecha_nacimiento")
+    private String fechaNacimiento;
+    private String sexo;
     private Integer edad; // Tip: Es mejor guardar la Fecha de Nacimiento para calcular la edad exacta siempre.
     private String estadoCivil;
     private Integer cantidadHijos;
     private String escolaridad; // Ej: Primaria, Secundaria, Licenciatura...
     private String origen;
+    @Column(name = "direccion_calle")
+    private String direccionCalle;
+    @Column(name = "direccion_no_ext")
+    private String direccionNoExt;
+    @Column(name = "direccion_no_int")
+    private String direccionNoInt;
+    @Column(name = "direccion_colonia")
+    private String direccionColonia;
+    @Column(name = "direccion_municipio_delegacion")
+    private String direccionMunicipioDelegacion;
+    @Column(name = "direccion_cp")
+    private String direccionCp;
+    @Column(name = "direccion_ciudad_estado")
+    private String direccionCiudadEstado;
     private String domicilioParticular;
+    @Column(name = "telefono_casa")
+    private String telefonoCasa;
     private String telefonoContacto;
     private String ocupacion;
     private String sustanciaConsumo;
@@ -45,6 +65,22 @@ public class Paciente {
 
     public void setNombreCompleto(String nombreCompleto) {
         this.nombreCompleto = nombreCompleto;
+    }
+
+    public String getFechaNacimiento() {
+        return fechaNacimiento;
+    }
+
+    public void setFechaNacimiento(String fechaNacimiento) {
+        this.fechaNacimiento = fechaNacimiento;
+    }
+
+    public String getSexo() {
+        return sexo;
+    }
+
+    public void setSexo(String sexo) {
+        this.sexo = sexo;
     }
 
     public Integer getEdad() {
@@ -87,6 +123,62 @@ public class Paciente {
         this.origen = origen;
     }
 
+    public String getDireccionCalle() {
+        return direccionCalle;
+    }
+
+    public void setDireccionCalle(String direccionCalle) {
+        this.direccionCalle = direccionCalle;
+    }
+
+    public String getDireccionNoExt() {
+        return direccionNoExt;
+    }
+
+    public void setDireccionNoExt(String direccionNoExt) {
+        this.direccionNoExt = direccionNoExt;
+    }
+
+    public String getDireccionNoInt() {
+        return direccionNoInt;
+    }
+
+    public void setDireccionNoInt(String direccionNoInt) {
+        this.direccionNoInt = direccionNoInt;
+    }
+
+    public String getDireccionColonia() {
+        return direccionColonia;
+    }
+
+    public void setDireccionColonia(String direccionColonia) {
+        this.direccionColonia = direccionColonia;
+    }
+
+    public String getDireccionMunicipioDelegacion() {
+        return direccionMunicipioDelegacion;
+    }
+
+    public void setDireccionMunicipioDelegacion(String direccionMunicipioDelegacion) {
+        this.direccionMunicipioDelegacion = direccionMunicipioDelegacion;
+    }
+
+    public String getDireccionCp() {
+        return direccionCp;
+    }
+
+    public void setDireccionCp(String direccionCp) {
+        this.direccionCp = direccionCp;
+    }
+
+    public String getDireccionCiudadEstado() {
+        return direccionCiudadEstado;
+    }
+
+    public void setDireccionCiudadEstado(String direccionCiudadEstado) {
+        this.direccionCiudadEstado = direccionCiudadEstado;
+    }
+
     public String getDomicilioParticular() {
         return domicilioParticular;
     }
@@ -94,6 +186,15 @@ public class Paciente {
     public void setDomicilioParticular(String domicilioParticular) {
         this.domicilioParticular = domicilioParticular;
     }
+
+    public String getTelefonoCasa() {
+        return telefonoCasa;
+    }
+
+    public void setTelefonoCasa(String telefonoCasa) {
+        this.telefonoCasa = telefonoCasa;
+    }
+
     public String getTelefonoContacto() {
         return telefonoContacto;
     }
