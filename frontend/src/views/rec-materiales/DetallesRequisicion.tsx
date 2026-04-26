@@ -164,6 +164,9 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
 
   const [activarSubirCotizacion, setSubirCotizacion] = useState(false);
 
+  type AdjuntoGuardado = { id: string; nombreArchivo: string };
+  const [adjuntosGuardados, setAdjuntosGuardados] = useState<AdjuntoGuardado[]>([]);
+
   // Función para actualizar un archivo específico
   const actualizarArchivoGlobal = (numero: string, archivo: File | null) => {
     setArchivosCotizaciones((prev) => ({
@@ -207,6 +210,36 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
       return;
     }
 
+    if (
+      rol === "compras-inventario" &&
+      datos?.estado === "PRE-AUTORIZADA" &&
+      datos?.tipo === "ORDINARIA"
+    ) {
+      const disponibles = 3 - adjuntosGuardados.length;
+      const archivosASubir = Object.values(archivosCotizaciones)
+        .filter((f): f is File => f !== null)
+        .slice(0, disponibles);
+
+      for (const archivo of archivosASubir) {
+        const formData = new FormData();
+        formData.append("archivo", archivo);
+        try {
+          const res = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos`, {
+            method: "POST",
+            body: formData,
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const adjunto: AdjuntoGuardado = await res.json();
+          setAdjuntosGuardados((prev) => [...prev, adjunto]);
+        } catch (e) {
+          console.log("error al subir adjunto", e);
+        }
+      }
+      setArchivosCotizaciones({ "1": null, "2": null, "3": null });
+      setModal(false);
+      return;
+    }
+
     Object.entries(archivosFacturas).forEach(([key, file]) => {
       if (file) {
         console.log(`factura_${key}`, file.name);
@@ -230,13 +263,23 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
         : new Date(encontrada.fecha as unknown as string),
     };
     setDatos(parsed);
+    if (
+      rol === "compras-inventario" &&
+      parsed.tipo === "ORDINARIA" &&
+      (parsed.estado === "PRE-AUTORIZADA" || parsed.estado === "EN-REVISION")
+    ) {
+      fetch(`${API_BASE}/requisiciones/${id}/adjuntos`)
+        .then((r) => r.json())
+        .then((lista: AdjuntoGuardado[]) => setAdjuntosGuardados(lista))
+        .catch(() => {});
+    }
     if (rol === "rec-materiales") {
       setSubirCotizacion(
         parsed.estado === "PENDIENTE" && parsed.tipo === "EXTRAORDINARIA",
       );
     } else if (rol === "compras-inventario") {
       setSubirCotizacion(
-        parsed.estado === "PRE-AUTORIZADA" ||
+        (parsed.estado === "PRE-AUTORIZADA" && parsed.tipo === "ORDINARIA") ||
           (parsed.estado === "AUTORIZADA" &&
             parsed.tipo === "ORDINARIA" &&
             parsed.tamanio === "MAYOR"),
@@ -247,10 +290,17 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
   const articulos = datos?.articulos;
   let i = 0;
 
+  const esFlujoCotizacionesAdjuntos =
+    rol === "compras-inventario" &&
+    datos?.tipo === "ORDINARIA" &&
+    (datos?.estado === "PRE-AUTORIZADA" || datos?.estado === "EN-REVISION");
+
   // Contamos cuántos espacios guardados en el objeto NO son null
-  const totalGuardados = Object.values(archivosCotizacionesGuardadas).filter(
-    (f) => f !== null,
-  ).length;
+  const totalGuardados = esFlujoCotizacionesAdjuntos
+    ? adjuntosGuardados.length
+    : Object.values(archivosCotizacionesGuardadas).filter(
+        (f) => f !== null,
+      ).length;
   const totalFacturasGuardadas = Object.values(
     archivosFacturasGuardadas,
   ).filter((f) => f !== null).length;
@@ -297,6 +347,11 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
   const mostrarIntegrarExpediente =
     esExtraordinariaMenor || esExtraordinariaMayor;
   const mostrarEnviarFinanzas = esExtraordinariaMayor;
+  const yaEnviada =
+    rol === "compras-inventario" &&
+    datos?.estado === "EN-REVISION" &&
+    datos?.tipo === "ORDINARIA";
+
   const cotizacionesPendientes = Math.max(0, totalNecesarios - totalGuardados);
   const facturasPendientes = Math.max(0, 1 - totalFacturasGuardadas);
   const irAOrdenCompra = () => {
@@ -374,16 +429,17 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                 }
               }}
               disabled={
-                !mostrarOrdenDeCompra &&
-                !mostrarIntegrarExpediente &&
-                !mostrarEnviarFinanzas &&
-                (totalGuardados < totalNecesarios ||
-                  (requiereFacturas && totalFacturasGuardadas < 1) ||
-                  (rol === "rec-materiales" &&
-                    datos?.estado === "PENDIENTE" &&
-                    datos?.tipo === "EXTRAORDINARIA" &&
-                    datos?.cotizacionPath == null &&
-                    totalGuardados < 1))
+                yaEnviada ||
+                (!mostrarOrdenDeCompra &&
+                  !mostrarIntegrarExpediente &&
+                  !mostrarEnviarFinanzas &&
+                  (totalGuardados < totalNecesarios ||
+                    (requiereFacturas && totalFacturasGuardadas < 1) ||
+                    (rol === "rec-materiales" &&
+                      datos?.estado === "PENDIENTE" &&
+                      datos?.tipo === "EXTRAORDINARIA" &&
+                      datos?.cotizacionPath == null &&
+                      totalGuardados < 1)))
               }
             >
               {mostrarEnviarFinanzas
