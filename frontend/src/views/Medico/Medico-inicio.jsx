@@ -32,12 +32,6 @@ const MedicoInicio = () => {
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
-                        <div className="relative min-w-[240px] flex-1 md:max-w-[420px]">
-                            <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <input type="text" placeholder="Buscar paciente, expediente o cita..." className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
-                        </div>
-                    </div>
                 </header>
 
                 <main className="space-y-5">
@@ -73,7 +67,7 @@ const MedicoInicio = () => {
                                         <h2 className="mt-1 text-2xl font-black text-slate-900 md:text-3xl">Módulo médico</h2>
                                     </div>
                                     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                        Estructura actualizada con historial de pre-admisión.
+                                        
                                     </div>
                                 </div>
                             </section>

@@ -68,6 +68,7 @@ const quickViews = [
   { label: 'Historial Paciente', path: '/medico/historial-paciente' },
   { label: 'Nutriología', path: '/nutriologia' },
   { label: 'Evaluación Nutri', path: '/nutriologia/evaluacion-nutricional' },
+  
   { label: 'Historial Pre-Admisión', path: '/medico/historial-pre-admision' },
   { label: 'Inicio Psicología', path: '/psicologia' },
   { label: 'Psi. Documentos', path: '/psicologia/paciente/HGU-18/documentos' },
@@ -180,6 +181,7 @@ function App() {
         <Route path="/medico/pacientes/:id/tension" element={<ControlTensionArterial />} />
         <Route path="/medico/pacientes/:id/glicemia" element={<ControlGlicemia />} /> 
         <Route path="/medico/historial-pre-admision" element={<HistorialPreAdmision />} />
+        <Route path="/medico/historia-medica" element={<HistoriaMedica />} />
         
 
 

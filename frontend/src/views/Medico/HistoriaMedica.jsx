@@ -62,7 +62,8 @@ const HistoriaMedica = () => {
 
     const handleFinalizar = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/historias-medicas', {
+            // ¡CAMBIO AL PUERTO 4000 AQUÍ!
+            const response = await fetch('http://localhost:4000/api/historias-medicas', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
@@ -78,7 +79,7 @@ const HistoriaMedica = () => {
             alert("Error de conexión con el servidor.");
         }
     };
-
+    
     const CheckboxGroup = ({ title, items, grupo }) => (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm mb-4">
             <p className="mb-4 text-xs font-black uppercase tracking-[0.2em] text-[#7E1D3B] border-b border-slate-100 pb-2">{title}</p>
