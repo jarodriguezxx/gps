@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum Estado {
     PENDIENTE,
     PRE_AUTORIZADA,
+    EN_REVISION,
     AUTORIZADA,
     FINALIZADA;
 

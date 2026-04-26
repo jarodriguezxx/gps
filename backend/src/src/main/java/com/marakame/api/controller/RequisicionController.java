@@ -1,5 +1,6 @@
 package com.marakame.api.controller;
 
+import com.marakame.api.entity.AdjuntoRequisicion;
 import com.marakame.api.entity.Requisicion;
 import com.marakame.api.service.RequisicionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,6 +74,38 @@ public class RequisicionController {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-guardando-archivo");
+        }
+    }
+
+    @GetMapping("/{id}/adjuntos")
+    public ResponseEntity<List<AdjuntoRequisicion>> getAdjuntos(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.listarAdjuntos(id));
+    }
+
+    @PostMapping(value = "/{id}/adjuntos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> subirAdjunto(
+            @PathVariable UUID id,
+            @RequestParam("archivo") MultipartFile archivo) {
+        try {
+            return ResponseEntity.ok(service.guardarAdjunto(id, archivo));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-guardando-archivo");
+        }
+    }
+
+    @DeleteMapping("/{id}/adjuntos/{adjuntoId}")
+    public ResponseEntity<?> eliminarAdjunto(@PathVariable UUID id, @PathVariable UUID adjuntoId) {
+        try {
+            service.eliminarAdjunto(id, adjuntoId);
+            return ResponseEntity.noContent().build();
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-eliminando-archivo");
         }
     }
 }
