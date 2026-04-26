@@ -727,9 +727,34 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                             </p>
                           </div>
                         </div>
-                        <span className="text-[11px] text-green-700 font-medium bg-green-100 border border-green-300 px-3 py-1 rounded-full mr-2 shrink-0">
-                          Guardado
-                        </span>
+                        {datos?.estado === "PRE-AUTORIZADA" ? (
+                          <button
+                            className={ui.buttons.primary + " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"}
+                            onClick={async () => {
+                              if (!id) return;
+                              try {
+                                const res = await fetch(
+                                  `${API_BASE}/requisiciones/${id}/adjuntos/${adj.id}`,
+                                  { method: "DELETE" },
+                                );
+                                if (!res.ok) throw new Error(await res.text());
+                                const adjRes = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos`);
+                                if (adjRes.ok) {
+                                  const lista: AdjuntoGuardado[] = await adjRes.json();
+                                  setAdjuntosGuardados(lista);
+                                }
+                              } catch (e) {
+                                console.log("error al eliminar adjunto", e);
+                              }
+                            }}
+                          >
+                            <p className="px-4 py-1 text-[12px]">Cancelar</p>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-green-700 font-medium bg-green-100 border border-green-300 px-3 py-1 rounded-full mr-2 shrink-0">
+                            Guardado
+                          </span>
+                        )}
                       </div>
                     ))}
                     {adjuntosGuardados.length < 3 && (

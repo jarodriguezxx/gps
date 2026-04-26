@@ -22,6 +22,9 @@ public class AdjuntoRequisicion {
     private String rutaArchivo;
     private String tipoContenido;
 
+    @jakarta.persistence.Column(name = "nombre_original")
+    private String nombreOriginal;
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
@@ -36,4 +39,7 @@ public class AdjuntoRequisicion {
 
     public String getTipoContenido() { return tipoContenido; }
     public void setTipoContenido(String tipoContenido) { this.tipoContenido = tipoContenido; }
+
+    public String getNombreOriginal() { return nombreOriginal; }
+    public void setNombreOriginal(String nombreOriginal) { this.nombreOriginal = nombreOriginal; }
 }

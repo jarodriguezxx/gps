@@ -117,6 +117,7 @@ public class RequisicionService {
         AdjuntoRequisicion adjunto = new AdjuntoRequisicion();
         adjunto.setRequisicion(req);
         adjunto.setNombreArchivo(archivo.getOriginalFilename());
+        adjunto.setNombreOriginal(archivo.getOriginalFilename());
         adjunto.setRutaArchivo(dest.toAbsolutePath().toString());
         adjunto.setTipoContenido(archivo.getContentType());
         return adjuntoRepository.save(adjunto);

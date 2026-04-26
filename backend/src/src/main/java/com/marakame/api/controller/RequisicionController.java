@@ -78,8 +78,12 @@ public class RequisicionController {
     }
 
     @GetMapping("/{id}/adjuntos")
-    public ResponseEntity<List<AdjuntoRequisicion>> getAdjuntos(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.listarAdjuntos(id));
+    public ResponseEntity<?> getAdjuntos(@PathVariable UUID id) {
+        try {
+            return ResponseEntity.ok(service.listarAdjuntos(id));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-listando-adjuntos: " + e.getMessage());
+        }
     }
 
     @PostMapping(value = "/{id}/adjuntos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -93,7 +97,9 @@ public class RequisicionController {
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-guardando-archivo");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-guardando-archivo: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
