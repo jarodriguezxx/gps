@@ -20,7 +20,7 @@ const ControlTensionArterial = () => {
     // 1. CARGAR DATOS DESDE SPRING BOOT AL ABRIR LA PANTALLA
     useEffect(() => {
         if (id) {
-            fetch(`http://localhost:8080/api/medico/pacientes/${id}/tension`)
+            fetch(`http://localhost:4000/api/medico/pacientes/${id}/tension`)
                 .then(response => {
                     if (!response.ok) throw new Error("Error al obtener los datos");
                     return response.json();
@@ -39,7 +39,7 @@ const ControlTensionArterial = () => {
         if (!formData.resultado) return;
 
         try {
-            const response = await fetch(`http://localhost:8080/api/medico/pacientes/${id}/tension`, {
+            const response = await fetch(`http://localhost:4000/api/medico/pacientes/${id}/tension`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

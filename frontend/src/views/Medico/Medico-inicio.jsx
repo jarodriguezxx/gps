@@ -43,7 +43,6 @@ const MedicoInicio = () => {
                                 { label: 'Inicio', path: '/medico' },
                                 { label: 'Expediente', path: '/medico/expediente' },
                                 { label: 'Nutriología', path: '/medico/nutriologia/evaluacion-nutricional' },
-                                { label: 'Historia médica', path: '/medico/historia-medica' },
                                 { label: 'Historial Pre-Admisión', path: '/medico/historial-pre-admision' }, // Nueva opción
                                 { label: 'Inventario', path: '/medico/inventario-pertenencias' },
                                 { label: 'Pacientes Activos', path: '/medico/pacientes-activos' }

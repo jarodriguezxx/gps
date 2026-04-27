@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.marakame.api.dto.HistoriaMedicaDTO;
+import com.marakame.api.entity.ExpedienteMedico;
 import com.marakame.api.entity.HistoriaMedica;
 import com.marakame.api.repository.HistoriaMedicaRepository;
+import com.marakame.api.service.ExpedienteService;
 import com.marakame.api.service.HistoriaMedicaService;
 
 @RestController
@@ -27,6 +29,8 @@ public class HistoriaMedicaController {
     private HistoriaMedicaService service;
     @Autowired
     private HistoriaMedicaRepository repository;
+    @Autowired
+    private ExpedienteService expedienteService;
 
     @PostMapping
     public ResponseEntity<HistoriaMedica> crear(@RequestBody HistoriaMedicaDTO dto) {
@@ -39,7 +43,21 @@ public class HistoriaMedicaController {
     }
 
     @PutMapping("/{id}/vincular/{pacienteId}")
-    public ResponseEntity<HistoriaMedica> vincular(@PathVariable Long id, @PathVariable Long pacienteId) {
-        return ResponseEntity.ok(service.enlazarAPaciente(id, pacienteId));
+    public ResponseEntity<?> vincular(@PathVariable Long id, @PathVariable Long pacienteId) {
+        try {
+            // Vincular historia al paciente
+            HistoriaMedica historia = service.enlazarAPaciente(id, pacienteId);
+            
+            // Crear expediente médico automáticamente
+            ExpedienteMedico expediente = expedienteService.crearExpediente(pacienteId);
+            
+            // Vincular la historia al expediente
+            expediente = expedienteService.vincularHistoriaMedica(expediente.getId(), id);
+            
+            return ResponseEntity.ok(historia);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
     }
 }

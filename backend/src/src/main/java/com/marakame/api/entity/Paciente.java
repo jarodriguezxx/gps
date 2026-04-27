@@ -15,22 +15,37 @@ public class Paciente {
     private Long id;
 
     private String nombreCompleto;
-    private Integer edad; // Tip: Es mejor guardar la Fecha de Nacimiento para calcular la edad exacta siempre.
+    private String apellidoPaterno;
+    private String apellidoMaterno;
+    private String nombres;
+    private Integer edad;
     private String estadoCivil;
     private Integer cantidadHijos;
-    private String escolaridad; // Ej: Primaria, Secundaria, Licenciatura...
+    private String escolaridad;
     private String origen;
     private String domicilioParticular;
     private String telefonoContacto;
+    private String telefonoCasa;
     private String ocupacion;
     private String sustanciaConsumo;
+    private String sexo;
+    private String fechaNacimiento;
+    
+    // Campos de dirección
+    private String direccionCalle;
+    private String direccionNoExt;
+    private String direccionNoInt;
+    private String direccionColonia;
+    private String direccionCP;
+    private String direccionMunicipioDelegacion;
+    private String direccionCiudadEstado;
 
     // Relación: Un paciente tiene un solicitante que hizo el trámite
     @ManyToOne
     @JoinColumn(name = "solicitante_id")
     private Solicitante solicitante;
 
-    // Getters y Setters...
+    // Getters y Setters
     public Long getId() {
         return id;
     }
@@ -45,6 +60,30 @@ public class Paciente {
 
     public void setNombreCompleto(String nombreCompleto) {
         this.nombreCompleto = nombreCompleto;
+    }
+
+    public String getApellidoPaterno() {
+        return apellidoPaterno;
+    }
+
+    public void setApellidoPaterno(String apellidoPaterno) {
+        this.apellidoPaterno = apellidoPaterno;
+    }
+
+    public String getApellidoMaterno() {
+        return apellidoMaterno;
+    }
+
+    public void setApellidoMaterno(String apellidoMaterno) {
+        this.apellidoMaterno = apellidoMaterno;
+    }
+
+    public String getNombres() {
+        return nombres;
+    }
+
+    public void setNombres(String nombres) {
+        this.nombres = nombres;
     }
 
     public Integer getEdad() {
@@ -94,12 +133,21 @@ public class Paciente {
     public void setDomicilioParticular(String domicilioParticular) {
         this.domicilioParticular = domicilioParticular;
     }
+
     public String getTelefonoContacto() {
         return telefonoContacto;
     }
 
     public void setTelefonoContacto(String telefonoContacto) {
         this.telefonoContacto = telefonoContacto;
+    }
+
+    public String getTelefonoCasa() {
+        return telefonoCasa;
+    }
+
+    public void setTelefonoCasa(String telefonoCasa) {
+        this.telefonoCasa = telefonoCasa;
     }
 
     public String getOcupacion() {
@@ -118,6 +166,78 @@ public class Paciente {
         this.sustanciaConsumo = sustanciaConsumo;
     }
 
+    public String getSexo() {
+        return sexo;
+    }
+
+    public void setSexo(String sexo) {
+        this.sexo = sexo;
+    }
+
+    public String getFechaNacimiento() {
+        return fechaNacimiento;
+    }
+
+    public void setFechaNacimiento(String fechaNacimiento) {
+        this.fechaNacimiento = fechaNacimiento;
+    }
+
+    public String getDireccionCalle() {
+        return direccionCalle;
+    }
+
+    public void setDireccionCalle(String direccionCalle) {
+        this.direccionCalle = direccionCalle;
+    }
+
+    public String getDireccionNoExt() {
+        return direccionNoExt;
+    }
+
+    public void setDireccionNoExt(String direccionNoExt) {
+        this.direccionNoExt = direccionNoExt;
+    }
+
+    public String getDireccionNoInt() {
+        return direccionNoInt;
+    }
+
+    public void setDireccionNoInt(String direccionNoInt) {
+        this.direccionNoInt = direccionNoInt;
+    }
+
+    public String getDireccionColonia() {
+        return direccionColonia;
+    }
+
+    public void setDireccionColonia(String direccionColonia) {
+        this.direccionColonia = direccionColonia;
+    }
+
+    public String getDireccionCP() {
+        return direccionCP;
+    }
+
+    public void setDireccionCP(String direccionCP) {
+        this.direccionCP = direccionCP;
+    }
+
+    public String getDireccionMunicipioDelegacion() {
+        return direccionMunicipioDelegacion;
+    }
+
+    public void setDireccionMunicipioDelegacion(String direccionMunicipioDelegacion) {
+        this.direccionMunicipioDelegacion = direccionMunicipioDelegacion;
+    }
+
+    public String getDireccionCiudadEstado() {
+        return direccionCiudadEstado;
+    }
+
+    public void setDireccionCiudadEstado(String direccionCiudadEstado) {
+        this.direccionCiudadEstado = direccionCiudadEstado;
+    }
+
     public Solicitante getSolicitante() {
         return solicitante;
     }
@@ -125,5 +245,4 @@ public class Paciente {
     public void setSolicitante(Solicitante solicitante) {
         this.solicitante = solicitante;
     }
-    
 }

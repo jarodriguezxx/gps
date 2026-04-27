@@ -1,5 +1,7 @@
 package com.marakame.api.service;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,5 +57,17 @@ public class PacienteService {
         }
 
         seguimientoRepository.save(seguimiento);
+    }
+
+    public List<Paciente> obtenerPacientesActivos() {
+        return pacienteRepository.findAll();
+    }
+
+    public Paciente obtenerPacienteById(Long id) {
+        return pacienteRepository.findById(id).orElse(null);
+    }
+
+    public List<Paciente> obtenerTodosPacientes() {
+        return pacienteRepository.findAll();
     }
 }
