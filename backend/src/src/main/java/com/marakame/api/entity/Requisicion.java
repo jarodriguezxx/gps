@@ -65,6 +65,10 @@ public class Requisicion {
     @JsonProperty("cotizacionPath")
     private String cotizacionPath;
 
+    @Column(name = "factura_path")
+    @JsonProperty("facturaPath")
+    private String facturaPath;
+
     @OneToMany(mappedBy = "requisicion", cascade = CascadeType.ALL)
     @JsonManagedReference("requisicion-articulos")
     @JsonProperty("articulos")
@@ -116,6 +120,9 @@ public class Requisicion {
 
     public String getCotizacionPath() { return cotizacionPath; }
     public void setCotizacionPath(String cotizacionPath) { this.cotizacionPath = cotizacionPath; }
+
+    public String getFacturaPath() { return facturaPath; }
+    public void setFacturaPath(String facturaPath) { this.facturaPath = facturaPath; }
 
     public List<Articulo> getArticulos() { return articulos; }
     public void setArticulos(List<Articulo> articulos) { this.articulos = articulos; }

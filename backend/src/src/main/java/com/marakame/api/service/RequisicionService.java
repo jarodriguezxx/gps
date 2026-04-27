@@ -3,6 +3,7 @@ package com.marakame.api.service;
 import com.marakame.api.entity.AdjuntoRequisicion;
 import com.marakame.api.entity.Estado;
 import com.marakame.api.entity.Requisicion;
+import com.marakame.api.entity.TamanioCompra;
 import com.marakame.api.entity.TipoCompra;
 import com.marakame.api.repository.AdjuntoRepository;
 import com.marakame.api.repository.RequisicionRepository;
@@ -58,6 +59,14 @@ public class RequisicionService {
             if (adjuntoRepository.findByRequisicionId(id).isEmpty())
                 throw new IllegalStateException("cotizacion-requerida");
             req.setEstado(Estado.EN_REVISION);
+        } else if (req.getEstado() == Estado.AUTORIZADA
+                && req.getTipo() == TipoCompra.ORDINARIA
+                && req.getTamanio() == TamanioCompra.MAYOR) {
+            if (adjuntoRepository.findByRequisicionId(id).size() < 3)
+                throw new IllegalStateException("cotizacion-requerida");
+            if (req.getFacturaPath() == null)
+                throw new IllegalStateException("factura-requerida");
+            req.setEstado(Estado.FINALIZADA);
         } else {
             throw new IllegalStateException("estado-invalido");
         }
@@ -102,7 +111,11 @@ public class RequisicionService {
         Requisicion req = repository.findById(id)
                 .orElseThrow(NoSuchElementException::new);
 
-        if (req.getEstado() != Estado.PRE_AUTORIZADA)
+        boolean puedeSubirAdjunto =
+                (req.getEstado() == Estado.PRE_AUTORIZADA && req.getTipo() == TipoCompra.ORDINARIA) ||
+                (req.getEstado() == Estado.AUTORIZADA && req.getTipo() == TipoCompra.ORDINARIA
+                        && req.getTamanio() == TamanioCompra.MAYOR);
+        if (!puedeSubirAdjunto)
             throw new IllegalStateException("estado-invalido");
 
         if (adjuntoRepository.findByRequisicionId(id).size() >= 3)
@@ -133,5 +146,42 @@ public class RequisicionService {
 
     public List<AdjuntoRequisicion> listarAdjuntos(UUID id) {
         return adjuntoRepository.findByRequisicionId(id);
+    }
+
+    @Transactional
+    public Requisicion guardarFactura(UUID id, MultipartFile archivo) throws IOException {
+        if (!"application/pdf".equals(archivo.getContentType()))
+            throw new IllegalArgumentException("solo-pdf");
+
+        Requisicion req = repository.findById(id)
+                .orElseThrow(NoSuchElementException::new);
+
+        if (req.getEstado() != Estado.AUTORIZADA
+                || req.getTipo() != TipoCompra.ORDINARIA
+                || req.getTamanio() != TamanioCompra.MAYOR)
+            throw new IllegalStateException("estado-invalido");
+
+        Path dir = Paths.get(cotizacionesDir);
+        Files.createDirectories(dir);
+        String filename = id + "_factura_" + archivo.getOriginalFilename();
+        Path dest = dir.resolve(filename);
+        archivo.transferTo(dest);
+
+        if (req.getFacturaPath() != null)
+            Files.deleteIfExists(Paths.get(req.getFacturaPath()));
+
+        req.setFacturaPath(dest.toAbsolutePath().toString());
+        return repository.save(req);
+    }
+
+    @Transactional
+    public Requisicion eliminarFactura(UUID id) throws IOException {
+        Requisicion req = repository.findById(id)
+                .orElseThrow(NoSuchElementException::new);
+        if (req.getFacturaPath() != null) {
+            Files.deleteIfExists(Paths.get(req.getFacturaPath()));
+            req.setFacturaPath(null);
+        }
+        return repository.save(req);
     }
 }

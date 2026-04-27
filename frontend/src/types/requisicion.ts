@@ -37,6 +37,7 @@ export type RequisicionesContenido = {
   firmaAdminsitradora: Boolean;
   firmaDirectoraGral: Boolean;
   cotizacionPath?: string | null;
+  facturaPath?: string | null;
 };
 
 export type Requisicion = RequisicionesCamposTabla & RequisicionesContenido;

@@ -114,4 +114,32 @@ public class RequisicionController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-eliminando-archivo");
         }
     }
+
+    @PostMapping(value = "/{id}/factura", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> subirFactura(
+            @PathVariable UUID id,
+            @RequestParam("archivo") MultipartFile archivo) {
+        try {
+            return ResponseEntity.ok(service.guardarFactura(id, archivo));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}/factura")
+    public ResponseEntity<?> eliminarFactura(@PathVariable UUID id) {
+        try {
+            return ResponseEntity.ok(service.eliminarFactura(id));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
 }
