@@ -3,8 +3,12 @@ package com.marakame.api.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.marakame.api.dto.PacienteDTO;
+import com.marakame.api.entity.EstudioSocioeconomicoPdf;
 import com.marakame.api.entity.Paciente;
 import com.marakame.api.service.PacienteService;
 
@@ -25,12 +30,53 @@ import com.marakame.api.service.PacienteService;
 @CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
 public class PacienteController {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(PacienteController.class);
+
     @Autowired
     private PacienteService pacienteService;
 
     @GetMapping("/estudio")
     public List<Paciente> obtenerPacientesParaEstudio(@RequestParam(required = false) String query) {
         return pacienteService.obtenerPacientesParaEstudio(query);
+    }
+
+    @GetMapping("/{id}/expediente")
+    public ResponseEntity<Map<String, Object>> obtenerDetalleExpediente(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(pacienteService.obtenerDetalleExpediente(id));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            LOGGER.error("Error al cargar detalle de expediente para paciente {}", id, e);
+            return new ResponseEntity<>(Map.of(
+                "error", "No se pudo cargar el detalle del expediente.",
+                "detalle", e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage())
+            ), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/{pacienteId}/estudio-socioeconomico/pdf/{pdfId}/descargar")
+    public ResponseEntity<?> descargarPdfSocioeconomico(
+        @PathVariable Long pacienteId,
+        @PathVariable Long pdfId
+    ) {
+        return responderPdfSocioeconomico(pacienteId, pdfId, false);
+    }
+
+    @GetMapping("/{pacienteId}/estudio-socioeconomico/pdf/{pdfId}/ver")
+    public ResponseEntity<?> verPdfSocioeconomico(
+        @PathVariable Long pacienteId,
+        @PathVariable Long pdfId
+    ) {
+        return responderPdfSocioeconomico(pacienteId, pdfId, true);
+    }
+
+    @GetMapping("/{pacienteId}/estudio-socioeconomico/pdf/{pdfId}/imprimir")
+    public ResponseEntity<?> imprimirPdfSocioeconomico(
+        @PathVariable Long pacienteId,
+        @PathVariable Long pdfId
+    ) {
+        return responderPdfSocioeconomico(pacienteId, pdfId, true);
     }
 
     @PostMapping("/guardar-expediente")
@@ -75,5 +121,36 @@ public class PacienteController {
                 "error", "Error al generar el PDF: " + e.getMessage()
             ), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private ResponseEntity<?> responderPdfSocioeconomico(Long pacienteId, Long pdfId, boolean inline) {
+        try {
+            var pdf = pacienteService.obtenerPdfSocioeconomico(pacienteId, pdfId);
+            if (pdf.isEmpty()) {
+                return new ResponseEntity<>(Map.of(
+                    "error", "No se encontró el PDF solicitado para este paciente."
+                ), HttpStatus.NOT_FOUND);
+            }
+
+            return buildPdfResponse(pdf.get(), inline);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Map.of(
+                "error", "No se pudo cargar el PDF.",
+                "detalle", e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage())
+            ), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private ResponseEntity<byte[]> buildPdfResponse(EstudioSocioeconomicoPdf pdf, boolean inline) {
+        String nombreArchivo = pdf.getNombreArchivo() == null || pdf.getNombreArchivo().isBlank()
+            ? "estudio_socioeconomico.pdf"
+            : pdf.getNombreArchivo();
+
+        String disposition = inline ? "inline" : "attachment";
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header(HttpHeaders.CONTENT_DISPOSITION, disposition + "; filename=\"" + nombreArchivo + "\"")
+            .body(pdf.getContenidoPdf());
     }
 }

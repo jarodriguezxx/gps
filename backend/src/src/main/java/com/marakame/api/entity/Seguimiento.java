@@ -22,6 +22,15 @@ public class Seguimiento {
     // Aquí guardas: "En espera de llamada", "Confirmada", "No contestó"
     private String estadoSeguimiento; 
 
+    // Origen del flujo de llamada: "NOSOTROS" o "PROSPECTO"
+    private String origenLlamada;
+
+    // Estado de asistencia para citas: "Pendiente", "Llegó", "No se presentó"
+    private String estadoAsistencia;
+
+    // Captura clínica al confirmar llegada
+    private String diagnosticoVisual;
+
     private LocalDateTime fechaHoraProgramada;
     private String motivo;
 
@@ -53,6 +62,30 @@ public class Seguimiento {
 
     public void setEstadoSeguimiento(String estadoSeguimiento) {
         this.estadoSeguimiento = estadoSeguimiento;
+    }
+
+    public String getOrigenLlamada() {
+        return origenLlamada;
+    }
+
+    public void setOrigenLlamada(String origenLlamada) {
+        this.origenLlamada = origenLlamada;
+    }
+
+    public String getEstadoAsistencia() {
+        return estadoAsistencia;
+    }
+
+    public void setEstadoAsistencia(String estadoAsistencia) {
+        this.estadoAsistencia = estadoAsistencia;
+    }
+
+    public String getDiagnosticoVisual() {
+        return diagnosticoVisual;
+    }
+
+    public void setDiagnosticoVisual(String diagnosticoVisual) {
+        this.diagnosticoVisual = diagnosticoVisual;
     }
 
     public LocalDateTime getFechaHoraProgramada() {

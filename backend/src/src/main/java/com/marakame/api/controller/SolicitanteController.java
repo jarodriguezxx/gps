@@ -33,7 +33,10 @@ public class SolicitanteController {
     public Solicitante crearSolicitante(@RequestBody SolicitanteDTO dto) {
         // Pasamos los datos del DTO (lo que llega de React) a la Entidad (la base de datos)
         Solicitante nuevo = new Solicitante();
-        nuevo.setNombre(dto.nombre());
+        nuevo.setNombres(dto.nombres());
+        nuevo.setApellidoPaterno(dto.apellidoPaterno());
+        nuevo.setApellidoMaterno(dto.apellidoMaterno());
+        nuevo.setNombre(construirNombreCompleto(dto.nombres(), dto.apellidoPaterno(), dto.apellidoMaterno(), dto.nombre()));
         nuevo.setLugar(dto.lugar());
         nuevo.setOcupacion(dto.ocupacion());
         nuevo.setDireccionCalle(dto.direccionCalle());
@@ -58,6 +61,29 @@ public class SolicitanteController {
         nuevo.setCelular(dto.celular());
         
         return solicitanteRepository.save(nuevo); // Se guarda en PostgreSQL
+    }
+
+    private String construirNombreCompleto(String nombres, String apellidoPaterno, String apellidoMaterno, String fallback) {
+        StringBuilder nombreCompleto = new StringBuilder();
+        agregarParteNombre(nombreCompleto, nombres);
+        agregarParteNombre(nombreCompleto, apellidoPaterno);
+        agregarParteNombre(nombreCompleto, apellidoMaterno);
+
+        if (nombreCompleto.length() > 0) {
+            return nombreCompleto.toString();
+        }
+
+        return fallback;
+    }
+
+    private void agregarParteNombre(StringBuilder nombreCompleto, String parte) {
+        if (parte == null || parte.isBlank()) {
+            return;
+        }
+        if (nombreCompleto.length() > 0) {
+            nombreCompleto.append(' ');
+        }
+        nombreCompleto.append(parte.trim());
     }
 
     private String construirDireccionCompleta(

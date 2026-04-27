@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight, AlertTriangle } from 'lucide-react';
 
 import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
 
@@ -23,8 +23,12 @@ const EstudioSocioeconomico = () => {
   const [indiceResaltado, setIndiceResaltado] = useState(-1);
   const [mostrarResultados, setMostrarResultados] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [checklistVisible, setChecklistVisible] = useState(false);
+  const [checklistItems, setChecklistItems] = useState([]);
   const [guardandoEstudio, setGuardandoEstudio] = useState(false);
-  const ultimaBusquedaAutoSeleccionadaRef = useRef('');
+  const [citasRegistradas, setCitasRegistradas] = useState([]);
+  const [cargandoCitasRegistradas, setCargandoCitasRegistradas] = useState(true);
+  const [errorCitasRegistradas, setErrorCitasRegistradas] = useState('');
   const [householdMembers, setHouseholdMembers] = useState([
     { nombre: '', parentesco: '', edad: '', sexo: '', estadoCivil: '', ocupacionLugar: '' },
   ]);
@@ -70,8 +74,36 @@ const EstudioSocioeconomico = () => {
     { nombre: '', telefono: '', relacion: '', tiempoConocer: '' },
   ]);
 
+  const splitNombreCompleto = (nombreCompleto = '') => {
+    const partes = String(nombreCompleto || '').trim().split(/\s+/).filter(Boolean);
+    if (partes.length === 0) {
+      return { nombres: '', apellidoPaterno: '', apellidoMaterno: '' };
+    }
+    if (partes.length === 1) {
+      return { nombres: partes[0], apellidoPaterno: '', apellidoMaterno: '' };
+    }
+    if (partes.length === 2) {
+      return { nombres: partes[0], apellidoPaterno: partes[1], apellidoMaterno: '' };
+    }
+    return {
+      nombres: partes.slice(0, -2).join(' '),
+      apellidoPaterno: partes[partes.length - 2],
+      apellidoMaterno: partes[partes.length - 1],
+    };
+  };
+
+  const composeNombreCompleto = (nombres, apellidoPaterno, apellidoMaterno) => {
+    return [nombres, apellidoPaterno, apellidoMaterno]
+      .map((parte) => String(parte || '').trim())
+      .filter(Boolean)
+      .join(' ');
+  };
+
   const [formData, setFormData] = useState({
     nombreSolicitante: '',
+    solicitanteNombres: '',
+    solicitanteApellidoPaterno: '',
+    solicitanteApellidoMaterno: '',
     fechaNacimiento: '',
     lugarNacimiento: '',
     edad: '',
@@ -90,6 +122,9 @@ const EstudioSocioeconomico = () => {
     telefonoCelular: '',
     cuentaConTarjeta: '',
     pacienteNombre: '',
+    pacienteNombres: '',
+    pacienteApellidoPaterno: '',
+    pacienteApellidoMaterno: '',
     pacienteFechaNacimiento: '',
     pacienteLugarNacimiento: '',
     pacienteEdad: '',
@@ -170,6 +205,14 @@ const EstudioSocioeconomico = () => {
     { id: 'vivienda', label: 'Vivienda', icon: <Home size={16}/> },
     { id: 'familiar', label: 'Familiar', icon: <Users size={16}/> },
   ];
+
+  const fieldLabels = {
+    pacienteEstadoCivil: 'Estado civil del paciente',
+    balanceEconomico: 'Balance económico',
+    patrimonioCantidad: 'Cantidad de autos',
+    familiarAportaIngreso: 'Aportación de otros familiares',
+    numeroIntegrantesAportan: 'Número de integrantes que aportan',
+  };
 
   const sectionRequiredFields = {
     solicitante: [
@@ -317,7 +360,34 @@ const EstudioSocioeconomico = () => {
     return String(Math.max(years, 0));
   };
 
+  const totalIncomes = Object.values(monthlyIncomes).reduce((acc, value) => acc + (Number(value) || 0), 0);
+  const totalExpenses = Object.values(monthlyExpenses).reduce((acc, value) => acc + (Number(value) || 0), 0);
+  const economicResult = totalIncomes - totalExpenses;
+  const hasVehicle = formData.patrimonioCuentaAuto === 'si';
+  const validIncomeContributors = incomeContributors.filter(
+    (row) => String(row.parentesco || '').trim() && Number(row.cantidadMensual || 0) > 0
+  ).length;
+  const validFamilyReferences = familyReferences.filter(
+    (row) =>
+      String(row.nombre || '').trim() &&
+      String(row.telefono || '').trim() &&
+      String(row.relacion || '').trim() &&
+      String(row.tiempoConocer || '').trim()
+  ).length;
+  const hasMinimumFamilyReferences = validFamilyReferences >= 2;
+
   const validateField = (name, value) => {
+    const camposLaboralesDependenEmpleo = [
+      'laboralLugarTrabajo',
+      'laboralAntiguedad',
+      'laboralPuesto',
+      'laboralHorario',
+    ];
+
+    if (camposLaboralesDependenEmpleo.includes(name) && formData.laboralCuentaConEmpleo === 'no') {
+      return '';
+    }
+
     if (name === 'vehiculoCategoria' && formData.patrimonioCuentaAuto === 'no') {
       return '';
     }
@@ -373,10 +443,129 @@ const EstudioSocioeconomico = () => {
     return '';
   };
 
+  const getCrossRuleFindings = (tabId = null) => {
+    const findings = [];
+
+    if (formData.balanceEconomico === 'deficit' && economicResult >= 0) {
+      findings.push({
+        tabId: 'economico',
+        field: 'balanceEconomico',
+        severity: 'error',
+        message: 'Marcaste déficit pero los ingresos no son menores a los egresos.',
+      });
+    }
+
+    if (formData.balanceEconomico === 'superavit' && economicResult < 0) {
+      findings.push({
+        tabId: 'economico',
+        field: 'balanceEconomico',
+        severity: 'error',
+        message: 'Marcaste superávit pero los egresos superan a los ingresos.',
+      });
+    }
+
+    if (formData.patrimonioCuentaAuto === 'no' && Number(formData.patrimonioCantidad || 0) > 0) {
+      findings.push({
+        tabId: 'economico',
+        field: 'patrimonioCantidad',
+        severity: 'error',
+        message: 'Si no cuenta con automóvil, la cantidad debe ser 0.',
+      });
+    }
+
+    if (formData.familiarAportaIngreso === 'si' && validIncomeContributors === 0) {
+      findings.push({
+        tabId: 'laboral',
+        field: 'familiarAportaIngreso',
+        severity: 'error',
+        message: 'Captura al menos una aportación válida (parentesco y monto mayor a 0).',
+      });
+    }
+
+    if (formData.familiarAportaIngreso === 'si' && Number(formData.numeroIntegrantesAportan || 0) <= 0) {
+      findings.push({
+        tabId: 'laboral',
+        field: 'numeroIntegrantesAportan',
+        severity: 'error',
+        message: 'Debe ser mayor a 0 cuando sí aportan otros familiares.',
+      });
+    }
+
+    if (formData.familiarAportaIngreso === 'no' && Number(formData.numeroIntegrantesAportan || 0) > 0) {
+      findings.push({
+        tabId: 'laboral',
+        field: 'numeroIntegrantesAportan',
+        severity: 'error',
+        message: 'Debe ser 0 cuando no aportan otros familiares.',
+      });
+    }
+
+    if (
+      Number(formData.pacienteEdad || 0) > 0 &&
+      Number(formData.pacienteEdad || 0) < 18 &&
+      ['Casado(a)', 'Divorciado(a)', 'Unión Libre'].includes(formData.pacienteEstadoCivil)
+    ) {
+      findings.push({
+        tabId: 'paciente',
+        field: 'pacienteEstadoCivil',
+        severity: 'warning',
+        message: 'Revisa estado civil: la edad del paciente es menor de 18.',
+      });
+    }
+
+    if (!tabId) {
+      return findings;
+    }
+
+    return findings.filter((item) => item.tabId === tabId);
+  };
+
+  const getFindingsByField = (field, severity = null) => {
+    const findings = getCrossRuleFindings().filter((item) => item.field === field);
+    if (!severity) {
+      return findings;
+    }
+    return findings.filter((item) => item.severity === severity);
+  };
+
+  const getActiveRequiredFields = (tabId) => {
+    const fields = [...(sectionRequiredFields[tabId] || [])];
+
+    if (tabId === 'laboral' && formData.laboralCuentaConEmpleo === 'no') {
+      return fields.filter((name) => !['laboralLugarTrabajo', 'laboralPuesto'].includes(name));
+    }
+
+    if (tabId === 'economico' && formData.patrimonioCuentaAuto === 'no') {
+      return fields.filter((name) => name !== 'vehiculoCategoria');
+    }
+
+    return fields;
+  };
+
   const handleChange = (name, value) => {
     setIsDirty(true);
     setFormData((prev) => {
       const next = { ...prev, [name]: value };
+
+      if ([
+        'solicitanteNombres',
+        'solicitanteApellidoPaterno',
+        'solicitanteApellidoMaterno',
+      ].includes(name)) {
+        next.nombreSolicitante = composeNombreCompleto(
+          name === 'solicitanteNombres' ? value : next.solicitanteNombres,
+          name === 'solicitanteApellidoPaterno' ? value : next.solicitanteApellidoPaterno,
+          name === 'solicitanteApellidoMaterno' ? value : next.solicitanteApellidoMaterno
+        );
+      }
+
+      if (['pacienteNombres', 'pacienteApellidoPaterno', 'pacienteApellidoMaterno'].includes(name)) {
+        next.pacienteNombre = composeNombreCompleto(
+          name === 'pacienteNombres' ? value : next.pacienteNombres,
+          name === 'pacienteApellidoPaterno' ? value : next.pacienteApellidoPaterno,
+          name === 'pacienteApellidoMaterno' ? value : next.pacienteApellidoMaterno
+        );
+      }
 
       if (name === 'fechaNacimiento') {
         next.edad = calculateAgeFromDate(value);
@@ -432,6 +621,17 @@ const EstudioSocioeconomico = () => {
         next.vehiculoNumero = '';
       }
 
+      if (name === 'laboralCuentaConEmpleo' && value === 'no') {
+        next.laboralLugarTrabajo = '';
+        next.laboralAntiguedad = '';
+        next.laboralPuesto = '';
+        next.laboralHorario = '';
+      }
+
+      if (name === 'familiarAportaIngreso' && value === 'no') {
+        next.numeroIntegrantesAportan = '0';
+      }
+
       return next;
     });
 
@@ -439,8 +639,60 @@ const EstudioSocioeconomico = () => {
       setVehicleAssets([{ marca: '', modelo: '', propietario: '' }]);
       setActiveVehicleRow(0);
       setErrors((prev) => ({ ...prev, vehiculoCategoria: '' }));
+      setFeedback({
+        type: 'info',
+        message: 'Autocorrección aplicada: se reinició la sección de vehículos y la cantidad quedó en 0.',
+      });
+    }
+
+    if (name === 'laboralCuentaConEmpleo' && value === 'no') {
+      setErrors((prev) => ({
+        ...prev,
+        laboralLugarTrabajo: '',
+        laboralAntiguedad: '',
+        laboralPuesto: '',
+        laboralHorario: '',
+      }));
+      setFeedback({
+        type: 'info',
+        message: 'Autocorrección aplicada: se limpiaron los datos laborales que no aplican cuando no hay empleo.',
+      });
+    }
+
+    if (name === 'familiarAportaIngreso' && value === 'no') {
+      setIncomeContributors([{ parentesco: '', cantidadMensual: '' }]);
+      setActiveContributorRow(0);
+      setFeedback({
+        type: 'info',
+        message: 'Autocorrección aplicada: se bloqueó aportación de familiares y se estableció 0 integrantes.',
+      });
     }
   };
+
+  useEffect(() => {
+    const cargarCitasRegistradas = async () => {
+      try {
+        setCargandoCitasRegistradas(true);
+        setErrorCitasRegistradas('');
+        const response = await fetch('http://localhost:4000/api/seguimientos/tablas');
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'No se pudieron cargar las citas registradas.');
+        }
+
+        const data = await response.json();
+        setCitasRegistradas(Array.isArray(data.citas) ? data.citas : []);
+      } catch (error) {
+        console.error('Error al cargar citas registradas para validar estudio:', error);
+        setErrorCitasRegistradas('No se pudieron validar las citas registradas.');
+      } finally {
+        setCargandoCitasRegistradas(false);
+      }
+    };
+
+    cargarCitasRegistradas();
+  }, []);
 
   useEffect(() => {
     const nombre = busquedaPaciente.trim();
@@ -473,15 +725,8 @@ const EstudioSocioeconomico = () => {
         const resultados = Array.isArray(data) ? data : [];
         setPacientesBase(resultados);
 
-        if (resultados.length === 1 && ultimaBusquedaAutoSeleccionadaRef.current !== nombre.toLowerCase()) {
-          seleccionarPaciente(resultados[0]);
-          setMostrarResultados(false);
-          setIndiceResaltado(0);
-          ultimaBusquedaAutoSeleccionadaRef.current = nombre.toLowerCase();
-        } else {
-          setMostrarResultados(true);
-          setIndiceResaltado(resultados.length > 0 ? 0 : -1);
-        }
+        setMostrarResultados(true);
+        setIndiceResaltado(resultados.length > 0 ? 0 : -1);
       } catch (error) {
         if (error.name !== 'AbortError') {
           console.error('Error al buscar pacientes por nombre:', error);
@@ -532,13 +777,45 @@ const EstudioSocioeconomico = () => {
   };
 
   const seleccionarPaciente = (paciente) => {
+    if (cargandoCitasRegistradas) {
+      setFeedback({
+        type: 'info',
+        message: 'Validando citas registradas, espera un momento e intenta de nuevo.',
+      });
+      return;
+    }
+
+    if (errorCitasRegistradas) {
+      setFeedback({
+        type: 'warning',
+        message: 'No fue posible validar la cita del paciente. Revisa la conexión con backend.',
+      });
+      return;
+    }
+
+    const tieneCitaRegistrada = citasRegistradas.some((item) => item.pacienteId === paciente.id);
+    if (!tieneCitaRegistrada) {
+      setFeedback({
+        type: 'warning',
+        message: 'Este paciente no tiene cita registrada. Primero agenda una cita para continuar con el estudio socioeconómico.',
+      });
+      return;
+    }
+
     setPacienteSeleccionadoId(paciente.id);
     setBusquedaPaciente(paciente.nombreCompleto || '');
     setIsDirty(true);
     setActiveTab('solicitante');
+    setFeedback(null);
+    const nombreSolicitanteCompleto = paciente.solicitante?.nombre || '';
+    const solicitantePartes = splitNombreCompleto(nombreSolicitanteCompleto);
+    const pacientePartes = splitNombreCompleto(paciente.nombreCompleto || '');
     setFormData((prev) => ({
       ...prev,
-      nombreSolicitante: paciente.solicitante?.nombre || '',
+      nombreSolicitante: nombreSolicitanteCompleto,
+      solicitanteNombres: paciente.solicitante?.nombres || solicitantePartes.nombres,
+      solicitanteApellidoPaterno: paciente.solicitante?.apellidoPaterno || solicitantePartes.apellidoPaterno,
+      solicitanteApellidoMaterno: paciente.solicitante?.apellidoMaterno || solicitantePartes.apellidoMaterno,
       fechaNacimiento: paciente.solicitante?.fechaNacimiento || '',
       lugarNacimiento: paciente.solicitante?.lugar || '',
       edad: paciente.solicitante?.edad ? String(paciente.solicitante.edad) : '',
@@ -557,6 +834,9 @@ const EstudioSocioeconomico = () => {
       telefonoCelular: paciente.solicitante?.celular || '',
       cuentaConTarjeta: paciente.solicitante?.cuentaConTarjeta || '',
       pacienteNombre: paciente.nombreCompleto || '',
+      pacienteNombres: paciente.nombres || pacientePartes.nombres,
+      pacienteApellidoPaterno: paciente.apellidoPaterno || pacientePartes.apellidoPaterno,
+      pacienteApellidoMaterno: paciente.apellidoMaterno || pacientePartes.apellidoMaterno,
       pacienteFechaNacimiento: paciente.fechaNacimiento || '',
       pacienteLugarNacimiento: paciente.origen || '',
       pacienteEdad: paciente.edad ? String(paciente.edad) : '',
@@ -748,21 +1028,30 @@ const EstudioSocioeconomico = () => {
     });
   };
 
-  const totalIncomes = Object.values(monthlyIncomes).reduce((acc, value) => acc + (Number(value) || 0), 0);
-  const totalExpenses = Object.values(monthlyExpenses).reduce((acc, value) => acc + (Number(value) || 0), 0);
-  const economicResult = totalIncomes - totalExpenses;
-  const hasVehicle = formData.patrimonioCuentaAuto === 'si';
-  const validFamilyReferences = familyReferences.filter(
-    (row) =>
-      String(row.nombre || '').trim() &&
-      String(row.telefono || '').trim() &&
-      String(row.relacion || '').trim() &&
-      String(row.tiempoConocer || '').trim()
-  ).length;
-  const hasMinimumFamilyReferences = validFamilyReferences >= 2;
+  const sectionProgress = tabs.map((tab) => {
+    const requiredFields = getActiveRequiredFields(tab.id);
+    const completedFields = requiredFields.filter((name) => String(formData[name] || '').trim() !== '').length;
+    const hasCrossIssues = getCrossRuleFindings(tab.id).some((item) => item.severity === 'error');
+    const hasFamilyIssue = tab.id === 'familiar' && !hasMinimumFamilyReferences;
+    const percentage = requiredFields.length === 0
+      ? 0
+      : Math.round((completedFields / requiredFields.length) * 100);
+
+    return {
+      id: tab.id,
+      label: tab.label,
+      required: requiredFields.length,
+      completed: completedFields,
+      percentage,
+      hasIssues: hasCrossIssues || hasFamilyIssue,
+    };
+  });
+
+  const completedSections = sectionProgress.filter((item) => item.percentage === 100 && !item.hasIssues).length;
+  const overallProgress = Math.round((completedSections / tabs.length) * 100);
 
   const isTabCompleted = (tabId) => {
-    const fields = sectionRequiredFields[tabId] || [];
+    const fields = getActiveRequiredFields(tabId);
     if (fields.length === 0) return false;
 
     const requiredFieldsDone = fields.every((name) => String(formData[name] || '').trim() !== '');
@@ -770,11 +1059,16 @@ const EstudioSocioeconomico = () => {
       return requiredFieldsDone && hasMinimumFamilyReferences;
     }
 
+    const tabBlockingFindings = getCrossRuleFindings(tabId).filter((item) => item.severity === 'error');
+    if (tabBlockingFindings.length > 0) {
+      return false;
+    }
+
     return requiredFieldsDone;
   };
 
   const validateCurrentTab = () => {
-    const reqFields = sectionRequiredFields[activeTab] || [];
+    const reqFields = getActiveRequiredFields(activeTab);
     const newErrors = {};
 
     reqFields.forEach((name) => {
@@ -795,8 +1089,74 @@ const EstudioSocioeconomico = () => {
       setTouched((prev) => ({ ...prev, familiarReferencias: true }));
     }
 
+    const tabBlockingFindings = getCrossRuleFindings(activeTab).filter((item) => item.severity === 'error');
+    tabBlockingFindings.forEach((finding) => {
+      newErrors[finding.field] = finding.message;
+    });
+
     setErrors((prev) => ({ ...prev, ...newErrors }));
     return Object.keys(newErrors).length === 0;
+  };
+
+  const buildValidationChecklist = () => {
+    const checklist = [];
+
+    tabs.forEach((tab) => {
+      const reqFields = getActiveRequiredFields(tab.id);
+      reqFields.forEach((name) => {
+        const msg = validateField(name, formData[name]);
+        if (msg) {
+          checklist.push({
+            id: `required-${tab.id}-${name}`,
+            tabId: tab.id,
+            field: name,
+            severity: 'error',
+            message: `${fieldLabels[name] || name}: ${msg}`,
+          });
+        }
+      });
+
+      if (tab.id === 'familiar' && !hasMinimumFamilyReferences) {
+        checklist.push({
+          id: 'required-familiar-referencias',
+          tabId: 'familiar',
+          field: 'familiarReferencias',
+          severity: 'error',
+          message: 'Familiar: captura al menos 2 referencias completas.',
+        });
+      }
+    });
+
+    getCrossRuleFindings().forEach((finding, index) => {
+      checklist.push({
+        id: `cross-${finding.tabId}-${finding.field}-${index}`,
+        ...finding,
+      });
+    });
+
+    return checklist;
+  };
+
+  const applyChecklistToErrors = (items) => {
+    const newErrors = {};
+    const nextTouched = { ...touched };
+
+    items
+      .filter((item) => item.severity === 'error')
+      .forEach((item) => {
+        if (item.field) {
+          newErrors[item.field] = item.message;
+          nextTouched[item.field] = true;
+        }
+      });
+
+    setTouched(nextTouched);
+    setErrors((prev) => ({ ...prev, ...newErrors }));
+  };
+
+  const openChecklist = (items) => {
+    setChecklistItems(items);
+    setChecklistVisible(true);
   };
 
   const handlePreviousStep = () => {
@@ -826,6 +1186,9 @@ const EstudioSocioeconomico = () => {
     }
     setFormData({
       nombreSolicitante: '',
+      solicitanteNombres: '',
+      solicitanteApellidoPaterno: '',
+      solicitanteApellidoMaterno: '',
       fechaNacimiento: '',
       lugarNacimiento: '',
       edad: '',
@@ -844,6 +1207,9 @@ const EstudioSocioeconomico = () => {
       telefonoCelular: '',
       cuentaConTarjeta: '',
       pacienteNombre: '',
+      pacienteNombres: '',
+      pacienteApellidoPaterno: '',
+      pacienteApellidoMaterno: '',
       pacienteFechaNacimiento: '',
       pacienteLugarNacimiento: '',
       pacienteEdad: '',
@@ -968,6 +1334,9 @@ const EstudioSocioeconomico = () => {
     setFormData((prev) => ({
       ...prev,
       nombreSolicitante: 'María Fernanda López Rivera',
+      solicitanteNombres: 'María Fernanda',
+      solicitanteApellidoPaterno: 'López',
+      solicitanteApellidoMaterno: 'Rivera',
       fechaNacimiento: '1985-04-18',
       lugarNacimiento: 'Guadalajara, Jalisco',
       edad: '40',
@@ -986,6 +1355,9 @@ const EstudioSocioeconomico = () => {
       telefonoCelular: '33 1122 3344',
       cuentaConTarjeta: 'Débito',
       pacienteNombre: 'Juan Pablo López Rivera',
+      pacienteNombres: 'Juan Pablo',
+      pacienteApellidoPaterno: 'López',
+      pacienteApellidoMaterno: 'Rivera',
       pacienteFechaNacimiento: '2008-09-02',
       pacienteLugarNacimiento: 'Guadalajara, Jalisco',
       pacienteEdad: '17',
@@ -1117,7 +1489,7 @@ const EstudioSocioeconomico = () => {
     });
   };
 
-  const handleSaveStudy = async () => {
+  const handleSaveStudy = async (allowWarnings = false) => {
     if (guardandoEstudio) {
       return;
     }
@@ -1130,6 +1502,46 @@ const EstudioSocioeconomico = () => {
       return;
     }
 
+    if (cargandoCitasRegistradas || errorCitasRegistradas) {
+      setFeedback({
+        type: 'warning',
+        message: 'No se puede validar la cita registrada del paciente en este momento.',
+      });
+      return;
+    }
+
+    const pacienteTieneCita = citasRegistradas.some((item) => item.pacienteId === pacienteSeleccionadoId);
+    if (!pacienteTieneCita) {
+      setFeedback({
+        type: 'warning',
+        message: 'Para guardar estudio socioeconómico, el paciente debe tener una cita registrada.',
+      });
+      return;
+    }
+
+    const checklist = buildValidationChecklist();
+    const hasBlockingIssues = checklist.some((item) => item.severity === 'error');
+    const hasWarnings = checklist.some((item) => item.severity === 'warning');
+
+    if (hasBlockingIssues || (hasWarnings && !allowWarnings)) {
+      applyChecklistToErrors(checklist);
+      openChecklist(checklist);
+
+      if (hasBlockingIssues) {
+        setFeedback({
+          type: 'error',
+          message: 'Hay inconsistencias que bloquean el guardado. Revísalas en el checklist.',
+        });
+      } else {
+        setFeedback({
+          type: 'warning',
+          message: 'Hay advertencias revisables antes de generar PDF. Puedes continuar si lo deseas.',
+        });
+      }
+
+      return;
+    }
+
     try {
       setGuardandoEstudio(true);
       setFeedback({
@@ -1138,6 +1550,9 @@ const EstudioSocioeconomico = () => {
       });
       const payload = {
         nombreSolicitante: formData.nombreSolicitante,
+        solicitanteNombres: formData.solicitanteNombres,
+        solicitanteApellidoPaterno: formData.solicitanteApellidoPaterno,
+        solicitanteApellidoMaterno: formData.solicitanteApellidoMaterno,
         fechaNacimientoSolicitante: formData.fechaNacimiento,
         edadSolicitante: formData.edad ? Number(formData.edad) : null,
         sexoSolicitante: formData.sexo,
@@ -1156,6 +1571,9 @@ const EstudioSocioeconomico = () => {
         telefonoCelularSolicitante: formData.telefonoCelular,
         cuentaConTarjetaSolicitante: formData.cuentaConTarjeta,
         nombrePaciente: formData.pacienteNombre,
+        pacienteNombres: formData.pacienteNombres,
+        pacienteApellidoPaterno: formData.pacienteApellidoPaterno,
+        pacienteApellidoMaterno: formData.pacienteApellidoMaterno,
         fechaNacimientoPaciente: formData.pacienteFechaNacimiento,
         edadPaciente: formData.pacienteEdad ? Number(formData.pacienteEdad) : null,
         sexoPaciente: formData.pacienteSexo,
@@ -1211,6 +1629,8 @@ const EstudioSocioeconomico = () => {
 
       setIsDirty(false);
       setGuardandoEstudio(false);
+      setChecklistVisible(false);
+      setChecklistItems([]);
       setFeedback({
         type: 'success',
         message: `Se actualizó Solicitante y Paciente y se generó el PDF ${pdfData?.nombreArchivo || ''}.`,
@@ -1223,6 +1643,16 @@ const EstudioSocioeconomico = () => {
         message: 'No se pudo guardar. Verifica backend o conexión.',
       });
     }
+  };
+
+  const handleContinueAfterWarnings = () => {
+    const hasBlockingIssues = checklistItems.some((item) => item.severity === 'error');
+    if (hasBlockingIssues || guardandoEstudio) {
+      return;
+    }
+    setChecklistVisible(false);
+    setChecklistItems([]);
+    handleSaveStudy(true);
   };
 
   useEffect(() => {
@@ -1358,6 +1788,14 @@ const EstudioSocioeconomico = () => {
           )}
         </section>
 
+        {!cargandoCitasRegistradas && errorCitasRegistradas && (
+          <section className="-mt-2 mb-2">
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              {errorCitasRegistradas}
+            </p>
+          </section>
+        )}
+
         <nav className="flex flex-wrap gap-2 mb-8 bg-white border border-slate-200 p-1.5 rounded-2xl shadow-sm">
           {tabs.map((tab) => (
             <button
@@ -1380,6 +1818,39 @@ const EstudioSocioeconomico = () => {
           ))}
         </nav>
 
+        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Resumen por sección</p>
+              <h3 className="text-base font-extrabold text-slate-800">Progreso global: {overallProgress}%</h3>
+            </div>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700">
+              {completedSections}/{tabs.length} secciones completas
+            </span>
+          </div>
+
+          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-[#7E1D3B] transition-all" style={{ width: `${overallProgress}%` }} />
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {sectionProgress.map((item) => (
+              <button
+                key={`resumen-${item.id}`}
+                type="button"
+                onClick={() => setActiveTab(item.id)}
+                className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-left hover:border-[#7E1D3B]/30 hover:bg-[#7E1D3B]/5"
+              >
+                <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">{item.label}</p>
+                <p className="mt-1 text-sm font-bold text-slate-800">{item.completed}/{item.required} campos</p>
+                <p className={`text-xs font-semibold ${item.hasIssues ? 'text-rose-700' : 'text-emerald-700'}`}>
+                  {item.hasIssues ? 'Con inconsistencias' : 'Sin inconsistencias'}
+                </p>
+              </button>
+            ))}
+          </div>
+        </section>
+
         {/* --- CONTENEDOR DEL FORMULARIO --- */}
           <div className="relative bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-rose-100/60 blur-2xl" />
@@ -1399,7 +1870,9 @@ const EstudioSocioeconomico = () => {
               </div>
 
                 <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
-                <InputGroup label="Nombre Completo del Solicitante" name="nombreSolicitante" value={formData.nombreSolicitante} error={errors.nombreSolicitante} required onChange={handleChange} onBlur={handleBlur} placeholder="Escribe el nombre completo..." />
+                  <InputGroup label="Nombre(s) del Solicitante" name="solicitanteNombres" value={formData.solicitanteNombres} error={errors.nombreSolicitante} required onChange={handleChange} onBlur={handleBlur} placeholder="Nombre(s)" />
+                  <InputGroup label="Apellido paterno" name="solicitanteApellidoPaterno" value={formData.solicitanteApellidoPaterno} onChange={handleChange} onBlur={handleBlur} placeholder="Apellido paterno" />
+                  <InputGroup label="Apellido materno" name="solicitanteApellidoMaterno" value={formData.solicitanteApellidoMaterno} onChange={handleChange} onBlur={handleBlur} placeholder="Apellido materno" />
                 <InputGroup label="Fecha de Nacimiento" name="fechaNacimiento" value={formData.fechaNacimiento} error={errors.fechaNacimiento} required onChange={handleChange} onBlur={handleBlur} type="date" />
                 
                 <InputGroup label="Lugar de Nacimiento" name="lugarNacimiento" value={formData.lugarNacimiento} error={errors.lugarNacimiento} onChange={handleChange} onBlur={handleBlur} placeholder="Estado / Municipio" />
@@ -1502,7 +1975,9 @@ const EstudioSocioeconomico = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
-                <InputGroup label="Nombre Completo del Paciente" name="pacienteNombre" value={formData.pacienteNombre} error={errors.pacienteNombre} required onChange={handleChange} onBlur={handleBlur} placeholder="Escribe el nombre completo..." />
+                <InputGroup label="Nombre(s) del Paciente" name="pacienteNombres" value={formData.pacienteNombres} error={errors.pacienteNombre} required onChange={handleChange} onBlur={handleBlur} placeholder="Nombre(s)" />
+                <InputGroup label="Apellido paterno" name="pacienteApellidoPaterno" value={formData.pacienteApellidoPaterno} onChange={handleChange} onBlur={handleBlur} placeholder="Apellido paterno" />
+                <InputGroup label="Apellido materno" name="pacienteApellidoMaterno" value={formData.pacienteApellidoMaterno} onChange={handleChange} onBlur={handleBlur} placeholder="Apellido materno" />
                 <InputGroup label="Fecha de Nacimiento" name="pacienteFechaNacimiento" value={formData.pacienteFechaNacimiento} error={errors.pacienteFechaNacimiento} required onChange={handleChange} onBlur={handleBlur} type="date" />
 
                 <InputGroup label="Lugar de Nacimiento" name="pacienteLugarNacimiento" value={formData.pacienteLugarNacimiento} error={errors.pacienteLugarNacimiento} onChange={handleChange} onBlur={handleBlur} placeholder="Estado / Municipio" />
@@ -1561,6 +2036,13 @@ const EstudioSocioeconomico = () => {
                   onBlur={handleBlur}
                   options={['Soltero(a)', 'Casado(a)', 'Divorciado(a)', 'Viudo(a)', 'Unión Libre']}
                 />
+                {getFindingsByField('pacienteEstadoCivil', 'warning').map((item) => (
+                  <div key={`warn-${item.field}`} className="md:col-span-2 xl:col-span-3 -mt-2">
+                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                      {item.message}
+                    </p>
+                  </div>
+                ))}
 
                 <div className="md:col-span-2 xl:col-span-3">
                   <InputGroup label="Dirección Actual" name="pacienteDireccion" value={formData.pacienteDireccion} error={errors.pacienteDireccion} required onChange={handleChange} onBlur={handleBlur} placeholder="Calle, Número, Colonia, C.P." />
@@ -1627,10 +2109,14 @@ const EstudioSocioeconomico = () => {
                     {errors.laboralCuentaConEmpleo && <p className="mt-1 text-xs font-semibold text-rose-700">{errors.laboralCuentaConEmpleo}</p>}
                   </div>
 
-                  <InputGroup label="Lugar de Trabajo/Empleo" name="laboralLugarTrabajo" value={formData.laboralLugarTrabajo} error={errors.laboralLugarTrabajo} required onChange={handleChange} onBlur={handleBlur} placeholder="Empresa o negocio" />
-                  <InputGroup label="Antiguedad Laboral" name="laboralAntiguedad" value={formData.laboralAntiguedad} error={errors.laboralAntiguedad} onChange={handleChange} onBlur={handleBlur} placeholder="Ej. 2 anos" />
-                  <InputGroup label="Puesto que ocupa" name="laboralPuesto" value={formData.laboralPuesto} error={errors.laboralPuesto} required onChange={handleChange} onBlur={handleBlur} placeholder="Puesto actual" />
-                  <InputGroup label="Horario de Trabajo" name="laboralHorario" value={formData.laboralHorario} error={errors.laboralHorario} onChange={handleChange} onBlur={handleBlur} placeholder="Ej. 8:00 - 16:00" />
+                  {formData.laboralCuentaConEmpleo !== 'no' && (
+                    <>
+                      <InputGroup label="Lugar de Trabajo/Empleo" name="laboralLugarTrabajo" value={formData.laboralLugarTrabajo} error={errors.laboralLugarTrabajo} required onChange={handleChange} onBlur={handleBlur} placeholder="Empresa o negocio" />
+                      <InputGroup label="Antiguedad Laboral" name="laboralAntiguedad" value={formData.laboralAntiguedad} error={errors.laboralAntiguedad} onChange={handleChange} onBlur={handleBlur} placeholder="Ej. 2 anos" />
+                      <InputGroup label="Puesto que ocupa" name="laboralPuesto" value={formData.laboralPuesto} error={errors.laboralPuesto} required onChange={handleChange} onBlur={handleBlur} placeholder="Puesto actual" />
+                      <InputGroup label="Horario de Trabajo" name="laboralHorario" value={formData.laboralHorario} error={errors.laboralHorario} onChange={handleChange} onBlur={handleBlur} placeholder="Ej. 8:00 - 16:00" />
+                    </>
+                  )}
 
                   <SelectGroup
                     label="No. de dependientes Económicos"
@@ -1737,10 +2223,26 @@ const EstudioSocioeconomico = () => {
                       onRemoveRow={handleRemoveContributor}
                       activeRow={activeContributorRow}
                       onRowFocus={setActiveContributorRow}
+                      disabled={formData.familiarAportaIngreso === 'no'}
                     />
+                    {formData.familiarAportaIngreso === 'no' && (
+                      <p className="mt-2 text-xs font-semibold text-slate-500">
+                        Tabla bloqueada porque se seleccionó que ningún otro miembro aporta al ingreso familiar.
+                      </p>
+                    )}
+                    {getFindingsByField('familiarAportaIngreso', 'error').map((item) => (
+                      <p key={`err-${item.field}`} className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                        {item.message}
+                      </p>
+                    ))}
                   </div>
                   <div>
-                    <InputGroup label="Numero de integrantes que aportan" name="numeroIntegrantesAportan" value={formData.numeroIntegrantesAportan} error={errors.numeroIntegrantesAportan} onChange={handleChange} onBlur={handleBlur} type="number" placeholder="0" />
+                    <InputGroup label="Numero de integrantes que aportan" name="numeroIntegrantesAportan" value={formData.numeroIntegrantesAportan} error={errors.numeroIntegrantesAportan} onChange={handleChange} onBlur={handleBlur} type="number" placeholder="0" readOnly={formData.familiarAportaIngreso === 'no'} />
+                    {getFindingsByField('numeroIntegrantesAportan', 'error').map((item) => (
+                      <p key={`err-${item.field}`} className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                        {item.message}
+                      </p>
+                    ))}
                   </div>
                 </div>
               </section>
@@ -1889,6 +2391,11 @@ const EstudioSocioeconomico = () => {
                   </div>
                 </div>
                 {errors.balanceEconomico && <p className="mt-1 text-xs font-semibold text-rose-700">{errors.balanceEconomico}</p>}
+                {getFindingsByField('balanceEconomico', 'error').map((item) => (
+                  <p key={`err-${item.field}`} className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                    {item.message}
+                  </p>
+                ))}
               </section>
 
               <section className="mt-10">
@@ -1927,6 +2434,11 @@ const EstudioSocioeconomico = () => {
 
                   <InputGroup label="Cantidad" name="patrimonioCantidad" value={formData.patrimonioCantidad} error={errors.patrimonioCantidad} onChange={handleChange} onBlur={handleBlur} type="number" placeholder="0" readOnly={!hasVehicle} />
                 </div>
+                {getFindingsByField('patrimonioCantidad', 'error').map((item) => (
+                  <p key={`err-${item.field}`} className="-mt-4 mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                    {item.message}
+                  </p>
+                ))}
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
                   <div className={`xl:col-span-2 rounded-2xl border p-4 md:p-5 ${hasVehicle ? 'border-slate-200 bg-slate-50/40' : 'border-slate-200 bg-slate-100/70 opacity-70'}`}>
@@ -2487,6 +2999,66 @@ const EstudioSocioeconomico = () => {
             )}
           </div>
         </section>
+
+        {checklistVisible && (
+          <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} className="text-[#7E1D3B]" />
+                <h3 className="text-sm font-black uppercase tracking-wide text-slate-700">Checklist previo a generar PDF</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setChecklistVisible(false)}
+                className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {checklistItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2 ${
+                    item.severity === 'error'
+                      ? 'border-rose-200 bg-rose-50'
+                      : 'border-amber-200 bg-amber-50'
+                  }`}
+                >
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">{tabs.find((tab) => tab.id === item.tabId)?.label || item.tabId}</p>
+                    <p className={`text-sm font-semibold ${item.severity === 'error' ? 'text-rose-800' : 'text-amber-800'}`}>
+                      {item.message}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(item.tabId);
+                      setChecklistVisible(false);
+                    }}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Ir a corregir
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {checklistItems.length > 0 && !checklistItems.some((item) => item.severity === 'error') && (
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleContinueAfterWarnings}
+                  className="rounded-xl bg-[#7E1D3B] px-4 py-2 text-sm font-bold text-white hover:bg-[#63162e]"
+                >
+                  Continuar y generar PDF
+                </button>
+              </div>
+            )}
+          </section>
+        )}
       </main>
     </div>
     </div>
@@ -2831,14 +3403,15 @@ const FamilyReferencesTable = ({ rows, onChange, onAddRow, onRemoveRow, activeRo
   </div>
 );
 
-const IncomeContributorsTable = ({ rows, onChange, onAddRow, onRemoveRow, activeRow, onRowFocus }) => (
-  <div className="rounded-2xl border border-slate-200 bg-slate-50/40 p-4 md:p-5">
+const IncomeContributorsTable = ({ rows, onChange, onAddRow, onRemoveRow, activeRow, onRowFocus, disabled = false }) => (
+  <div className={`rounded-2xl border border-slate-200 p-4 md:p-5 ${disabled ? 'bg-slate-100/80 opacity-80' : 'bg-slate-50/40'}`}>
     <div className="mb-3 flex items-center justify-between gap-3">
       <h3 className="text-sm font-black uppercase tracking-wide text-slate-700">Aportación de otros familiares</h3>
       <button
         type="button"
         onClick={onAddRow}
-        className="inline-flex items-center gap-2 rounded-lg border border-[#7E1D3B]/20 bg-white px-3 py-1.5 text-xs font-bold text-[#7E1D3B] hover:bg-[#7E1D3B]/5"
+        disabled={disabled}
+        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold ${disabled ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed' : 'border-[#7E1D3B]/20 bg-white text-[#7E1D3B] hover:bg-[#7E1D3B]/5'}`}
       >
         <Plus size={14} /> Agregar fila
       </button>
@@ -2866,6 +3439,7 @@ const IncomeContributorsTable = ({ rows, onChange, onAddRow, onRemoveRow, active
                   value={row.parentesco}
                   onChange={(e) => onChange(index, 'parentesco', e.target.value)}
                   onFocus={() => onRowFocus(index)}
+                  disabled={disabled}
                   className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
                 />
               </td>
@@ -2876,6 +3450,7 @@ const IncomeContributorsTable = ({ rows, onChange, onAddRow, onRemoveRow, active
                   value={row.cantidadMensual}
                   onChange={(e) => onChange(index, 'cantidadMensual', e.target.value)}
                   onFocus={() => onRowFocus(index)}
+                  disabled={disabled}
                   className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
                 />
               </td>
@@ -2883,7 +3458,8 @@ const IncomeContributorsTable = ({ rows, onChange, onAddRow, onRemoveRow, active
                 <button
                   type="button"
                   onClick={() => onRemoveRow(index)}
-                  className="inline-flex items-center rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700 hover:bg-rose-100"
+                  disabled={disabled}
+                  className={`inline-flex items-center rounded-lg border p-2 ${disabled ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed' : 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'}`}
                   aria-label="Eliminar fila"
                 >
                   <Trash2 size={14} />

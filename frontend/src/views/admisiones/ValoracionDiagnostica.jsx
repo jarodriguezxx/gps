@@ -198,6 +198,14 @@ const ValoracionDiagnostica = () => {
   const isValoracionActive = location.pathname === '/admisiones/valoracion-diagnostica';
   const [tab, setTab] = useState('solicitante');
   const [isSaving, setIsSaving] = useState(false);
+
+  const composeNombreCompleto = (nombres, apellidoPaterno, apellidoMaterno) => {
+    return [nombres, apellidoPaterno, apellidoMaterno]
+      .map((parte) => String(parte || '').trim())
+      .filter(Boolean)
+      .join(' ');
+  };
+
   const [formData, setFormData] = useState({
     ...structuredAddressDefaults,
     fechaAtencion: getSystemDateValue(),
@@ -206,6 +214,9 @@ const ValoracionDiagnostica = () => {
     fuenteReferencia: '',
     fuenteReferenciaOtro: '',
     nombreSolicitante: '',
+    solicitanteNombres: '',
+    solicitanteApellidoPaterno: '',
+    solicitanteApellidoMaterno: '',
     lugarVisita: '',
     domicilioSolicitante: '',
     telefonoSolicitante: '',
@@ -213,6 +224,9 @@ const ValoracionDiagnostica = () => {
     dedicacionSolicitante: '',
     parentesco: '',
     nombrePaciente: '',
+    pacienteNombres: '',
+    pacienteApellidoPaterno: '',
+    pacienteApellidoMaterno: '',
     origenPaciente: '',
     edadPaciente: '',
     estadoCivilPaciente: '',
@@ -253,6 +267,24 @@ const ValoracionDiagnostica = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+      ...(name === 'solicitanteNombres' || name === 'solicitanteApellidoPaterno' || name === 'solicitanteApellidoMaterno'
+        ? {
+            nombreSolicitante: composeNombreCompleto(
+              name === 'solicitanteNombres' ? value : prev.solicitanteNombres,
+              name === 'solicitanteApellidoPaterno' ? value : prev.solicitanteApellidoPaterno,
+              name === 'solicitanteApellidoMaterno' ? value : prev.solicitanteApellidoMaterno
+            ),
+          }
+        : {}),
+      ...(name === 'pacienteNombres' || name === 'pacienteApellidoPaterno' || name === 'pacienteApellidoMaterno'
+        ? {
+            nombrePaciente: composeNombreCompleto(
+              name === 'pacienteNombres' ? value : prev.pacienteNombres,
+              name === 'pacienteApellidoPaterno' ? value : prev.pacienteApellidoPaterno,
+              name === 'pacienteApellidoMaterno' ? value : prev.pacienteApellidoMaterno
+            ),
+          }
+        : {}),
       ...(seleccionarTipoLlamada
         ? {
             estadoSeguimiento: '',
@@ -274,6 +306,9 @@ const ValoracionDiagnostica = () => {
 
     const solicitantePayload = {
       nombre: formData.nombreSolicitante,
+      nombres: formData.solicitanteNombres,
+      apellidoPaterno: formData.solicitanteApellidoPaterno,
+      apellidoMaterno: formData.solicitanteApellidoMaterno,
       lugar: formData.lugarVisita,
       ocupacion: formData.dedicacionSolicitante,
       direccionCalle: formData.solicitanteDireccionCalle,
@@ -299,6 +334,9 @@ const ValoracionDiagnostica = () => {
 
     const pacientePayload = {
       nombre: formData.nombrePaciente,
+      nombres: formData.pacienteNombres,
+      apellidoPaterno: formData.pacienteApellidoPaterno,
+      apellidoMaterno: formData.pacienteApellidoMaterno,
       edad: formData.edadPaciente ? Number(formData.edadPaciente) : null,
       estadocivil: formData.estadoCivilPaciente,
       hijos: formData.hijosCount ? Number(formData.hijosCount) : null,
@@ -500,11 +538,25 @@ const ValoracionDiagnostica = () => {
                 )}
 
                 <InputGroup
-                  label="Nombre de quien solicita información"
-                  name="nombreSolicitante"
-                  value={formData.nombreSolicitante}
+                  label="Nombre(s) de quien solicita información"
+                  name="solicitanteNombres"
+                  value={formData.solicitanteNombres}
                   onChange={handleInputChange}
-                  placeholder="Nombre completo"
+                  placeholder="Nombre(s)"
+                />
+                <InputGroup
+                  label="Apellido paterno"
+                  name="solicitanteApellidoPaterno"
+                  value={formData.solicitanteApellidoPaterno}
+                  onChange={handleInputChange}
+                  placeholder="Apellido paterno"
+                />
+                <InputGroup
+                  label="Apellido materno"
+                  name="solicitanteApellidoMaterno"
+                  value={formData.solicitanteApellidoMaterno}
+                  onChange={handleInputChange}
+                  placeholder="Apellido materno"
                 />
                 <AddressSection
                   title="Dirección actual"
@@ -571,11 +623,25 @@ const ValoracionDiagnostica = () => {
             <div className="space-y-8">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                 <InputGroup
-                  label="Nombre completo del prospecto"
-                  name="nombrePaciente"
-                  value={formData.nombrePaciente}
+                  label="Nombre(s) del prospecto"
+                  name="pacienteNombres"
+                  value={formData.pacienteNombres}
                   onChange={handleInputChange}
-                  placeholder="Nombre completo"
+                  placeholder="Nombre(s)"
+                />
+                <InputGroup
+                  label="Apellido paterno"
+                  name="pacienteApellidoPaterno"
+                  value={formData.pacienteApellidoPaterno}
+                  onChange={handleInputChange}
+                  placeholder="Apellido paterno"
+                />
+                <InputGroup
+                  label="Apellido materno"
+                  name="pacienteApellidoMaterno"
+                  value={formData.pacienteApellidoMaterno}
+                  onChange={handleInputChange}
+                  placeholder="Apellido materno"
                 />
                 <InputGroup
                   label="Edad del prospecto"
