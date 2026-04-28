@@ -90,6 +90,20 @@ public class PacienteController {
         }
     }
 
+    @PutMapping("/{id}/llamada-inicial")
+    public ResponseEntity<String> actualizarLlamadaInicial(
+        @PathVariable Long id,
+        @RequestBody PacienteDTO dto
+    ) {
+        try {
+            pacienteService.actualizarLlamadaInicial(id, dto);
+            return new ResponseEntity<>("Llamada inicial actualizada con exito", HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error al actualizar la llamada inicial: " + e.getMessage(),
+                                        HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @PutMapping("/{id}/estudio-basico")
     public ResponseEntity<String> actualizarEstudioBasico(
         @PathVariable Long id,

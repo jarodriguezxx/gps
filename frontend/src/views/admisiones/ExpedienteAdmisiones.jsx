@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Search, Sparkles } from 'lucide-react';
+import { ArrowRight, FileText, Search, Sparkles, X } from 'lucide-react';
 import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
 import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
 
@@ -27,6 +27,14 @@ const formatTimeValue = (value) => {
 	const date = new Date(value);
 	if (Number.isNaN(date.getTime())) return '--:--';
 	return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+};
+
+const toDateTimeLocalValue = (value) => {
+	if (!value) return '';
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return '';
+	const pad = (part) => String(part).padStart(2, '0');
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
 const buildPdfActionUrl = (path) => `http://localhost:4000${path}`;
@@ -143,6 +151,117 @@ const buildTimeline = (detalleExpediente) => {
 	}));
 };
 
+const buildDiagnosticoReadOnlyData = (prospecto, detalleExpediente) => {
+	if (!prospecto && !detalleExpediente) {
+		return null;
+	}
+
+	const llamadaInicial = detalleExpediente?.llamadaInicial || {};
+	const tieneSnapshot = Object.keys(llamadaInicial).length > 0;
+	const ultimoSeguimiento = Array.isArray(detalleExpediente?.seguimientos) && detalleExpediente.seguimientos.length > 0
+		? detalleExpediente.seguimientos[0]
+		: null;
+
+	const solicitanteLlamada = llamadaInicial.solicitante || {};
+	const solicitanteBase = prospecto?.solicitante || {};
+	const solicitante = { ...solicitanteBase, ...solicitanteLlamada };
+
+	const pacienteLlamada = llamadaInicial.paciente || {};
+	const pacienteBase = prospecto || {};
+	const paciente = { ...pacienteBase, ...pacienteLlamada };
+
+	return {
+		solicitante: {
+			fuenteReferencia: '',
+			nombres: solicitante.nombres || '',
+			apellidoPaterno: solicitante.apellidoPaterno || '',
+			apellidoMaterno: solicitante.apellidoMaterno || '',
+			lugarVisita: solicitante.origen || solicitante.lugar || '',
+			direccionCalle: solicitante.direccionCalle || '',
+			direccionNoExt: solicitante.direccionNoExt || '',
+			direccionNoInt: solicitante.direccionNoInt || '',
+			direccionColonia: solicitante.direccionColonia || '',
+			direccionMunicipioDelegacion: solicitante.direccionMunicipioDelegacion || '',
+			direccionCp: solicitante.direccionCp || '',
+			direccionCiudadEstado: solicitante.direccionCiudadEstado || '',
+			telefono: solicitante.telefono || '',
+			celular: solicitante.celular || '',
+			dedicacion: solicitante.ocupacion || '',
+			parentesco: solicitante.parentescoPaciente || '',
+		},
+		prospecto: {
+			nombres: paciente.nombres || '',
+			apellidoPaterno: paciente.apellidoPaterno || '',
+			apellidoMaterno: paciente.apellidoMaterno || '',
+			edad: paciente.edad ?? '',
+			estadoCivil: paciente.estadoCivil || '',
+			hijos: paciente.hijos ?? paciente.cantidadHijos ?? '',
+			escolaridad: paciente.escolaridad || '',
+			origen: paciente.origen || '',
+			telefono: paciente.telefono || paciente.telefonoContacto || '',
+			direccionCalle: paciente.direccionCalle || '',
+			direccionNoExt: paciente.direccionNoExt || '',
+			direccionNoInt: paciente.direccionNoInt || '',
+			direccionColonia: paciente.direccionColonia || '',
+			direccionMunicipioDelegacion: paciente.direccionMunicipioDelegacion || '',
+			direccionCp: paciente.direccionCp || '',
+			direccionCiudadEstado: paciente.direccionCiudadEstado || '',
+			dedicacion: paciente.ocupacion || '',
+			sustanciaConsumo: paciente.sustancia || paciente.sustanciaConsumo || '',
+			internamiento: '',
+			criterioInternamiento: '',
+			conclusionIntervencion: '',
+			tratamientoAnterior: '',
+			posibilidadesEconomicas: '',
+			llamarPaciente: llamadaInicial.llamarPaciente || (ultimoSeguimiento?.origenLlamada === 'PROSPECTO' ? 'prospecto' : ultimoSeguimiento?.origenLlamada === 'NOSOTROS' ? 'nosotros' : ''),
+			estadoSeguimiento: llamadaInicial.estadoSeguimiento || ultimoSeguimiento?.estadoSeguimiento || '',
+			fechaCita: toDateTimeLocalValue(llamadaInicial.fechaCita || ultimoSeguimiento?.fechaHoraProgramada),
+			acuerdo: llamadaInicial.motivoAccion || ultimoSeguimiento?.motivo || '',
+		},
+		tieneSnapshot,
+	};
+};
+
+const ReadOnlyField = ({ label, value, type = 'text' }) => (
+	<div>
+		<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">{label}</label>
+		<input
+			type={type}
+			value={value ?? ''}
+			disabled
+			readOnly
+			className="min-h-[48px] w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 p-3.5 text-slate-600 outline-none"
+		/>
+	</div>
+);
+
+const ReadOnlySelect = ({ label, value }) => (
+	<div>
+		<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">{label}</label>
+		<select
+			value={value ?? ''}
+			disabled
+			className="min-h-[48px] w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 p-3.5 text-slate-600 outline-none"
+		>
+			<option value="">{value || 'Sin dato'}</option>
+		</select>
+	</div>
+);
+
+const ReadOnlyRadio = ({ label, selectedValue, options }) => (
+	<div>
+		<p className="mb-2 ml-1 text-xs font-bold uppercase text-slate-600">{label}</p>
+		<div className="flex flex-wrap gap-3">
+			{options.map((option) => (
+				<label key={option.value} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-600">
+					<input type="radio" checked={selectedValue === option.value} readOnly disabled className="accent-[#7E1D3B]" />
+					<span>{option.label}</span>
+				</label>
+			))}
+		</div>
+	</div>
+);
+
 const ExpedienteAdmisiones = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -157,6 +276,8 @@ const ExpedienteAdmisiones = () => {
 	const [detalleExpediente, setDetalleExpediente] = useState(null);
 	const [cargandoDetalleExpediente, setCargandoDetalleExpediente] = useState(false);
 	const [errorDetalleExpediente, setErrorDetalleExpediente] = useState('');
+	const [modalLlamadaInicialAbierto, setModalLlamadaInicialAbierto] = useState(false);
+	const [diagnosticoTab, setDiagnosticoTab] = useState('solicitante');
 	const isInicioActive = location.pathname === '/admisiones';
 	const isExpedienteActive = location.pathname === '/admisiones/expediente';
 	const isEstudioActive = location.pathname === '/admisiones/estudio-socioeconomico';
@@ -166,6 +287,8 @@ const ExpedienteAdmisiones = () => {
 		setProspectoSeleccionado(prospecto);
 		setBusquedaExpediente(getNombreProspecto(prospecto));
 		setMostrarResultados(false);
+		setModalLlamadaInicialAbierto(false);
+		setDiagnosticoTab('solicitante');
 	};
 
 	useEffect(() => {
@@ -270,6 +393,8 @@ const ExpedienteAdmisiones = () => {
 		setProspectoSeleccionado(null);
 		setDetalleExpediente(null);
 		setErrorDetalleExpediente('');
+		setModalLlamadaInicialAbierto(false);
+		setDiagnosticoTab('solicitante');
 	};
 
 	const handleBusquedaKeyDown = (event) => {
@@ -326,6 +451,10 @@ const ExpedienteAdmisiones = () => {
 	const documentosProspecto = useMemo(() => buildDocumentosProspecto(prospectoSeleccionado, detalleExpediente), [prospectoSeleccionado, detalleExpediente]);
 	const notasProspecto = useMemo(() => buildNotasProspecto(prospectoSeleccionado, detalleExpediente), [prospectoSeleccionado, detalleExpediente]);
 	const timelineProspecto = useMemo(() => buildTimeline(detalleExpediente), [detalleExpediente]);
+	const diagnosticoReadOnlyData = useMemo(
+		() => buildDiagnosticoReadOnlyData(prospectoSeleccionado, detalleExpediente),
+		[prospectoSeleccionado, detalleExpediente]
+	);
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-900">
@@ -453,7 +582,7 @@ const ExpedienteAdmisiones = () => {
 						</section>
 
 						{tab === 'general' && (
-							<>
+							
 								
 
 								<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -464,76 +593,118 @@ const ExpedienteAdmisiones = () => {
 										</article>
 									))}
 								</section>
-							</>
+							
 						)}
+{tab === 'docs' && (
+    <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6 animate-fadeIn">
+        <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Expediente Digital</p>
+                <h3 className="text-2xl font-black text-slate-900">Documentación y Registros</h3>
+            </div>
+            <FileText className="text-[#7E1D3B]" size={28} />
+        </div>
 
-						{tab === 'docs' && (
-							<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-								<div className="mb-4 flex items-center justify-between gap-3">
-									<div>
-										<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Documentos</p>
-										<h3 className="text-2xl font-black text-slate-900">PDFs y registros del expediente</h3>
-									</div>
-									<FileText className="text-[#7E1D3B]" size={22} />
-								</div>
-								{!prospectoSeleccionado ? (
-									<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
-										Selecciona un prospecto en el buscador para cargar sus documentos reales.
-									</div>
-								) : null}
-								<div className="space-y-3">
-									{documentosProspecto.map((doc) => (
-										<div key={doc.nombre} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-											<div className="flex items-start justify-between gap-3">
-												<div>
-													<p className="text-sm font-black text-slate-900">{doc.nombre}</p>
-													<p className="text-xs uppercase tracking-[0.2em] text-slate-400">{doc.tipo}</p>
-												</div>
-												<span className={`rounded-full px-2 py-1 text-xs font-semibold ${doc.estado === 'Adjunto' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}>{doc.estado}</span>
-											</div>
-											<p className="mt-2 text-sm leading-6 text-slate-600">{doc.detalle}</p>
-											<div className="mt-3 flex flex-wrap gap-2">
-												{doc.verUrl ? (
-													<a
-														href={doc.verUrl}
-														target="_blank"
-														rel="noreferrer"
-														className="inline-flex rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-													>
-														Ver inline
-													</a>
-												) : null}
-												{doc.imprimirUrl ? (
-													<a
-														href={doc.imprimirUrl}
-														target="_blank"
-														rel="noreferrer"
-														className="inline-flex rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
-													>
-														Imprimir
-													</a>
-												) : null}
-												{doc.descargaUrl ? (
-													<a
-														href={doc.descargaUrl}
-														target="_blank"
-														rel="noreferrer"
-														className="inline-flex rounded-lg border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-3 py-1.5 text-xs font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12"
-													>
-														Descargar PDF
-													</a>
-												) : null}
-											</div>
-										</div>
-									))}
-									{prospectoSeleccionado && documentosProspecto.length === 0 ? (
-										<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
-											No hay documentos para mostrar en este prospecto.
-										</div>
-									) : null}
-								</div>
-							</section>
-						)}
+        {!prospectoSeleccionado ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-8 text-center">
+                <Search className="mx-auto mb-3 text-slate-300" size={40} />
+                <p className="text-sm text-slate-600">Selecciona un prospecto en el buscador para cargar sus documentos.</p>
+            </div>
+        ) : (
+            <div className="space-y-4">
+                {/* 1. SECCIÓN ESPECIAL: VALORACIÓN DIAGNÓSTICA (Snapshots) */}
+                <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-5 transition-all hover:border-[#7E1D3B]/30 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#7E1D3B]/10 text-[#7E1D3B]">
+                            <Sparkles size={24} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <p className="text-base font-black text-slate-900">Valoración Diagnóstica Inicial</p>
+                                {/* BADGE DISCRETO EN LUGAR DE AVISO AMARILLO */}
+                                {!diagnosticoReadOnlyData?.tieneSnapshot ? (
+                                    <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">
+                                        <X size={10} /> Incompleto
+                                    </span>
+                                ) : (
+                                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">
+                                        Sincronizado
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs text-slate-500">Formato de entrevista inicial y criterios de internamiento.</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setDiagnosticoTab('solicitante');
+                                setModalLlamadaInicialAbierto(true);
+                            }}
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                        >
+                            Ver Consulta
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/admisiones/valoracion-diagnostica', {
+                                state: {
+                                    pacienteId: prospectoSeleccionado?.id,
+                                    llamadaInicial: detalleExpediente?.llamadaInicial || null,
+                                },
+                            })}
+                            className="rounded-xl bg-[#7E1D3B] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#63162e]"
+                        >
+                            Actualizar
+                        </button>
+                    </div>
+                </div>
+
+                {/* 2. LISTADO DE DOCUMENTOS PDF Y REGISTROS DINÁMICOS */}
+                <div className="grid gap-3">
+                    {documentosProspecto.length > 0 ? (
+                        documentosProspecto.map((doc, idx) => (
+                            <div key={`${doc.nombre}-${idx}`} className="group flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+                                <div className="flex items-center gap-4">
+                                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${doc.estado === 'Adjunto' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+                                        <FileText size={20} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-sm font-bold text-slate-900">{doc.nombre}</p>
+                                            <span className={`text-[10px] font-bold uppercase ${doc.estado === 'Adjunto' ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                • {doc.estado}
+                                            </span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500">{doc.detalle}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                    {doc.verUrl && (
+                                        <a href={doc.verUrl} target="_blank" rel="noreferrer" title="Visualizar" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                                            <Search size={18} />
+                                        </a>
+                                    )}
+                                    {doc.descargaUrl && (
+                                        <a href={doc.descargaUrl} target="_blank" rel="noreferrer" title="Descargar" className="rounded-lg p-2 text-[#7E1D3B] hover:bg-rose-50">
+                                            <ArrowRight size={18} />
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="py-10 text-center">
+                            <p className="text-sm text-slate-400">No hay documentos adicionales registrados.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        )}
+    </section>
+)}
 
 						{tab === 'notes' && (
 							<>
@@ -616,13 +787,172 @@ const ExpedienteAdmisiones = () => {
 							</div>
 							<div className="grid gap-3 md:grid-cols-3">
 								<button type="button" onClick={() => navigate('/admisiones/estudio-socioeconomico')} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Abrir estudio socioeconómico</button>
-								<button type="button" onClick={() => navigate('/admisiones/valoracion-diagnostica')} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Abrir valoración diagnóstica</button>
+									<button type="button" onClick={() => navigate('/admisiones/valoracion-diagnostica', {
+										state: {
+											pacienteId: prospectoSeleccionado?.id,
+											llamadaInicial: detalleExpediente?.llamadaInicial || null,
+										},
+									})} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Abrir valoración diagnóstica</button>
 								<button type="button" onClick={() => navigate('/admisiones')} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Volver a inicio de admisiones</button>
 							</div>
 						</section>
 					</div>
 				</div>
 				</main>
+
+				{modalLlamadaInicialAbierto && diagnosticoReadOnlyData ? (
+					<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+						<div className="flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.35)]">
+							<div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 md:px-6">
+								<div>
+									<p className="text-xs font-bold uppercase tracking-[0.3em] text-[#7E1D3B]">Diagnóstico inicial</p>
+									<h3 className="text-2xl font-black text-slate-900 md:text-3xl">Consulta del diagnóstico (solo lectura)</h3>
+									<p className="mt-1 text-sm text-slate-500">Esta vista es informativa. Para guardar cambios usa el botón Actualizar.</p>
+								</div>
+								<button onClick={() => setModalLlamadaInicialAbierto(false)} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-[#7E1D3B] hover:text-[#7E1D3B]">
+									<X size={20} />
+								</button>
+							</div>
+
+							<div className="border-b border-slate-200 px-5 py-3 md:px-6">
+								<div className="grid gap-2 sm:grid-cols-2">
+									<button
+										type="button"
+										onClick={() => setDiagnosticoTab('solicitante')}
+										className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${diagnosticoTab === 'solicitante' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+									>
+										Datos del Solicitante
+									</button>
+									<button
+										type="button"
+										onClick={() => setDiagnosticoTab('prospecto')}
+										className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${diagnosticoTab === 'prospecto' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+									>
+										Datos del Prospecto
+									</button>
+								</div>
+							</div>
+
+							<div className="flex-1 overflow-y-auto px-5 py-5 md:px-6">
+								{diagnosticoTab === 'solicitante' ? (
+									<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+										<ReadOnlySelect label="Fuente de referencia" value={diagnosticoReadOnlyData.solicitante.fuenteReferencia} />
+										<ReadOnlyField label="Nombre(s)" value={diagnosticoReadOnlyData.solicitante.nombres} />
+										<ReadOnlyField label="Apellido paterno" value={diagnosticoReadOnlyData.solicitante.apellidoPaterno} />
+										<ReadOnlyField label="Apellido materno" value={diagnosticoReadOnlyData.solicitante.apellidoMaterno} />
+										<ReadOnlyField label="Lugar de donde nos visitan" value={diagnosticoReadOnlyData.solicitante.lugarVisita} />
+										<ReadOnlyField label="A qué se dedica" value={diagnosticoReadOnlyData.solicitante.dedicacion} />
+										<ReadOnlyField label="Parentesco con el paciente" value={diagnosticoReadOnlyData.solicitante.parentesco} />
+										<ReadOnlyField label="Número teléfono" value={diagnosticoReadOnlyData.solicitante.telefono} />
+										<ReadOnlyField label="Número celular" value={diagnosticoReadOnlyData.solicitante.celular} />
+
+										<div className="rounded-2xl border border-rose-100 bg-rose-50/60 p-4 md:col-span-2 xl:col-span-3">
+											<p className="mb-3 text-sm font-bold text-[#7E1D3B]">Dirección del solicitante</p>
+											<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+												<ReadOnlyField label="Calle" value={diagnosticoReadOnlyData.solicitante.direccionCalle} />
+												<ReadOnlyField label="No. Ext." value={diagnosticoReadOnlyData.solicitante.direccionNoExt} />
+												<ReadOnlyField label="No. Int." value={diagnosticoReadOnlyData.solicitante.direccionNoInt} />
+												<ReadOnlyField label="Colonia" value={diagnosticoReadOnlyData.solicitante.direccionColonia} />
+												<ReadOnlyField label="Mpio. o delegación" value={diagnosticoReadOnlyData.solicitante.direccionMunicipioDelegacion} />
+												<ReadOnlyField label="C.P." value={diagnosticoReadOnlyData.solicitante.direccionCp} />
+												<ReadOnlyField label="Ciudad o estado" value={diagnosticoReadOnlyData.solicitante.direccionCiudadEstado} />
+											</div>
+										</div>
+									</div>
+								) : (
+									<div className="space-y-8">
+										<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+											<ReadOnlyField label="Nombre(s)" value={diagnosticoReadOnlyData.prospecto.nombres} />
+											<ReadOnlyField label="Apellido paterno" value={diagnosticoReadOnlyData.prospecto.apellidoPaterno} />
+											<ReadOnlyField label="Apellido materno" value={diagnosticoReadOnlyData.prospecto.apellidoMaterno} />
+											<ReadOnlyField label="Edad" value={diagnosticoReadOnlyData.prospecto.edad} type="number" />
+											<ReadOnlySelect label="Estado civil" value={diagnosticoReadOnlyData.prospecto.estadoCivil} />
+											<ReadOnlyField label="Cuántos hijos tiene" value={diagnosticoReadOnlyData.prospecto.hijos} type="number" />
+											<ReadOnlySelect label="Escolaridad" value={diagnosticoReadOnlyData.prospecto.escolaridad} />
+											<ReadOnlyField label="Origen" value={diagnosticoReadOnlyData.prospecto.origen} />
+											<ReadOnlyField label="Teléfono de contacto" value={diagnosticoReadOnlyData.prospecto.telefono} />
+											<ReadOnlyField label="Ocupación" value={diagnosticoReadOnlyData.prospecto.dedicacion} />
+											<ReadOnlySelect label="Sustancia de consumo" value={diagnosticoReadOnlyData.prospecto.sustanciaConsumo} />
+										</div>
+
+										<div className="rounded-2xl border border-rose-100 bg-rose-50/60 p-4">
+											<p className="mb-3 text-sm font-bold text-[#7E1D3B]">Dirección del prospecto</p>
+											<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+												<ReadOnlyField label="Calle" value={diagnosticoReadOnlyData.prospecto.direccionCalle} />
+												<ReadOnlyField label="No. Ext." value={diagnosticoReadOnlyData.prospecto.direccionNoExt} />
+												<ReadOnlyField label="No. Int." value={diagnosticoReadOnlyData.prospecto.direccionNoInt} />
+												<ReadOnlyField label="Colonia" value={diagnosticoReadOnlyData.prospecto.direccionColonia} />
+												<ReadOnlyField label="Mpio. o delegación" value={diagnosticoReadOnlyData.prospecto.direccionMunicipioDelegacion} />
+												<ReadOnlyField label="C.P." value={diagnosticoReadOnlyData.prospecto.direccionCp} />
+												<ReadOnlyField label="Ciudad o estado" value={diagnosticoReadOnlyData.prospecto.direccionCiudadEstado} />
+											</div>
+										</div>
+
+										<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+											<p className="mb-4 text-sm font-bold uppercase text-slate-700">Valoración y criterios de internamiento</p>
+											<div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+												<ReadOnlyRadio
+													label="¿Está dispuesto a internarse?"
+													selectedValue={diagnosticoReadOnlyData.prospecto.internamiento}
+													options={[
+														{ value: 'acepta', label: 'Sí acepta' },
+														{ value: 'no', label: 'No acepta' },
+														{ value: 'duda', label: 'Duda' },
+													]}
+												/>
+												<ReadOnlyRadio
+													label="Se requiere intervenir"
+													selectedValue={diagnosticoReadOnlyData.prospecto.criterioInternamiento}
+													options={[
+														{ value: 'si', label: 'Sí' },
+														{ value: 'no', label: 'No' },
+													]}
+												/>
+											</div>
+											<div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+												<ReadOnlySelect label="¿Ha estado en tratamiento anteriormente?" value={diagnosticoReadOnlyData.prospecto.tratamientoAnterior} />
+												<ReadOnlyField label="Posibilidades económicas" value={diagnosticoReadOnlyData.prospecto.posibilidadesEconomicas} />
+												<ReadOnlyField label="Conclusión" value={diagnosticoReadOnlyData.prospecto.conclusionIntervencion} />
+											</div>
+										</div>
+
+										<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+											<p className="mb-4 text-sm font-bold uppercase text-slate-700">Seguimiento y programación</p>
+											<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+												<ReadOnlySelect label="Tipo de llamada inicial" value={diagnosticoReadOnlyData.prospecto.llamarPaciente} />
+												<ReadOnlySelect label="Estado de seguimiento" value={diagnosticoReadOnlyData.prospecto.estadoSeguimiento} />
+												<ReadOnlyField label="Fecha de cita o llamada" value={diagnosticoReadOnlyData.prospecto.fechaCita} type="datetime-local" />
+												<ReadOnlyField label="Acuerdo" value={diagnosticoReadOnlyData.prospecto.acuerdo} />
+											</div>
+										</div>
+									</div>
+								)}
+							</div>
+
+							<div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4 md:px-6">
+								<button
+									type="button"
+									onClick={() => setModalLlamadaInicialAbierto(false)}
+									className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+								>
+									Cerrar
+								</button>
+								<button
+									type="button"
+									onClick={() => navigate('/admisiones/valoracion-diagnostica', {
+										state: {
+											pacienteId: prospectoSeleccionado?.id,
+											llamadaInicial: detalleExpediente?.llamadaInicial || null,
+										},
+									})}
+									className="rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#63162e]"
+								>
+									Actualizar
+								</button>
+							</div>
+						</div>
+					</div>
+				) : null}
 			</div>
 		</div>
 	);

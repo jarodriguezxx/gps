@@ -15,6 +15,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -37,6 +40,8 @@ import com.marakame.api.repository.SolicitanteRepository;
 
 @Service
 public class PacienteService {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private PacienteRepository pacienteRepository;
@@ -114,16 +119,24 @@ public class PacienteService {
                 seguimientoItem.put("estadoAsistencia", item.getEstadoAsistencia());
                 seguimientoItem.put("origenLlamada", item.getOrigenLlamada());
                 seguimientoItem.put("diagnosticoVisual", item.getDiagnosticoVisual());
+                seguimientoItem.put("formatoLlamadaInicial", leerFormatoLlamadaInicial(item.getFormatoLlamadaInicialJson()));
                 seguimientoItem.put("fechaHoraProgramada", item.getFechaHoraProgramada());
                 seguimientoItem.put("motivo", item.getMotivo());
                 return seguimientoItem;
             })
             .collect(Collectors.toList());
 
+        Map<String, Object> formatoLlamadaInicial = seguimientos.stream()
+            .map(item -> leerFormatoLlamadaInicial(item.getFormatoLlamadaInicialJson()))
+            .filter(valor -> valor != null && !valor.isEmpty())
+            .findFirst()
+            .orElse(Map.of());
+
         Map<String, Object> respuesta = new LinkedHashMap<>();
         respuesta.put("paciente", mapPaciente(paciente));
         respuesta.put("solicitante", mapSolicitante(paciente.getSolicitante()));
         respuesta.put("seguimientos", seguimientoItems);
+        respuesta.put("llamadaInicial", formatoLlamadaInicial);
         respuesta.put("documentos", documentos);
         respuesta.put("resumen", Map.of(
             "totalSeguimientos", seguimientoItems.size(),
@@ -252,6 +265,94 @@ public class PacienteService {
     }
 
     @Transactional
+    public void actualizarLlamadaInicial(Long pacienteId, PacienteDTO dto) {
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("No existe el paciente indicado"));
+
+        Solicitante solicitante = paciente.getSolicitante();
+        if (solicitante == null) {
+            throw new IllegalArgumentException("El paciente no tiene solicitante vinculado para actualizar la llamada inicial");
+        }
+
+        solicitante.setNombre(dto.nombre());
+        solicitante.setNombres(dto.nombres());
+        solicitante.setApellidoPaterno(dto.apellidoPaterno());
+        solicitante.setApellidoMaterno(dto.apellidoMaterno());
+        solicitante.setEdad(dto.edad());
+        solicitante.setEstadoCivil(dto.estadocivil());
+        solicitante.setEscolaridad(dto.escolaridad());
+        solicitante.setLugar(dto.origen());
+        solicitante.setDireccionCalle(dto.direccionCalle());
+        solicitante.setDireccionNoExt(dto.direccionNoExt());
+        solicitante.setDireccionNoInt(dto.direccionNoInt());
+        solicitante.setDireccionColonia(dto.direccionColonia());
+        solicitante.setDireccionMunicipioDelegacion(dto.direccionMunicipioDelegacion());
+        solicitante.setDireccionCp(dto.direccionCp());
+        solicitante.setDireccionCiudadEstado(dto.direccionCiudadEstado());
+        solicitante.setDomicilioParticular(construirDireccionCompleta(
+            dto.direccionCalle(),
+            dto.direccionNoExt(),
+            dto.direccionNoInt(),
+            dto.direccionColonia(),
+            dto.direccionMunicipioDelegacion(),
+            dto.direccionCp(),
+            dto.direccionCiudadEstado(),
+            dto.domicilio()
+        ));
+        solicitante.setTelefono(dto.telefono());
+        solicitante.setCelular(dto.telefono());
+        solicitante.setOcupacion(dto.ocupacion());
+        solicitanteRepository.save(solicitante);
+
+        paciente.setNombres(dto.nombres());
+        paciente.setApellidoPaterno(dto.apellidoPaterno());
+        paciente.setApellidoMaterno(dto.apellidoMaterno());
+        paciente.setNombreCompleto(construirNombreCompleto(dto.nombres(), dto.apellidoPaterno(), dto.apellidoMaterno(), dto.nombre()));
+        paciente.setEdad(dto.edad());
+        paciente.setEstadoCivil(dto.estadocivil());
+        paciente.setCantidadHijos(dto.hijos());
+        paciente.setEscolaridad(dto.escolaridad());
+        paciente.setOrigen(dto.origen());
+        paciente.setDireccionCalle(dto.direccionCalle());
+        paciente.setDireccionNoExt(dto.direccionNoExt());
+        paciente.setDireccionNoInt(dto.direccionNoInt());
+        paciente.setDireccionColonia(dto.direccionColonia());
+        paciente.setDireccionMunicipioDelegacion(dto.direccionMunicipioDelegacion());
+        paciente.setDireccionCp(dto.direccionCp());
+        paciente.setDireccionCiudadEstado(dto.direccionCiudadEstado());
+        paciente.setDomicilioParticular(construirDireccionCompleta(
+            dto.direccionCalle(),
+            dto.direccionNoExt(),
+            dto.direccionNoInt(),
+            dto.direccionColonia(),
+            dto.direccionMunicipioDelegacion(),
+            dto.direccionCp(),
+            dto.direccionCiudadEstado(),
+            dto.domicilio()
+        ));
+        paciente.setTelefonoContacto(dto.telefono());
+        paciente.setOcupacion(dto.ocupacion());
+        paciente.setSustanciaConsumo(dto.sustancia());
+        pacienteRepository.save(paciente);
+
+        List<Seguimiento> seguimientosIniciales = seguimientoRepository
+            .findByPaciente_IdAndFormatoLlamadaInicialJsonIsNotNullOrderByFechaHoraProgramadaAsc(pacienteId);
+
+        Seguimiento seguimiento = seguimientosIniciales.isEmpty() ? null : seguimientosIniciales.get(0);
+        if (seguimiento == null) {
+            throw new IllegalArgumentException("No existe una llamada inicial guardada para este paciente");
+        }
+
+        seguimiento.setFormatoLlamadaInicialJson(construirFormatoLlamadaInicialJson(dto, solicitante));
+        seguimiento.setEstadoSeguimiento(dto.estadoSeguimiento());
+        seguimiento.setMotivo(dto.motivoAccion());
+        seguimiento.setFechaHoraProgramada(dto.fechaCita());
+        seguimiento.setOrigenLlamada("nosotros".equalsIgnoreCase(dto.llamarPaciente()) ? "NOSOTROS" : "PROSPECTO");
+        seguimiento.setTipoAccion("Llamada");
+        seguimientoRepository.save(seguimiento);
+    }
+
+    @Transactional
     public EstudioSocioeconomicoPdf generarYGuardarPdfEstudio(Long pacienteId, Map<String, Object> payload) {
         Paciente paciente = pacienteRepository.findById(pacienteId)
             .orElseThrow(() -> new IllegalArgumentException("No existe el paciente indicado"));
@@ -348,8 +449,92 @@ public class PacienteService {
         seguimiento.setFechaHoraProgramada(fechaProgramada);
         seguimiento.setMotivo(dto.motivoAccion());
         seguimiento.setTipoAccion(tipoAccion);
+        seguimiento.setFormatoLlamadaInicialJson(construirFormatoLlamadaInicialJson(dto, solicitante));
 
         seguimientoRepository.save(seguimiento);
+    }
+
+    private String construirFormatoLlamadaInicialJson(PacienteDTO dto, Solicitante solicitante) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("solicitante", construirSnapshotSolicitante(solicitante));
+        snapshot.put("paciente", construirSnapshotPaciente(dto));
+        snapshot.put("llamarPaciente", dto.llamarPaciente());
+        snapshot.put("estadoSeguimiento", dto.estadoSeguimiento());
+        snapshot.put("fechaCita", dto.fechaCita());
+        snapshot.put("motivoAccion", dto.motivoAccion());
+
+        try {
+            return objectMapper.writeValueAsString(snapshot);
+        } catch (JsonProcessingException e) {
+            return null;
+        }
+    }
+
+    private Map<String, Object> construirSnapshotSolicitante(Solicitante solicitante) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        if (solicitante == null) {
+            return data;
+        }
+
+        data.put("nombre", solicitante.getNombre());
+        data.put("nombres", solicitante.getNombres());
+        data.put("apellidoPaterno", solicitante.getApellidoPaterno());
+        data.put("apellidoMaterno", solicitante.getApellidoMaterno());
+        data.put("edad", solicitante.getEdad());
+        data.put("estadoCivil", solicitante.getEstadoCivil());
+        data.put("escolaridad", solicitante.getEscolaridad());
+        data.put("origen", solicitante.getLugar());
+        data.put("direccionCalle", solicitante.getDireccionCalle());
+        data.put("direccionNoExt", solicitante.getDireccionNoExt());
+        data.put("direccionNoInt", solicitante.getDireccionNoInt());
+        data.put("direccionColonia", solicitante.getDireccionColonia());
+        data.put("direccionMunicipioDelegacion", solicitante.getDireccionMunicipioDelegacion());
+        data.put("direccionCp", solicitante.getDireccionCp());
+        data.put("direccionCiudadEstado", solicitante.getDireccionCiudadEstado());
+        data.put("domicilio", solicitante.getDomicilioParticular());
+        data.put("telefono", solicitante.getTelefono());
+        data.put("celular", solicitante.getCelular());
+        data.put("ocupacion", solicitante.getOcupacion());
+        data.put("parentescoPaciente", solicitante.getParentescoPaciente());
+        data.put("cuentaConTarjeta", solicitante.getCuentaConTarjeta());
+        return data;
+    }
+
+    private Map<String, Object> construirSnapshotPaciente(PacienteDTO dto) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("nombre", dto.nombre());
+        data.put("nombres", dto.nombres());
+        data.put("apellidoPaterno", dto.apellidoPaterno());
+        data.put("apellidoMaterno", dto.apellidoMaterno());
+        data.put("edad", dto.edad());
+        data.put("estadoCivil", dto.estadocivil());
+        data.put("hijos", dto.hijos());
+        data.put("escolaridad", dto.escolaridad());
+        data.put("origen", dto.origen());
+        data.put("direccionCalle", dto.direccionCalle());
+        data.put("direccionNoExt", dto.direccionNoExt());
+        data.put("direccionNoInt", dto.direccionNoInt());
+        data.put("direccionColonia", dto.direccionColonia());
+        data.put("direccionMunicipioDelegacion", dto.direccionMunicipioDelegacion());
+        data.put("direccionCp", dto.direccionCp());
+        data.put("direccionCiudadEstado", dto.direccionCiudadEstado());
+        data.put("domicilio", dto.domicilio());
+        data.put("telefono", dto.telefono());
+        data.put("ocupacion", dto.ocupacion());
+        data.put("sustancia", dto.sustancia());
+        return data;
+    }
+
+    private Map<String, Object> leerFormatoLlamadaInicial(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+
+        try {
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+        } catch (JsonProcessingException e) {
+            return Map.of("raw", json);
+        }
     }
 
     private boolean contiene(String texto, String filtro) {

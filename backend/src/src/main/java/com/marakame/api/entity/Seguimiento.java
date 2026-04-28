@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -30,6 +31,9 @@ public class Seguimiento {
 
     // Captura clínica al confirmar llegada
     private String diagnosticoVisual;
+
+    @Lob
+    private String formatoLlamadaInicialJson;
 
     private LocalDateTime fechaHoraProgramada;
     private String motivo;
@@ -86,6 +90,14 @@ public class Seguimiento {
 
     public void setDiagnosticoVisual(String diagnosticoVisual) {
         this.diagnosticoVisual = diagnosticoVisual;
+    }
+
+    public String getFormatoLlamadaInicialJson() {
+        return formatoLlamadaInicialJson;
+    }
+
+    public void setFormatoLlamadaInicialJson(String formatoLlamadaInicialJson) {
+        this.formatoLlamadaInicialJson = formatoLlamadaInicialJson;
     }
 
     public LocalDateTime getFechaHoraProgramada() {
