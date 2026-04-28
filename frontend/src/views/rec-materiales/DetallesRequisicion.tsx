@@ -103,7 +103,7 @@ const TarjetaCotizacion = ({
                 setArchivo(null);
                 onArchivoChange(null);
                 if (yaGuardadoEnBD) onEliminarGuardado?.();
-              
+
                 return;
               }
               inputRef.current?.click();
@@ -165,7 +165,9 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
   const [activarSubirCotizacion, setSubirCotizacion] = useState(false);
 
   type AdjuntoGuardado = { id: string; nombreArchivo: string };
-  const [adjuntosGuardados, setAdjuntosGuardados] = useState<AdjuntoGuardado[]>([]);
+  const [adjuntosGuardados, setAdjuntosGuardados] = useState<AdjuntoGuardado[]>(
+    [],
+  );
 
   // Función para actualizar un archivo específico
   const actualizarArchivoGlobal = (numero: string, archivo: File | null) => {
@@ -293,7 +295,10 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
           });
           if (!res.ok) throw new Error(await res.text());
           const data: tipos.Requisicion = await res.json();
-          setDatos({ ...data, fecha: new Date(data.fecha as unknown as string) });
+          setDatos({
+            ...data,
+            fecha: new Date(data.fecha as unknown as string),
+          });
           refrescar();
         } catch (e) {
           console.log("error al subir factura", e);
@@ -316,9 +321,10 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
     }
     const parsed = {
       ...encontrada,
-      fecha: encontrada.fecha instanceof Date
-        ? encontrada.fecha
-        : new Date(encontrada.fecha as unknown as string),
+      fecha:
+        encontrada.fecha instanceof Date
+          ? encontrada.fecha
+          : new Date(encontrada.fecha as unknown as string),
     };
     setDatos(parsed);
     if (
@@ -362,11 +368,19 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
   // Contamos cuántos espacios guardados en el objeto NO son null
   const totalGuardados = esFlujoCotizacionesAdjuntos
     ? adjuntosGuardados.length
-    : Object.values(archivosCotizacionesGuardadas).filter(
-        (f) => f !== null,
-      ).length;
+    : Object.values(archivosCotizacionesGuardadas).filter((f) => f !== null)
+        .length;
+
+  const requiereFacturas =
+    rol === "compras-inventario" &&
+    datos?.estado === "AUTORIZADA" &&
+    datos?.tipo === "ORDINARIA" &&
+    datos?.tamanio === "MAYOR";
+
   const totalFacturasGuardadas = requiereFacturas
-    ? (datos?.facturaPath != null ? 1 : 0)
+    ? datos?.facturaPath != null
+      ? 1
+      : 0
     : Object.values(archivosFacturasGuardadas).filter((f) => f !== null).length;
   let nombresPdfs = "";
 
@@ -390,11 +404,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
           datos?.tamanio === "MAYOR"
         ? 3
         : 1;
-  const requiereFacturas =
-    rol === "compras-inventario" &&
-    datos?.estado === "AUTORIZADA" &&
-    datos?.tipo === "ORDINARIA" &&
-    datos?.tamanio === "MAYOR";
+
   const esExtraordinariaAutorizada =
     rol === "compras-inventario" &&
     datos?.estado === "AUTORIZADA" &&
@@ -774,10 +784,16 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                       >
                         <div className="flex w-full flex-row py-2 gap-4 h-12">
                           <div className="h-full aspect-square flex justify-center items-center rounded-full bg-green-600">
-                            <p className="text-white font-bold text-xs">{idx + 1}</p>
+                            <p className="text-white font-bold text-xs">
+                              {idx + 1}
+                            </p>
                           </div>
                           <div className="w-full h-full flex flex-col justify-center gap-1">
-                            <p className={ui.text.body + " font-bold text-[12px]"}>
+                            <p
+                              className={
+                                ui.text.body + " font-bold text-[12px]"
+                              }
+                            >
                               Cotización {idx + 1}
                             </p>
                             <p className="text-[10px] text-green-700 truncate max-w-[200px]">
@@ -785,9 +801,13 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                             </p>
                           </div>
                         </div>
-                        {datos?.estado === "PRE-AUTORIZADA" || datos?.estado === "AUTORIZADA" ? (
+                        {datos?.estado === "PRE-AUTORIZADA" ||
+                        datos?.estado === "AUTORIZADA" ? (
                           <button
-                            className={ui.buttons.primary + " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"}
+                            className={
+                              ui.buttons.primary +
+                              " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"
+                            }
                             onClick={async () => {
                               if (!id) return;
                               try {
@@ -796,9 +816,12 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                                   { method: "DELETE" },
                                 );
                                 if (!res.ok) throw new Error(await res.text());
-                                const adjRes = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos`);
+                                const adjRes = await fetch(
+                                  `${API_BASE}/requisiciones/${id}/adjuntos`,
+                                );
                                 if (adjRes.ok) {
-                                  const lista: AdjuntoGuardado[] = await adjRes.json();
+                                  const lista: AdjuntoGuardado[] =
+                                    await adjRes.json();
                                   setAdjuntosGuardados(lista);
                                 }
                               } catch (e) {
@@ -825,7 +848,9 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                             return (
                               <TarjetaCotizacion
                                 key={slotKey}
-                                archivoInicial={archivosCotizaciones[slotKey] ?? null}
+                                archivoInicial={
+                                  archivosCotizaciones[slotKey] ?? null
+                                }
                                 numero={String(slotNum)}
                                 titulo={`Cotización ${slotNum}`}
                                 onArchivoChange={(file) =>
@@ -844,16 +869,27 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                       archivoInicial={archivosCotizaciones["1"]}
                       numero="1"
                       titulo="Cotización 1"
-                      onArchivoChange={(file) => actualizarArchivoGlobal("1", file)}
+                      onArchivoChange={(file) =>
+                        actualizarArchivoGlobal("1", file)
+                      }
                       yaGuardadoEnBD={datos?.cotizacionPath != null}
                       onEliminarGuardado={async () => {
                         if (!id) return;
                         try {
-                          const res = await fetch(`${API_BASE}/requisiciones/${id}/cotizacion`, { method: "DELETE" });
+                          const res = await fetch(
+                            `${API_BASE}/requisiciones/${id}/cotizacion`,
+                            { method: "DELETE" },
+                          );
                           if (!res.ok) throw new Error(await res.text());
                           const data: tipos.Requisicion = await res.json();
-                          setDatos({ ...data, fecha: new Date(data.fecha as unknown as string) });
-                          setArchivosCotizacionesGuardadas(prev => ({ ...prev, "1": null }));
+                          setDatos({
+                            ...data,
+                            fecha: new Date(data.fecha as unknown as string),
+                          });
+                          setArchivosCotizacionesGuardadas((prev) => ({
+                            ...prev,
+                            "1": null,
+                          }));
                           refrescar();
                         } catch (e: any) {
                           console.log("error al eliminar cotización", e);
@@ -896,13 +932,24 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                               <p className="text-white font-bold text-xs">F1</p>
                             </div>
                             <div className="w-full h-full flex flex-col justify-center gap-1">
-                              <p className={ui.text.body + " font-bold text-[12px]"}>Factura 1</p>
-                              <p className="text-[10px] text-green-700">Guardada</p>
+                              <p
+                                className={
+                                  ui.text.body + " font-bold text-[12px]"
+                                }
+                              >
+                                Factura 1
+                              </p>
+                              <p className="text-[10px] text-green-700">
+                                Guardada
+                              </p>
                             </div>
                           </div>
                           {datos?.estado === "AUTORIZADA" ? (
                             <button
-                              className={ui.buttons.primary + " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"}
+                              className={
+                                ui.buttons.primary +
+                                " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"
+                              }
                               onClick={async () => {
                                 if (!id) return;
                                 try {
@@ -910,9 +957,16 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                                     `${API_BASE}/requisiciones/${id}/factura`,
                                     { method: "DELETE" },
                                   );
-                                  if (!res.ok) throw new Error(await res.text());
-                                  const data: tipos.Requisicion = await res.json();
-                                  setDatos({ ...data, fecha: new Date(data.fecha as unknown as string) });
+                                  if (!res.ok)
+                                    throw new Error(await res.text());
+                                  const data: tipos.Requisicion =
+                                    await res.json();
+                                  setDatos({
+                                    ...data,
+                                    fecha: new Date(
+                                      data.fecha as unknown as string,
+                                    ),
+                                  });
                                   refrescar();
                                 } catch (e) {
                                   console.log("error al eliminar factura", e);
