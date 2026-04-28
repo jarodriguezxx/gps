@@ -4,10 +4,8 @@ import { ui } from "../../config/theme";
 import * as requisicionTypes from "../../types/requisicion.ts";
 import * as ordenTypes from "../../types/ordenCompra.ts";
 import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
-import {
-  cargarOrdenCompraPersistida,
-  guardarOrdenCompraPersistida,
-} from "./ordenCompraStorage";
+
+const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8080";
 
 const moneda = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -25,6 +23,8 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
   const [requisicion, setRequisicion] =
     useState<requisicionTypes.Requisicion | null>(null);
   const [orden, setOrden] = useState<ordenTypes.OrdenCompra | null>(null);
+  const [ordenBackendId, setOrdenBackendId] = useState<string | null>(null);
+  const [enviada, setEnviada] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -33,25 +33,35 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
       return;
     }
 
-    const requisicionEncontrada = requisiciones.find(
-      (item) => item.id === id,
-    );
-
-    if (!requisicionEncontrada) {
+    const req = requisiciones.find((r) => r.id === id);
+    if (!req) {
       setRequisicion(null);
       setOrden(null);
       return;
     }
 
-    setRequisicion(requisicionEncontrada);
+    setRequisicion(req);
 
-    const borradorGuardado = cargarOrdenCompraPersistida(
-      requisicionEncontrada.id,
-    );
-    setOrden(
-      borradorGuardado ??
-        ordenTypes.crearBorradorOrdenCompra(requisicionEncontrada),
-    );
+    fetch(`${API_BASE}/api/ordenes-compra?requisicionId=${req.id}`)
+      .then(async (res) => {
+        if (res.ok) return res.json() as Promise<ordenTypes.OrdenCompraBackend>;
+        if (res.status === 404) {
+          const create = await fetch(`${API_BASE}/api/ordenes-compra`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ requisicionId: req.id }),
+          });
+          if (!create.ok) throw new Error("error-creando-orden");
+          return create.json() as Promise<ordenTypes.OrdenCompraBackend>;
+        }
+        throw new Error("error-cargando-orden");
+      })
+      .then((backend) => {
+        setOrdenBackendId(backend.id);
+        setEnviada(backend.estatus === "ENVIADA");
+        setOrden(ordenTypes.mapBackendToLocal(backend, req));
+      })
+      .catch((e) => console.error("OrdenCompra load error:", e));
   }, [id]);
 
   const proveedoresActivos = useMemo(
@@ -67,22 +77,33 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
   const iva = ordenTypes.calcularIvaOrdenCompra(subtotal);
   const total = ordenTypes.calcularTotalOrdenCompra(subtotal);
 
+  // Auto-save debounced al backend
   useEffect(() => {
-    if (!orden) {
-      return;
-    }
+    if (!orden || !ordenBackendId || enviada) return;
 
     const timeoutId = window.setTimeout(() => {
-      guardarOrdenCompraPersistida(orden);
-    }, 300);
+      fetch(`${API_BASE}/api/ordenes-compra/${ordenBackendId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ordenTypes.mapLocalToUpdateRequest(orden)),
+      });
+    }, 500);
 
     return () => window.clearTimeout(timeoutId);
-  }, [orden]);
+  }, [orden, ordenBackendId, enviada]);
 
   const firmasCompletas =
     orden?.firmas.encargadoCompras.estado === "FIRMADA" &&
     orden?.firmas.administradora.estado === "FIRMADA" &&
     orden?.firmas.directoraGeneral.estado === "FIRMADA";
+
+  const puedeEnviar =
+    !!orden &&
+    firmasCompletas &&
+    orden.proveedor !== null &&
+    orden.justificacion.trim().length > 0 &&
+    orden.articulos.every((a) => a.precioUnitario > 0);
+
   const esComprasInventario = rol === "compras-inventario";
   const regresarPantallaAnterior = () => {
     if (window.history.length > 1) {
@@ -122,76 +143,60 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
     });
   };
 
-  const eliminarArticulo = (articuloId: string) => {
-    setOrden((prev) => {
-      if (!prev) {
-        return prev;
-      }
+  const firmarDocumento = async (
+    clave: keyof ordenTypes.OrdenCompra["firmas"],
+  ) => {
+    if (!esComprasInventario || clave !== "encargadoCompras" || !ordenBackendId)
+      return;
+    if (orden?.firmas.encargadoCompras.estado === "FIRMADA") return;
 
-      return {
-        ...prev,
-        articulos: prev.articulos.filter(
-          (articulo) => articulo.id !== articuloId,
-        ),
-      };
-    });
+    const res = await fetch(
+      `${API_BASE}/api/ordenes-compra/${ordenBackendId}/firmar-encargado`,
+      { method: "PATCH" },
+    );
+    if (!res.ok) return;
+
+    setOrden((prev) =>
+      prev
+        ? {
+            ...prev,
+            firmas: {
+              ...prev.firmas,
+              encargadoCompras: {
+                ...prev.firmas.encargadoCompras,
+                estado: "FIRMADA",
+                fechaFirma: new Date(),
+              },
+            },
+          }
+        : prev,
+    );
   };
 
-  const firmarDocumento = (clave: keyof ordenTypes.OrdenCompra["firmas"]) => {
-    if (!esComprasInventario || clave !== "encargadoCompras") {
-      return;
-    }
+  const guardarBorrador = async () => {
+    if (!orden || !ordenBackendId || enviada) return;
 
-    setOrden((prev) => {
-      if (!prev) {
-        return prev;
-      }
-
-      const firmas = { ...prev.firmas };
-      const firmaAnteriorFirmada =
-        clave === "encargadoCompras" ||
-        (clave === "administradora" &&
-          firmas.encargadoCompras.estado === "FIRMADA") ||
-        (clave === "directoraGeneral" &&
-          firmas.administradora.estado === "FIRMADA");
-
-      if (!firmaAnteriorFirmada || firmas[clave].estado === "FIRMADA") {
-        return prev;
-      }
-
-      firmas[clave] = {
-        ...firmas[clave],
-        estado: "FIRMADA",
-        fechaFirma: new Date(),
-      };
-
-      return {
-        ...prev,
-        firmas,
-        estatus:
-          firmas.administradora.estado === "FIRMADA" &&
-          firmas.directoraGeneral.estado === "FIRMADA"
-            ? "AUTORIZADA"
-            : prev.estatus,
-      };
+    await fetch(`${API_BASE}/api/ordenes-compra/${ordenBackendId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(ordenTypes.mapLocalToUpdateRequest(orden)),
     });
-  };
-
-  const guardarBorrador = () => {
-    if (!orden) {
-      return;
-    }
-
-    guardarOrdenCompraPersistida(orden);
     alert("Borrador guardado");
   };
 
-  const enviarAutorizacion = () => {
-    if (!orden) {
+  const enviarAlmacen = async () => {
+    if (!orden || !ordenBackendId) return;
+
+    const res = await fetch(
+      `${API_BASE}/api/ordenes-compra/${ordenBackendId}/enviar`,
+      { method: "PATCH" },
+    );
+    if (!res.ok) {
+      alert(`Error: ${await res.text()}`);
       return;
     }
-
-    alert("Orden enviada a autorización");
+    setEnviada(true);
+    navigate(`/${rol}`);
   };
 
   if (!requisicion || !orden) {
@@ -244,16 +249,28 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
           <button onClick={() => window.print()} className={ui.buttons.neutral}>
             Imprimir
           </button>
-          <button onClick={guardarBorrador} className={ui.buttons.neutral}>
-            Guardar Borrador
-          </button>
-          <button
-            onClick={enviarAutorizacion}
-            disabled={!firmasCompletas}
-            className={ui.buttons.primary}
-          >
-            Enviar a Autorización
-          </button>
+          {!enviada && (
+            <button
+              onClick={guardarBorrador}
+              className={ui.buttons.neutral}
+            >
+              Guardar Borrador
+            </button>
+          )}
+          {!enviada && (
+            <button
+              onClick={enviarAlmacen}
+              disabled={!puedeEnviar}
+              className={ui.buttons.primary}
+            >
+              Enviar a Almacén
+            </button>
+          )}
+          {enviada && (
+            <span className="rounded-full bg-green-100 px-4 py-1.5 text-sm font-semibold text-green-800">
+              Enviada a Almacén
+            </span>
+          )}
         </div>
       </div>
 
@@ -314,6 +331,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                   Proveedor / Razón Social
                 </label>
                 <select
+                  disabled={enviada}
                   value={orden.proveedor?.id ?? ""}
                   onChange={(event) => {
                     const proveedorSeleccionado = proveedoresActivos.find(
@@ -341,7 +359,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                         : prev,
                     );
                   }}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-[#7E1D3B]"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-[#7E1D3B] disabled:opacity-60"
                 >
                   <option value="">Selecciona un proveedor activo</option>
                   {proveedoresActivos.map((proveedor) => (
@@ -362,31 +380,6 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between bg-[#3F5F1D] px-4 py-3 text-white">
               <h2 className="text-base font-semibold">Artículos de la Orden</h2>
-              <button
-                onClick={() => {
-                  setOrden((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          articulos: [
-                            ...prev.articulos,
-                            {
-                              id: `${prev.id}-${prev.articulos.length + 1}`,
-                              articulo: "",
-                              descripcion: "",
-                              unidad: "PIEZA",
-                              cantidad: 1,
-                              precioUnitario: 0,
-                            },
-                          ],
-                        }
-                      : prev,
-                  );
-                }}
-                className="rounded-lg bg-white px-3 py-1 text-xs font-semibold text-[#3F5F1D] transition hover:bg-slate-100"
-              >
-                + Agregar Artículo
-              </button>
             </div>
 
             <div className="overflow-x-auto">
@@ -400,7 +393,6 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                     <th className={ui.table.header}>Cantidad</th>
                     <th className={ui.table.header}>Precio Unit.</th>
                     <th className={ui.table.header}>Subtotal</th>
-                    <th className={ui.table.header}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -415,6 +407,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                         </td>
                         <td className={ui.table.cell}>
                           <input
+                            disabled={enviada}
                             value={articulo.articulo}
                             onChange={(event) =>
                               actualizarArticulo(
@@ -423,12 +416,13 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                                 event.target.value,
                               )
                             }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] disabled:opacity-60"
                             placeholder="Artículo"
                           />
                         </td>
                         <td className={ui.table.cell}>
                           <input
+                            disabled={enviada}
                             value={articulo.descripcion}
                             onChange={(event) =>
                               actualizarArticulo(
@@ -437,12 +431,13 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                                 event.target.value,
                               )
                             }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] disabled:opacity-60"
                             placeholder="Descripción"
                           />
                         </td>
                         <td className={ui.table.cell}>
                           <select
+                            disabled={enviada}
                             value={articulo.unidad}
                             onChange={(event) =>
                               actualizarArticulo(
@@ -452,7 +447,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                                   .value as requisicionTypes.UnidadesArticulos,
                               )
                             }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] disabled:opacity-60"
                           >
                             <option value="PIEZA">Pieza</option>
                             <option value="CAJA">Caja</option>
@@ -461,6 +456,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                         </td>
                         <td className={ui.table.cell}>
                           <input
+                            disabled={enviada}
                             type="number"
                             min={1}
                             value={articulo.cantidad}
@@ -471,11 +467,12 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                                 Number(event.target.value),
                               )
                             }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] disabled:opacity-60"
                           />
                         </td>
                         <td className={ui.table.cell}>
                           <input
+                            disabled={enviada}
                             type="number"
                             min={0}
                             step="0.01"
@@ -487,7 +484,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                                 Number(event.target.value),
                               )
                             }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] disabled:opacity-60"
                           />
                         </td>
                         <td
@@ -496,14 +493,6 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                           }
                         >
                           {moneda.format(subtotalLinea)}
-                        </td>
-                        <td className={ui.table.cell + " text-center"}>
-                          <button
-                            onClick={() => eliminarArticulo(articulo.id)}
-                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
-                          >
-                            Eliminar
-                          </button>
                         </td>
                       </tr>
                     );
@@ -562,6 +551,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
             </div>
             <div className="p-4">
               <textarea
+                disabled={enviada}
                 value={orden.justificacion}
                 onChange={(event) =>
                   setOrden((prev) =>
@@ -573,7 +563,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                       : prev,
                   )
                 }
-                className="min-h-40 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#7E1D3B]"
+                className="min-h-40 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#7E1D3B] disabled:opacity-60"
                 placeholder="Escriba la justificación detallada de esta orden de compra..."
               />
               <p className="mt-2 text-xs text-slate-500">
@@ -615,7 +605,8 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                   esBloqueCompras &&
                   esComprasInventario &&
                   firma.estado !== "FIRMADA" &&
-                  firmaAnteriorFirmada;
+                  firmaAnteriorFirmada &&
+                  !enviada;
 
                 return (
                   <article

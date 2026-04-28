@@ -142,3 +142,128 @@ export const calcularIvaOrdenCompra = (subtotal: number) => subtotal * 0.16;
 
 export const calcularTotalOrdenCompra = (subtotal: number) =>
   subtotal + calcularIvaOrdenCompra(subtotal);
+
+// ── Tipos para comunicación con backend ──────────────────────────────────────
+
+export type OrdenCompraBackend = {
+  id: string;
+  requisicionId: string;
+  numeroOrden: string | null;
+  consecutivo: number | null;
+  fechaOrden: string;
+  estatus: "BORRADOR" | "ENVIADA";
+  justificacion: string | null;
+  proveedorId: string | null;
+  proveedorNombre: string | null;
+  proveedorRfc: string | null;
+  proveedorTelefono: string | null;
+  proveedorCorreo: string | null;
+  proveedorContactoNombre: string | null;
+  firmaEncargadoCompras: boolean;
+  articulos: ArticuloOrdenCompraBackend[];
+};
+
+export type ArticuloOrdenCompraBackend = {
+  id: string;
+  articuloRequisicionId: string | null;
+  articulo: string;
+  descripcion: string;
+  unidad: requisicionTypes.UnidadesArticulos;
+  cantidad: number;
+  precioUnitario: number;
+};
+
+export type ActualizarOrdenCompraRequest = {
+  justificacion: string;
+  proveedorId: string | null;
+  proveedorNombre: string | null;
+  proveedorRfc: string | null;
+  proveedorTelefono: string | null;
+  proveedorCorreo: string | null;
+  proveedorContactoNombre: string | null;
+  articulos: {
+    id: string;
+    articulo: string;
+    descripcion: string;
+    unidad: string;
+    cantidad: number;
+    precioUnitario: number;
+  }[];
+};
+
+export const mapBackendToLocal = (
+  backend: OrdenCompraBackend,
+  req: requisicionTypes.Requisicion,
+): OrdenCompra => ({
+  id: backend.id,
+  requisicionId: backend.requisicionId,
+  numeroOrden:
+    backend.numeroOrden ??
+    `OC-${new Date(backend.fechaOrden).getFullYear()}-XXXX`,
+  consecutivo: backend.consecutivo?.toString() ?? "—",
+  fechaOrden: new Date(backend.fechaOrden),
+  estatus: backend.estatus === "ENVIADA" ? "AUTORIZADA" : "BORRADOR",
+  siguientePaso: null,
+  proveedor: backend.proveedorId
+    ? {
+        id: backend.proveedorId,
+        nombre: backend.proveedorNombre ?? "",
+        rfc: backend.proveedorRfc ?? "",
+        telefono: backend.proveedorTelefono ?? "",
+        correo: backend.proveedorCorreo ?? "",
+        contactoNombre: backend.proveedorContactoNombre ?? "",
+      }
+    : null,
+  articulos: backend.articulos.map((a) => ({
+    id: a.id,
+    articulo: a.articulo,
+    descripcion: a.descripcion,
+    unidad: a.unidad,
+    cantidad: a.cantidad,
+    precioUnitario: a.precioUnitario,
+  })),
+  justificacion: backend.justificacion ?? "",
+  firmas: {
+    encargadoCompras: {
+      cargo: "Encargado de Compras e Inventarios",
+      nombre: "Laura Martínez",
+      estado: backend.firmaEncargadoCompras ? "FIRMADA" : "PENDIENTE",
+      fechaFirma: null,
+      requiereAnterior: false,
+    },
+    administradora: {
+      cargo: "Administradora",
+      nombre: "Lic. Patricia Hernández",
+      estado: req.firmaAdminsitradora ? "FIRMADA" : "PENDIENTE",
+      fechaFirma: null,
+      requiereAnterior: true,
+    },
+    directoraGeneral: {
+      cargo: "Directora General",
+      nombre: "Dra. María Elena Rodríguez",
+      estado: req.firmaDirectoraGral ? "FIRMADA" : "PENDIENTE",
+      fechaFirma: null,
+      requiereAnterior: true,
+    },
+  },
+});
+
+export const mapLocalToUpdateRequest = (
+  orden: OrdenCompra,
+): ActualizarOrdenCompraRequest => ({
+  justificacion: orden.justificacion,
+  proveedorId: orden.proveedor?.id ?? null,
+  proveedorNombre: orden.proveedor?.nombre ?? null,
+  proveedorRfc: orden.proveedor?.rfc ?? null,
+  proveedorTelefono: orden.proveedor?.telefono ?? null,
+  proveedorCorreo: orden.proveedor?.correo ?? null,
+  proveedorContactoNombre: orden.proveedor?.contactoNombre ?? null,
+  articulos: orden.articulos.map((a) => ({
+    id: a.id,
+    articulo: a.articulo,
+    descripcion: a.descripcion,
+    unidad: a.unidad,
+    cantidad: a.cantidad,
+    precioUnitario: a.precioUnitario,
+  })),
+});
