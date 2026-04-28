@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
     Activity, Droplet, FileText, Plus, Home, 
-    Stethoscope, ShieldAlert, Users, ClipboardList, BookOpen, Search 
-} from 'lucide-react';
+    Stethoscope, ShieldAlert, Users, ClipboardList, BookOpen, Search, Calendar
+ } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg'; // Asegúrate de que esta ruta sea correcta
 
 // Datos de prueba como fallback
@@ -221,9 +221,9 @@ const PacientesActivos = () => {
                                                         </button>
 
                                                         <button 
-                                                            onClick={() => navigate(`/medico/expediente`)}
+                                                            onClick={() => navigate(`/medico/pacientes/${paciente.id}/expediente`)}
                                                             className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-                                                            title="Ver Expediente General"
+                                                            title="Ver Expediente Médico"
                                                         >
                                                             <FileText size={18} />
                                                         </button>

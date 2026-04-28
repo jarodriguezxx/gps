@@ -178,8 +178,10 @@ function App() {
         <Route path="/medico/pacientes-activos"                element={<PacientesActivos />} />
         <Route path="/medico/historial-paciente"               element={<HistorialMedicoPaciente />} />
         <Route path="/medico/consulta-diaria"                  element={<ConsultaDiaria />} />
+        <Route path="/medico/pacientes/:pacienteId/consulta-diaria" element={<ConsultaDiaria />} />
         <Route path="/medico/pacientes/:id/tension" element={<ControlTensionArterial />} />
-        <Route path="/medico/pacientes/:id/glicemia" element={<ControlGlicemia />} /> 
+        <Route path="/medico/pacientes/:id/glicemia" element={<ControlGlicemia />} />
+        <Route path="/medico/pacientes/:pacienteId/expediente" element={<ExpedienteMedico />} />
         <Route path="/medico/historial-pre-admision" element={<HistorialPreAdmision />} />
         <Route path="/medico/historia-medica" element={<HistoriaMedica />} />
         
