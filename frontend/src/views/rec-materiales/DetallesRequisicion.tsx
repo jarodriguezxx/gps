@@ -589,7 +589,9 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                   ? "Orden de compra / Integrar expediente"
                   : mostrarOrdenDeCompra
                     ? "Orden de compra"
-                    : "Enviar"}
+                    : esFlujoCargaFacturasExpediente
+                      ? "Integrar al expediente"
+                      : "Enviar"}
             </button>
             <button
               className={`${ui.buttons.primary} py-2!`}

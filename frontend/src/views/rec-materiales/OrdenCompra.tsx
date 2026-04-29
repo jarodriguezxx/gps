@@ -186,10 +186,9 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
       alert(`Error: ${await res.text()}`);
       return;
     }
-    const backend = await res.json();
-    setEnviada(true);
-    setOrden((prev) => prev ? { ...prev, estatus: backend.estatus, numeroOrden: backend.numeroOrden, consecutivo: backend.consecutivo } : prev);
     refrescar?.();
+    alert("Orden de compra enviada a Almacén exitosamente. Regresando a la requisición.");
+    navigate(-1);
   };
 
   if (!requisicion || !orden) {
@@ -242,7 +241,7 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
           <button onClick={() => window.print()} className={ui.buttons.neutral}>
             Imprimir
           </button>
-          {!enviada && (
+          {!enviada && puedeEnviar && (
             <button
               onClick={guardarBorrador}
               className={ui.buttons.neutral}
