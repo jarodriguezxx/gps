@@ -158,6 +158,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
   const [activarSubirCotizacion, setSubirCotizacion] = useState(false);
   const [isGuardando, setIsGuardando] = useState(false);
   const [isEnviando, setIsEnviando] = useState(false);
+  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
 
   type AdjuntoGuardado = { id: string; nombreArchivo: string; tipo?: string };
   const [adjuntosGuardados, setAdjuntosGuardados] = useState<AdjuntoGuardado[]>(
@@ -551,7 +552,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
     rol === "compras-inventario" &&
     (datos?.estado === "AUTORIZADA" || datos?.estado === "EN-REVISION" || datos?.estado === "FINALIZADA") &&
     (datos?.tipo === "EXTRAORDINARIA" ||
-      (datos?.tipo === "ORDINARIA" && datos?.tamanio === "MENOR"));
+      (datos?.tipo === "ORDINARIA" && datos?.tamanio === "MENOR")) &&
+    !(datos?.tipo === "EXTRAORDINARIA" && datos?.estado === "EN-REVISION");
   const mostrarIntegrarExpediente =
     esExtraordinariaMenor || esExtraordinariaMayor;
   const mostrarEnviarFinanzas = esExtraordinariaMayor;
@@ -632,7 +634,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
 
                 if (esFlujoCargaExpedienteMayor) {
                   if (!id) return;
-                  if (!window.confirm("¿Confirmas integrar el expediente? El estado cambiará y no podrás revertirlo.")) return;
+                  if (!window.confirm("¿Confirmas enviar el expediente a Recursos financieros? Esta acción no se puede revertir.")) return;
                   setIsEnviando(true);
                   try {
                     const res = await fetch(
@@ -647,6 +649,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                     };
                     setDatos(parsed);
                     await refrescar();
+                    await new Promise((r) => setTimeout(r, 900));
                     navigate(-1);
                   } catch (e: any) {
                     alert(`Error al integrar expediente: ${e.message}`);
@@ -672,6 +675,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                   };
                   setDatos(parsed);
                   await refrescar();
+                  await new Promise((r) => setTimeout(r, 900));
                   navigate(-1);
                 } catch (e: any) {
                   alert(`Error al enviar requisición: ${e.message}`);
@@ -709,11 +713,11 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                   ? "Orden de compra / Recursos financieros"
                   : mostrarIntegrarExpediente
                     ? "Orden de compra / Integrar expediente"
-                    : mostrarOrdenDeCompra
-                      ? "Orden de compra"
-                      : esFlujoCargaFacturasExpediente
-                        ? "Integrar al expediente"
-                        : esFlujoCargaExpedienteMayor
+                    : esFlujoCargaExpedienteMayor
+                      ? "Enviar a Recursos financieros"
+                      : mostrarOrdenDeCompra
+                        ? "Orden de compra"
+                        : esFlujoCargaFacturasExpediente
                           ? "Integrar al expediente"
                           : "Enviar"}
             </button>
@@ -727,6 +731,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
             <button
               className={`${ui.buttons.primary} py-2!`}
               hidden={!esFlujoCargaFacturasExpediente || yaEnviada}
+              disabled={isEnviando}
               onClick={() => setModal(true)}
             >
               Cargar facturas
@@ -734,6 +739,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
             <button
               className={`${ui.buttons.primary} py-2!`}
               hidden={!esFlujoCargaExpedienteMayor || yaEnviada}
+              disabled={isEnviando}
               onClick={() => setModal(true)}
             >
               Cargar expediente
@@ -933,11 +939,18 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                     className={`${ui.text.h2} text-start w-full`}
                     style={{ color: colors.primary.main }}
                   >
-                    Gestión de cotizaciones
+                    {esFlujoCargaExpedienteMayor
+                      ? "Gestión del expediente"
+                      : esFlujoCargaFacturasExpediente
+                        ? "Gestión de facturas"
+                        : "Gestión de cotizaciones"}
                   </h2>
                   <p className={ui.text.body + " text-start w-full"}>
-                    Cargue las {totalNecesarios} cotizaciones requeridas y
-                    consulte los proveedores autorizados
+                    {esFlujoCargaExpedienteMayor
+                      ? "Integre las 3 cotizaciones requeridas y al menos 1 factura para completar el expediente"
+                      : esFlujoCargaFacturasExpediente
+                        ? "Integre al menos 1 factura (máximo 5) para habilitar el envío del expediente"
+                        : `Cargue las ${totalNecesarios} cotizaciones requeridas y consulte los proveedores autorizados`}
                   </p>
                   {requiereFacturas && (
                     <p className={ui.text.body + " text-start w-full"}>
@@ -1000,18 +1013,21 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                           </div>
                           <button
                             className={ui.buttons.primary + " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"}
+                            disabled={eliminandoId === adj.id}
                             onClick={async () => {
                               if (!id) return;
                               if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
+                              setEliminandoId(adj.id);
                               try {
                                 const res = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos/${adj.id}`, { method: "DELETE" });
                                 if (!res.ok) throw new Error(await res.text());
                                 const adjRes = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos`);
                                 if (adjRes.ok) setAdjuntosGuardados(await adjRes.json());
                               } catch (e: any) { alert(`Error al eliminar archivo: ${e.message ?? e}.`); }
+                              finally { setEliminandoId(null); }
                             }}
                           >
-                            <p className="px-4 py-1 text-[12px]">Cancelar</p>
+                            <p className="px-4 py-1 text-[12px]">{eliminandoId === adj.id ? "..." : "Cancelar"}</p>
                           </button>
                         </div>
                       ))}
@@ -1060,18 +1076,21 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                           </div>
                           <button
                             className={ui.buttons.primary + " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"}
+                            disabled={eliminandoId === adj.id}
                             onClick={async () => {
                               if (!id) return;
                               if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
+                              setEliminandoId(adj.id);
                               try {
                                 const res = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos/${adj.id}`, { method: "DELETE" });
                                 if (!res.ok) throw new Error(await res.text());
                                 const adjRes = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos`);
                                 if (adjRes.ok) setAdjuntosGuardados(await adjRes.json());
                               } catch (e: any) { alert(`Error al eliminar archivo: ${e.message ?? e}.`); }
+                              finally { setEliminandoId(null); }
                             }}
                           >
-                            <p className="px-4 py-1 text-[12px]">Cancelar</p>
+                            <p className="px-4 py-1 text-[12px]">{eliminandoId === adj.id ? "..." : "Cancelar"}</p>
                           </button>
                         </div>
                       ))}
@@ -1132,9 +1151,11 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                               ui.buttons.primary +
                               " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"
                             }
+                            disabled={eliminandoId === adj.id}
                             onClick={async () => {
                               if (!id) return;
                               if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
+                              setEliminandoId(adj.id);
                               try {
                                 const res = await fetch(
                                   `${API_BASE}/requisiciones/${id}/adjuntos/${adj.id}`,
@@ -1151,10 +1172,12 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                                 }
                               } catch (e: any) {
                                 alert(`Error al eliminar archivo: ${e.message ?? e}.`);
+                              } finally {
+                                setEliminandoId(null);
                               }
                             }}
                           >
-                            <p className="px-4 py-1 text-[12px]">Cancelar</p>
+                            <p className="px-4 py-1 text-[12px]">{eliminandoId === adj.id ? "..." : "Cancelar"}</p>
                           </button>
                         </div>
                       ))}
@@ -1223,9 +1246,11 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                               ui.buttons.primary +
                               " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"
                             }
+                            disabled={eliminandoId === adj.id}
                             onClick={async () => {
                               if (!id) return;
                               if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
+                              setEliminandoId(adj.id);
                               try {
                                 const res = await fetch(
                                   `${API_BASE}/requisiciones/${id}/adjuntos/${adj.id}`,
@@ -1242,10 +1267,12 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                                 }
                               } catch (e: any) {
                                 alert(`Error al eliminar archivo: ${e.message ?? e}.`);
+                              } finally {
+                                setEliminandoId(null);
                               }
                             }}
                           >
-                            <p className="px-4 py-1 text-[12px]">Cancelar</p>
+                            <p className="px-4 py-1 text-[12px]">{eliminandoId === adj.id ? "..." : "Cancelar"}</p>
                           </button>
                         ) : (
                           <span className="text-[11px] text-green-700 font-medium bg-green-100 border border-green-300 px-3 py-1 rounded-full mr-2 shrink-0">
@@ -1292,6 +1319,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                       onEliminarGuardado={async () => {
                         if (!id) return;
                         if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
+                        setEliminandoId("cotizacion-bd");
                         try {
                           const res = await fetch(
                             `${API_BASE}/requisiciones/${id}/cotizacion`,
@@ -1310,6 +1338,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                           refrescar();
                         } catch (e: any) {
                           alert(`Error al eliminar archivo: ${e.message ?? e}.`);
+                        } finally {
+                          setEliminandoId(null);
                         }
                       }}
                     />
@@ -1367,9 +1397,11 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                                 ui.buttons.primary +
                                 " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"
                               }
+                              disabled={eliminandoId === "factura-main"}
                               onClick={async () => {
                                 if (!id) return;
                                 if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
+                                setEliminandoId("factura-main");
                                 try {
                                   const res = await fetch(
                                     `${API_BASE}/requisiciones/${id}/factura`,
@@ -1388,10 +1420,12 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                                   refrescar();
                                 } catch (e: any) {
                                   alert(`Error al eliminar archivo: ${e.message ?? e}.`);
+                                } finally {
+                                  setEliminandoId(null);
                                 }
                               }}
                             >
-                              <p className="px-4 py-1 text-[12px]">Cancelar</p>
+                              <p className="px-4 py-1 text-[12px]">{eliminandoId === "factura-main" ? "..." : "Cancelar"}</p>
                             </button>
                           ) : (
                             <span className="text-[11px] text-green-700 font-medium bg-green-100 border border-green-300 px-3 py-1 rounded-full mr-2 shrink-0">

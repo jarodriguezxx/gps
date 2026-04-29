@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { ui } from "../../config/theme";
 import { API_BASE } from "../../config/api.ts";
@@ -28,14 +28,19 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
   const [enviada, setEnviada] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [firmando, setFirmando] = useState(false);
+  const loadedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
-
     if (!id) {
       setRequisicion(null);
       setOrden(null);
       setIsLoading(false);
+      loadedIdRef.current = null;
+      return;
+    }
+
+    if (!requisiciones.length) {
+      setIsLoading(true);
       return;
     }
 
@@ -44,9 +49,18 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
       setRequisicion(null);
       setOrden(null);
       setIsLoading(false);
+      loadedIdRef.current = null;
       return;
     }
 
+    // Ya cargamos este ID — solo actualizar la copia local sin re-fetch
+    if (loadedIdRef.current === id) {
+      setRequisicion(req);
+      return;
+    }
+
+    loadedIdRef.current = id;
+    setIsLoading(true);
     setRequisicion(req);
 
     const requisicionYaEnviada =
