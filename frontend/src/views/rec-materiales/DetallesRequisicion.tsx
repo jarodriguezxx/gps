@@ -649,7 +649,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                     };
                     setDatos(parsed);
                     await refrescar();
-                    await new Promise((r) => setTimeout(r, 900));
+                    alert("Expediente enviado a Recursos Financieros exitosamente.");
                     navigate(-1);
                   } catch (e: any) {
                     alert(`Error al integrar expediente: ${e.message}`);
@@ -675,7 +675,9 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                   };
                   setDatos(parsed);
                   await refrescar();
-                  await new Promise((r) => setTimeout(r, 900));
+                  alert(esFlujoCargaFacturasExpediente
+                    ? "Expediente integrado exitosamente."
+                    : "Requisición enviada exitosamente.");
                   navigate(-1);
                 } catch (e: any) {
                   alert(`Error al enviar requisición: ${e.message}`);
