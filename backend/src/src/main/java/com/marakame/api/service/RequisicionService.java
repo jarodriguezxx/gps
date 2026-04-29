@@ -74,6 +74,16 @@ public class RequisicionService {
             if (facturas.isEmpty())
                 throw new IllegalStateException("factura-requerida");
             req.setEstado(Estado.FINALIZADA);
+        } else if (req.getEstado() == Estado.EN_REVISION
+                && req.getTipo() == TipoCompra.EXTRAORDINARIA
+                && req.getTamanio() == TamanioCompra.MAYOR) {
+            List<AdjuntoRequisicion> cotizaciones = adjuntoRepository.findByRequisicionIdAndTipo(id, "COTIZACION");
+            if (cotizaciones.size() < 3)
+                throw new IllegalStateException("cotizacion-requerida");
+            List<AdjuntoRequisicion> facturas = adjuntoRepository.findByRequisicionIdAndTipo(id, "FACTURA");
+            if (facturas.isEmpty())
+                throw new IllegalStateException("factura-requerida");
+            req.setEstado(Estado.FINALIZADA);
         } else {
             throw new IllegalStateException("estado-invalido");
         }
@@ -121,6 +131,8 @@ public class RequisicionService {
         boolean puedeSubirAdjunto =
                 (req.getEstado() == Estado.PRE_AUTORIZADA && req.getTipo() == TipoCompra.ORDINARIA) ||
                 (req.getEstado() == Estado.AUTORIZADA && req.getTipo() == TipoCompra.ORDINARIA
+                        && req.getTamanio() == TamanioCompra.MAYOR) ||
+                (req.getEstado() == Estado.EN_REVISION && req.getTipo() == TipoCompra.EXTRAORDINARIA
                         && req.getTamanio() == TamanioCompra.MAYOR);
         if (!puedeSubirAdjunto)
             throw new IllegalStateException("estado-invalido");
@@ -203,7 +215,7 @@ public class RequisicionService {
 
         if (req.getEstado() != Estado.EN_REVISION
                 || req.getTipo() != TipoCompra.EXTRAORDINARIA
-                || req.getTamanio() != TamanioCompra.MENOR)
+                || (req.getTamanio() != TamanioCompra.MENOR && req.getTamanio() != TamanioCompra.MAYOR))
             throw new IllegalStateException("estado-invalido");
 
         if (adjuntoRepository.findByRequisicionIdAndTipo(id, "FACTURA").size() >= 5)

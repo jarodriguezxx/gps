@@ -26,11 +26,16 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
   const [orden, setOrden] = useState<ordenTypes.OrdenCompra | null>(null);
   const [ordenBackendId, setOrdenBackendId] = useState<string | null>(null);
   const [enviada, setEnviada] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [firmando, setFirmando] = useState(false);
 
   useEffect(() => {
+    setIsLoading(true);
+
     if (!id) {
       setRequisicion(null);
       setOrden(null);
+      setIsLoading(false);
       return;
     }
 
@@ -38,13 +43,12 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
     if (!req) {
       setRequisicion(null);
       setOrden(null);
+      setIsLoading(false);
       return;
     }
 
     setRequisicion(req);
 
-    // Pre-setear enviada desde el estado de la requisición antes de que llegue el backend,
-    // para evitar que controles de edición se activen brevemente en órdenes ya enviadas.
     const requisicionYaEnviada =
       req.estado === "EN-REVISION" || req.estado === "FINALIZADA";
     setEnviada(requisicionYaEnviada);
@@ -92,8 +96,11 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
               }
             : ordenLocal.proveedor,
         });
+        setIsLoading(false);
       })
-      .catch((e) => console.error("OrdenCompra load error:", e));
+      .catch(() => {
+        setIsLoading(false);
+      });
   }, [id, requisiciones]);
 
   const subtotal = useMemo(
@@ -112,7 +119,7 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(ordenTypes.mapLocalToUpdateRequest(orden)),
-      });
+      }).catch(() => {});
     }, 500);
 
     return () => window.clearTimeout(timeoutId);
@@ -147,49 +154,68 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
       return;
     if (orden?.firmas.encargadoCompras.estado === "FIRMADA") return;
 
-    const res = await fetch(
-      `${API_BASE}/ordenes-compra/${ordenBackendId}/firmar-encargado`,
-      { method: "PATCH" },
-    );
-    if (!res.ok) return;
+    if (!window.confirm("¿Confirmas firmar este documento? Esta acción no se puede revertir."))
+      return;
 
-    setOrden((prev) =>
-      prev
-        ? {
-            ...prev,
-            firmas: {
-              ...prev.firmas,
-              encargadoCompras: {
-                ...prev.firmas.encargadoCompras,
-                estado: "FIRMADA",
-                fechaFirma: new Date(),
+    setFirmando(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/ordenes-compra/${ordenBackendId}/firmar-encargado`,
+        { method: "PATCH" },
+      );
+      if (!res.ok) {
+        alert("Error al registrar la firma. Intenta de nuevo.");
+        return;
+      }
+
+      setOrden((prev) =>
+        prev
+          ? {
+              ...prev,
+              firmas: {
+                ...prev.firmas,
+                encargadoCompras: {
+                  ...prev.firmas.encargadoCompras,
+                  estado: "FIRMADA",
+                  fechaFirma: new Date(),
+                },
               },
-            },
-          }
-        : prev,
-    );
+            }
+          : prev,
+      );
+    } finally {
+      setFirmando(false);
+    }
   };
 
   const guardarBorrador = async () => {
     if (!orden || !ordenBackendId || enviada) return;
 
-    await fetch(`${API_BASE}/ordenes-compra/${ordenBackendId}`, {
+    const res = await fetch(`${API_BASE}/ordenes-compra/${ordenBackendId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(ordenTypes.mapLocalToUpdateRequest(orden)),
     });
+    if (!res.ok) {
+      alert("Error al guardar el borrador. Intenta de nuevo.");
+      return;
+    }
     alert("Borrador guardado");
   };
 
   const enviarAlmacen = async () => {
     if (!orden || !ordenBackendId) return;
 
+    if (!window.confirm("¿Confirmas enviar la orden de compra a Almacén? Una vez enviada no podrá editarse."))
+      return;
+
     const res = await fetch(
       `${API_BASE}/ordenes-compra/${ordenBackendId}/enviar`,
       { method: "PATCH" },
     );
     if (!res.ok) {
-      alert(`Error: ${await res.text()}`);
+      const msg = await res.text().catch(() => res.status.toString());
+      alert(`Error al enviar la orden: ${msg}`);
       return;
     }
     refrescar?.();
@@ -197,14 +223,27 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
     navigate(-1);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-3 text-slate-500">
+          <svg className="h-8 w-8 animate-spin text-[#8B1238]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          <p className="text-sm font-medium">Cargando orden...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!requisicion || !orden) {
     return (
       <div className="flex h-full min-h-0 items-center justify-center bg-slate-50 p-6">
         <div className="max-w-lg rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
           <h1 className={ui.text.h1}>Orden de compra</h1>
           <p className={ui.text.body + " mt-2"}>
-            No se encontró la requisición solicitada o la ruta no contiene un id
-            válido.
+            No se encontró la requisición solicitada o hubo un error de conexión.
           </p>
           <button
             onClick={() => navigate(-1)}
@@ -512,7 +551,8 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
                   esComprasInventario &&
                   firma.estado !== "FIRMADA" &&
                   firmaAnteriorFirmada &&
-                  !enviada;
+                  !enviada &&
+                  !firmando;
 
                 return (
                   <article

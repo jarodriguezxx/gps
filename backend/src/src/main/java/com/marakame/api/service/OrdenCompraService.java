@@ -138,8 +138,7 @@ public class OrdenCompraService {
         orden.setEstatus("ENVIADA");
         if (req.getTipo() == TipoCompra.ORDINARIA) {
             req.setEstado(Estado.FINALIZADA);
-        } else if (req.getTipo() == TipoCompra.EXTRAORDINARIA
-                && req.getTamanio() == TamanioCompra.MENOR) {
+        } else if (req.getTipo() == TipoCompra.EXTRAORDINARIA) {
             req.setEstado(Estado.EN_REVISION);
         } else {
             req.setEstado(Estado.FINALIZADA);

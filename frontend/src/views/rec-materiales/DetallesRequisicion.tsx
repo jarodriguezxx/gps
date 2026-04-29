@@ -156,6 +156,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
   });
 
   const [activarSubirCotizacion, setSubirCotizacion] = useState(false);
+  const [isGuardando, setIsGuardando] = useState(false);
+  const [isEnviando, setIsEnviando] = useState(false);
 
   type AdjuntoGuardado = { id: string; nombreArchivo: string; tipo?: string };
   const [adjuntosGuardados, setAdjuntosGuardados] = useState<AdjuntoGuardado[]>(
@@ -180,6 +182,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
   // Esto es para guardar los archivos que se tienen
   const guardarTodo = async () => {
     if (!id) return;
+    setIsGuardando(true);
+    try {
     const archivoCotizacion = archivosCotizaciones["1"];
     if (archivoCotizacion && rol === "rec-materiales") {
       const formData = new FormData();
@@ -200,7 +204,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
         setModal(false);
         refrescar();
       } catch (e: any) {
-        console.log("error al subir cotización", e);
+        alert(`Error al subir cotización: ${e.message ?? e}. Intenta de nuevo.`);
       }
       return;
     }
@@ -224,8 +228,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
             body: formData,
           });
           if (!res.ok) throw new Error(await res.text());
-        } catch (e) {
-          console.log("error al subir adjunto", e);
+        } catch (e: any) {
+          alert(`Error al subir "${archivo.name}": ${e.message ?? e}. Intenta de nuevo.`);
         }
       }
       try {
@@ -234,8 +238,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
           const lista: AdjuntoGuardado[] = await adjRes.json();
           setAdjuntosGuardados(lista);
         }
-      } catch (e) {
-        console.log("error al obtener adjuntos", e);
+      } catch {
+        alert("No se pudo actualizar la lista de adjuntos. Recarga la página.");
       }
       setArchivosCotizaciones({ "1": null, "2": null, "3": null });
       setModal(false);
@@ -262,8 +266,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
             body: formData,
           });
           if (!res.ok) throw new Error(await res.text());
-        } catch (e) {
-          console.log("error al subir adjunto", e);
+        } catch (e: any) {
+          alert(`Error al subir "${archivo.name}": ${e.message ?? e}. Intenta de nuevo.`);
         }
       }
 
@@ -273,8 +277,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
           const lista: AdjuntoGuardado[] = await adjRes.json();
           setAdjuntosGuardados(lista);
         }
-      } catch (e) {
-        console.log("error al obtener adjuntos", e);
+      } catch {
+        alert("No se pudo actualizar la lista de adjuntos. Recarga la página.");
       }
 
       const facturaFile = archivosFacturas["1"];
@@ -293,9 +297,69 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
             fecha: new Date(data.fecha as unknown as string),
           });
           refrescar();
-        } catch (e) {
-          console.log("error al subir factura", e);
+        } catch (e: any) {
+          alert(`Error al subir factura: ${e.message ?? e}. Intenta de nuevo.`);
         }
+      }
+
+      setArchivosCotizaciones({ "1": null, "2": null, "3": null });
+      setArchivosFacturas({ "1": null });
+      setModal(false);
+      return;
+    }
+
+    if (
+      rol === "compras-inventario" &&
+      datos?.estado === "EN-REVISION" &&
+      datos?.tipo === "EXTRAORDINARIA" &&
+      datos?.tamanio === "MAYOR"
+    ) {
+      const cotizacionesGuardadas = adjuntosGuardados.filter((a) => a.tipo === "COTIZACION");
+      const dispCotiz = Math.max(0, 3 - cotizacionesGuardadas.length);
+      const cotizASubir = Object.values(archivosCotizaciones)
+        .filter((f): f is File => f !== null)
+        .slice(0, dispCotiz);
+
+      for (const archivo of cotizASubir) {
+        const formData = new FormData();
+        formData.append("archivo", archivo);
+        const res = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) {
+          const msg = await res.text().catch(() => res.status.toString());
+          alert(`Error al subir cotización "${archivo.name}": ${msg}`);
+        }
+      }
+
+      const facturasGuardadas = adjuntosGuardados.filter((a) => a.tipo === "FACTURA");
+      const dispFact = Math.max(0, 5 - facturasGuardadas.length);
+      const factASubir = Object.values(archivosFacturas)
+        .filter((f): f is File => f !== null)
+        .slice(0, dispFact);
+
+      for (const archivo of factASubir) {
+        const formData = new FormData();
+        formData.append("archivo", archivo);
+        const res = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos-factura`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) {
+          const msg = await res.text().catch(() => res.status.toString());
+          alert(`Error al subir factura "${archivo.name}": ${msg}`);
+        }
+      }
+
+      try {
+        const adjRes = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos`);
+        if (adjRes.ok) {
+          const lista: AdjuntoGuardado[] = await adjRes.json();
+          setAdjuntosGuardados(lista);
+        }
+      } catch {
+        alert("No se pudo actualizar la lista de adjuntos. Recarga la página.");
       }
 
       setArchivosCotizaciones({ "1": null, "2": null, "3": null });
@@ -327,8 +391,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
             const msg = await res.text().catch(() => res.status.toString());
             alert(`Error al subir factura "${archivo.name}": ${msg}`);
           }
-        } catch (e) {
-          console.log("error al subir factura expediente", e);
+        } catch (e: any) {
+          alert(`Error al subir "${archivo.name}": ${e.message ?? e}. Intenta de nuevo.`);
         }
       }
 
@@ -340,8 +404,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
           const lista: AdjuntoGuardado[] = await adjRes.json();
           setAdjuntosGuardados(lista);
         }
-      } catch (e) {
-        console.log("error al obtener facturas expediente", e);
+      } catch {
+        alert("No se pudo actualizar la lista de facturas. Recarga la página.");
       }
 
       refrescar();
@@ -354,6 +418,9 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
       });
       setModal(false);
       return;
+    }
+    } finally {
+      setIsGuardando(false);
     }
   };
 
@@ -383,7 +450,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
       fetch(`${API_BASE}/requisiciones/${id}/adjuntos`)
         .then((r) => r.json())
         .then((lista: AdjuntoGuardado[]) => setAdjuntosGuardados(lista))
-        .catch(() => {});
+        .catch(() => alert("Error al cargar los documentos guardados. Recarga la página."));
     }
     if (
       rol === "compras-inventario" &&
@@ -394,7 +461,18 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
       fetch(`${API_BASE}/requisiciones/${id}/adjuntos-factura`)
         .then((r) => r.json())
         .then((lista: AdjuntoGuardado[]) => setAdjuntosGuardados(lista))
-        .catch(() => {});
+        .catch(() => alert("Error al cargar los documentos guardados. Recarga la página."));
+    }
+    if (
+      rol === "compras-inventario" &&
+      parsed.tipo === "EXTRAORDINARIA" &&
+      parsed.tamanio === "MAYOR" &&
+      (parsed.estado === "EN-REVISION" || parsed.estado === "FINALIZADA")
+    ) {
+      fetch(`${API_BASE}/requisiciones/${id}/adjuntos`)
+        .then((r) => r.json())
+        .then((lista: AdjuntoGuardado[]) => setAdjuntosGuardados(lista))
+        .catch(() => alert("Error al cargar los documentos guardados. Recarga la página."));
     }
     if (rol === "rec-materiales") {
       setSubirCotizacion(
@@ -471,7 +549,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
     esExtraordinariaAutorizada && datos?.tamanio === "MAYOR";
   const mostrarOrdenDeCompra =
     rol === "compras-inventario" &&
-    (datos?.estado === "AUTORIZADA" || datos?.estado === "FINALIZADA") &&
+    (datos?.estado === "AUTORIZADA" || datos?.estado === "EN-REVISION" || datos?.estado === "FINALIZADA") &&
     (datos?.tipo === "EXTRAORDINARIA" ||
       (datos?.tipo === "ORDINARIA" && datos?.tamanio === "MENOR"));
   const mostrarIntegrarExpediente =
@@ -487,6 +565,12 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
     rol === "compras-inventario" &&
     datos?.tipo === "EXTRAORDINARIA" &&
     datos?.tamanio === "MENOR" &&
+    (datos?.estado === "EN-REVISION" || datos?.estado === "FINALIZADA");
+
+  const esFlujoCargaExpedienteMayor =
+    rol === "compras-inventario" &&
+    datos?.tipo === "EXTRAORDINARIA" &&
+    datos?.tamanio === "MAYOR" &&
     (datos?.estado === "EN-REVISION" || datos?.estado === "FINALIZADA");
 
   const cotizacionesPendientes = Math.max(0, totalNecesarios - totalGuardados);
@@ -546,7 +630,35 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                   return;
                 }
 
+                if (esFlujoCargaExpedienteMayor) {
+                  if (!id) return;
+                  if (!window.confirm("¿Confirmas integrar el expediente? El estado cambiará y no podrás revertirlo.")) return;
+                  setIsEnviando(true);
+                  try {
+                    const res = await fetch(
+                      `${API_BASE}/requisiciones/${id}/enviar`,
+                      { method: "PATCH" },
+                    );
+                    if (!res.ok) throw new Error(await res.text());
+                    const data: tipos.Requisicion = await res.json();
+                    const parsed = {
+                      ...data,
+                      fecha: new Date(data.fecha as unknown as string),
+                    };
+                    setDatos(parsed);
+                    await refrescar();
+                    navigate(-1);
+                  } catch (e: any) {
+                    alert(`Error al integrar expediente: ${e.message}`);
+                  } finally {
+                    setIsEnviando(false);
+                  }
+                  return;
+                }
+
                 if (!id) return;
+                if (!window.confirm("¿Confirmas enviar esta requisición? El estado cambiará y no podrás revertirlo.")) return;
+                setIsEnviando(true);
                 try {
                   const res = await fetch(
                     `${API_BASE}/requisiciones/${id}/enviar`,
@@ -562,15 +674,23 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                   await refrescar();
                   navigate(-1);
                 } catch (e: any) {
-                  console.log("error al enviar requisición", e);
+                  alert(`Error al enviar requisición: ${e.message}`);
+                } finally {
+                  setIsEnviando(false);
                 }
               }}
               disabled={
+                isEnviando ||
                 (yaEnviada && !mostrarOrdenDeCompra) ||
                 (esFlujoCargaFacturasExpediente &&
                   datos?.estado === "EN-REVISION" &&
                   adjuntosGuardados.length < 1) ||
+                (esFlujoCargaExpedienteMayor &&
+                  datos?.estado === "EN-REVISION" &&
+                  (adjuntosGuardados.filter((a) => a.tipo === "COTIZACION").length < 3 ||
+                    adjuntosGuardados.filter((a) => a.tipo === "FACTURA").length < 1)) ||
                 (!esFlujoCargaFacturasExpediente &&
+                  !esFlujoCargaExpedienteMayor &&
                   !mostrarOrdenDeCompra &&
                   !mostrarIntegrarExpediente &&
                   !mostrarEnviarFinanzas &&
@@ -583,15 +703,19 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                       totalGuardados < 1)))
               }
             >
-              {mostrarEnviarFinanzas
-                ? "Orden de compra / Recursos financieros"
-                : mostrarIntegrarExpediente
-                  ? "Orden de compra / Integrar expediente"
-                  : mostrarOrdenDeCompra
-                    ? "Orden de compra"
-                    : esFlujoCargaFacturasExpediente
-                      ? "Integrar al expediente"
-                      : "Enviar"}
+              {isEnviando
+                ? "Enviando..."
+                : mostrarEnviarFinanzas
+                  ? "Orden de compra / Recursos financieros"
+                  : mostrarIntegrarExpediente
+                    ? "Orden de compra / Integrar expediente"
+                    : mostrarOrdenDeCompra
+                      ? "Orden de compra"
+                      : esFlujoCargaFacturasExpediente
+                        ? "Integrar al expediente"
+                        : esFlujoCargaExpedienteMayor
+                          ? "Integrar al expediente"
+                          : "Enviar"}
             </button>
             <button
               className={`${ui.buttons.primary} py-2!`}
@@ -606,6 +730,13 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
               onClick={() => setModal(true)}
             >
               Cargar facturas
+            </button>
+            <button
+              className={`${ui.buttons.primary} py-2!`}
+              hidden={!esFlujoCargaExpedienteMayor || yaEnviada}
+              onClick={() => setModal(true)}
+            >
+              Cargar expediente
             </button>
           </div>
         </div>
@@ -828,10 +959,10 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                 <div className="flex gap-4">
                   <button
                     className={ui.buttons.primary}
-                    //
+                    disabled={isGuardando}
                     onClick={guardarTodo}
                   >
-                    Guardar documentos
+                    {isGuardando ? "Guardando..." : "Guardar documentos"}
                   </button>
                   {/* TODO el botón de cancelar lo que hace es cerrar el modal, nada más */}
                   <button
@@ -845,8 +976,128 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                 </div>
               </div>
 
-              <div className="flex flex-1 min-h-0 flex-col items-start justify-start pt-1 gap-2">
-                {esFlujoCargaFacturasExpediente && !yaEnviada ? (
+              <div className="flex flex-1 min-h-0 flex-col items-start justify-start pt-1 gap-2 overflow-y-auto">
+                {esFlujoCargaExpedienteMayor && !yaEnviada ? (
+                  <>
+                    {/* Sección cotizaciones */}
+                    <p className={ui.text.body + " font-bold"}>
+                      Cotizaciones requeridas (3 exactas)
+                    </p>
+                    <div className="w-full flex flex-col gap-3">
+                      {adjuntosGuardados.filter((a) => a.tipo === "COTIZACION").map((adj, idx) => (
+                        <div
+                          key={adj.id}
+                          className="border-slate-400 border bg-green-50 flex flex-row w-full justify-between items-center rounded-xl p-2"
+                        >
+                          <div className="flex w-full flex-row py-2 gap-4 h-12">
+                            <div className="h-full aspect-square flex justify-center items-center rounded-full bg-green-600">
+                              <p className="text-white font-bold text-xs">C{idx + 1}</p>
+                            </div>
+                            <div className="w-full h-full flex flex-col justify-center gap-1">
+                              <p className={ui.text.body + " font-bold text-[12px]"}>Cotización {idx + 1}</p>
+                              <p className="text-[10px] text-green-700 truncate max-w-[200px]">{adj.nombreArchivo}</p>
+                            </div>
+                          </div>
+                          <button
+                            className={ui.buttons.primary + " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"}
+                            onClick={async () => {
+                              if (!id) return;
+                              if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
+                              try {
+                                const res = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos/${adj.id}`, { method: "DELETE" });
+                                if (!res.ok) throw new Error(await res.text());
+                                const adjRes = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos`);
+                                if (adjRes.ok) setAdjuntosGuardados(await adjRes.json());
+                              } catch (e: any) { alert(`Error al eliminar archivo: ${e.message ?? e}.`); }
+                            }}
+                          >
+                            <p className="px-4 py-1 text-[12px]">Cancelar</p>
+                          </button>
+                        </div>
+                      ))}
+                      {adjuntosGuardados.filter((a) => a.tipo === "COTIZACION").length < 3 && (
+                        <div className="w-full flex flex-col gap-3">
+                          {Array.from(
+                            { length: 3 - adjuntosGuardados.filter((a) => a.tipo === "COTIZACION").length },
+                            (_, i) => {
+                              const slotKey = String(i + 1);
+                              const slotNum = adjuntosGuardados.filter((a) => a.tipo === "COTIZACION").length + i + 1;
+                              return (
+                                <TarjetaCotizacion
+                                  key={`cot-${slotKey}`}
+                                  archivoInicial={archivosCotizaciones[slotKey] ?? null}
+                                  numero={`C${slotNum}`}
+                                  titulo={`Cotización ${slotNum}`}
+                                  onArchivoChange={(file) => actualizarArchivoGlobal(slotKey, file)}
+                                />
+                              );
+                            },
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="w-full flex bg-slate-200 h-px my-2" />
+
+                    {/* Sección facturas */}
+                    <p className={ui.text.body + " font-bold"}>
+                      Facturas del expediente (mínimo 1, máximo 5)
+                    </p>
+                    <div className="w-full flex flex-col gap-3">
+                      {adjuntosGuardados.filter((a) => a.tipo === "FACTURA").map((adj, idx) => (
+                        <div
+                          key={adj.id}
+                          className="border-slate-400 border bg-green-50 flex flex-row w-full justify-between items-center rounded-xl p-2"
+                        >
+                          <div className="flex w-full flex-row py-2 gap-4 h-12">
+                            <div className="h-full aspect-square flex justify-center items-center rounded-full bg-green-600">
+                              <p className="text-white font-bold text-xs">F{idx + 1}</p>
+                            </div>
+                            <div className="w-full h-full flex flex-col justify-center gap-1">
+                              <p className={ui.text.body + " font-bold text-[12px]"}>Factura {idx + 1}</p>
+                              <p className="text-[10px] text-green-700 truncate max-w-[200px]">{adj.nombreArchivo}</p>
+                            </div>
+                          </div>
+                          <button
+                            className={ui.buttons.primary + " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"}
+                            onClick={async () => {
+                              if (!id) return;
+                              if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
+                              try {
+                                const res = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos/${adj.id}`, { method: "DELETE" });
+                                if (!res.ok) throw new Error(await res.text());
+                                const adjRes = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos`);
+                                if (adjRes.ok) setAdjuntosGuardados(await adjRes.json());
+                              } catch (e: any) { alert(`Error al eliminar archivo: ${e.message ?? e}.`); }
+                            }}
+                          >
+                            <p className="px-4 py-1 text-[12px]">Cancelar</p>
+                          </button>
+                        </div>
+                      ))}
+                      {adjuntosGuardados.filter((a) => a.tipo === "FACTURA").length < 5 && (
+                        <div className="w-full flex flex-col gap-3">
+                          {Array.from(
+                            { length: 5 - adjuntosGuardados.filter((a) => a.tipo === "FACTURA").length },
+                            (_, i) => {
+                              const slotKey = String(i + 1);
+                              const slotNum = adjuntosGuardados.filter((a) => a.tipo === "FACTURA").length + i + 1;
+                              return (
+                                <TarjetaCotizacion
+                                  key={`fact-${slotKey}`}
+                                  archivoInicial={archivosFacturas[slotKey] ?? null}
+                                  numero={`F${slotNum}`}
+                                  titulo={`Factura ${slotNum}`}
+                                  onArchivoChange={(file) => actualizarFacturaGlobal(slotKey, file)}
+                                />
+                              );
+                            },
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : esFlujoCargaFacturasExpediente && !yaEnviada ? (
                   <>
                     <p className={ui.text.body + " font-bold"}>
                       Facturas del expediente (mínimo 1, máximo 5)
@@ -883,6 +1134,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                             }
                             onClick={async () => {
                               if (!id) return;
+                              if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
                               try {
                                 const res = await fetch(
                                   `${API_BASE}/requisiciones/${id}/adjuntos/${adj.id}`,
@@ -897,8 +1149,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                                     await adjRes.json();
                                   setAdjuntosGuardados(lista);
                                 }
-                              } catch (e) {
-                                console.log("error al eliminar factura", e);
+                              } catch (e: any) {
+                                alert(`Error al eliminar archivo: ${e.message ?? e}.`);
                               }
                             }}
                           >
@@ -973,6 +1225,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                             }
                             onClick={async () => {
                               if (!id) return;
+                              if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
                               try {
                                 const res = await fetch(
                                   `${API_BASE}/requisiciones/${id}/adjuntos/${adj.id}`,
@@ -987,8 +1240,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                                     await adjRes.json();
                                   setAdjuntosGuardados(lista);
                                 }
-                              } catch (e) {
-                                console.log("error al eliminar adjunto", e);
+                              } catch (e: any) {
+                                alert(`Error al eliminar archivo: ${e.message ?? e}.`);
                               }
                             }}
                           >
@@ -1038,6 +1291,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                       yaGuardadoEnBD={datos?.cotizacionPath != null}
                       onEliminarGuardado={async () => {
                         if (!id) return;
+                        if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
                         try {
                           const res = await fetch(
                             `${API_BASE}/requisiciones/${id}/cotizacion`,
@@ -1055,7 +1309,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                           }));
                           refrescar();
                         } catch (e: any) {
-                          console.log("error al eliminar cotización", e);
+                          alert(`Error al eliminar archivo: ${e.message ?? e}.`);
                         }
                       }}
                     />
@@ -1115,6 +1369,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                               }
                               onClick={async () => {
                                 if (!id) return;
+                                if (!window.confirm("¿Eliminar este archivo? Esta acción no se puede deshacer.")) return;
                                 try {
                                   const res = await fetch(
                                     `${API_BASE}/requisiciones/${id}/factura`,
@@ -1131,8 +1386,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                                     ),
                                   });
                                   refrescar();
-                                } catch (e) {
-                                  console.log("error al eliminar factura", e);
+                                } catch (e: any) {
+                                  alert(`Error al eliminar archivo: ${e.message ?? e}.`);
                                 }
                               }}
                             >
