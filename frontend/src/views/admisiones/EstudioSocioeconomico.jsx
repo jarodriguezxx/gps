@@ -1818,38 +1818,7 @@ const EstudioSocioeconomico = () => {
           ))}
         </nav>
 
-        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Resumen por sección</p>
-              <h3 className="text-base font-extrabold text-slate-800">Progreso global: {overallProgress}%</h3>
-            </div>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700">
-              {completedSections}/{tabs.length} secciones completas
-            </span>
-          </div>
-
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-[#7E1D3B] transition-all" style={{ width: `${overallProgress}%` }} />
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
-            {sectionProgress.map((item) => (
-              <button
-                key={`resumen-${item.id}`}
-                type="button"
-                onClick={() => setActiveTab(item.id)}
-                className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-left hover:border-[#7E1D3B]/30 hover:bg-[#7E1D3B]/5"
-              >
-                <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">{item.label}</p>
-                <p className="mt-1 text-sm font-bold text-slate-800">{item.completed}/{item.required} campos</p>
-                <p className={`text-xs font-semibold ${item.hasIssues ? 'text-rose-700' : 'text-emerald-700'}`}>
-                  {item.hasIssues ? 'Con inconsistencias' : 'Sin inconsistencias'}
-                </p>
-              </button>
-            ))}
-          </div>
-        </section>
+        
 
         {/* --- CONTENEDOR DEL FORMULARIO --- */}
           <div className="relative bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">

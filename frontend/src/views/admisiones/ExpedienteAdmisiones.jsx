@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Search, Sparkles, X } from 'lucide-react';
+import { ArrowRight, FileText, Search, Sparkles, X, Download, Upload } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
 import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
 
@@ -262,6 +263,194 @@ const ReadOnlyRadio = ({ label, selectedValue, options }) => (
 	</div>
 );
 
+const convertirNumeroALetra = (num) => {
+	const numeros = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
+	const decenas = ['diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+	const centenas = ['ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
+	
+	const n = Math.floor(num);
+	if (n === 0) return 'cero';
+	if (n < 10) return numeros[n];
+	if (n < 20) return decenas[n - 10];
+	if (n < 100) {
+		const dec = Math.floor(n / 10);
+		const unit = n % 10;
+		return unit === 0 ? decenas[dec + 8] : decenas[dec + 8] + ' y ' + numeros[unit];
+	}
+	if (n < 1000) {
+		const cent = Math.floor(n / 100);
+		const rest = n % 100;
+		return cent === 1 && rest === 0 ? 'cien' : centenas[cent - 1] + (rest > 0 ? ' ' + convertirNumeroALetra(rest) : '');
+	}
+	return String(n);
+};
+
+const generarReciboHTML = (datos) => {
+	const totalMonto = parseFloat(datos.montoPago || 0) + parseFloat(datos.montoPrograma || 0);
+	const nombreCompletoPagador = `${datos.nombrePagador || ''} ${datos.apellidoPaternoPagador || ''} ${datos.apellidoMaternoPagador || ''}`.trim();
+	
+	return `
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<style>
+				body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+				.recibo { border: 2px solid #333; padding: 30px; max-width: 800px; margin: 0 auto; }
+				.header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #7E1D3B; padding-bottom: 15px; }
+				.header h1 { margin: 0; color: #7E1D3B; font-size: 28px; }
+				.header p { margin: 5px 0; font-size: 12px; color: #666; }
+				.numero-recibo { position: absolute; top: 20px; right: 30px; font-size: 14px; font-weight: bold; }
+				.grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 20px 0; }
+				.grid-2 { grid-template-columns: 1fr 1fr; }
+				.campo { margin-bottom: 12px; }
+				.campo label { font-weight: bold; font-size: 10px; color: #333; display: block; margin-bottom: 2px; }
+				.campo-valor { border-bottom: 1px solid #333; padding: 3px 0; font-size: 11px; }
+				.full-width { grid-column: 1 / -1; }
+				.tabla { width: 100%; border-collapse: collapse; margin: 20px 0; }
+				.tabla th { background: #7E1D3B; color: white; padding: 8px; text-align: left; font-size: 11px; }
+				.tabla td { border-bottom: 1px solid #ddd; padding: 8px; font-size: 11px; }
+				.tabla tr:last-child td { border-bottom: 2px solid #333; }
+				.firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; }
+				.firma { text-align: center; border-top: 1px solid #333; padding-top: 10px; font-size: 11px; }
+				.firma-linea { margin-top: 60px; }
+			</style>
+		</head>
+		<body>
+			<div class="recibo">
+				<div class="numero-recibo">Nº ${new Date().getTime().toString().slice(-4)}</div>
+				<div class="header">
+					<h1>RECIBO DE PAGO</h1>
+					<p>Instituto Marakame • Centro de Tratamiento</p>
+					<p>Fecha: ${new Date().toLocaleDateString('es-MX')}</p>
+				</div>
+
+				<div class="grid grid-2">
+					<div class="campo">
+						<label>Nombre(s):</label>
+						<div class="campo-valor">${datos.nombrePagador || ''}</div>
+					</div>
+					<div class="campo">
+						<label>Apellido paterno:</label>
+						<div class="campo-valor">${datos.apellidoPaternoPagador || ''}</div>
+					</div>
+					<div class="campo">
+						<label>Apellido materno:</label>
+						<div class="campo-valor">${datos.apellidoMaternoPagador || ''}</div>
+					</div>
+					<div class="campo">
+						<label>Fecha de pago:</label>
+						<div class="campo-valor">${datos.fechaPago || ''}</div>
+					</div>
+					<div class="campo">
+						<label>RFC:</label>
+						<div class="campo-valor">${datos.rfc || ''}</div>
+					</div>
+					<div class="campo">
+						<label>Teléfono:</label>
+						<div class="campo-valor">${datos.telefonoPagador || ''}</div>
+					</div>
+				</div>
+
+				<div style="border-top: 2px solid #7E1D3B; padding-top: 15px; margin: 20px 0;">
+					<p style="font-weight: bold; margin-bottom: 8px;">Dirección:</p>
+					<div class="grid grid-2">
+						<div class="campo">
+							<label>Calle:</label>
+							<div class="campo-valor">${datos.direccionCalle || ''}</div>
+						</div>
+						<div class="campo">
+							<label>No. Exterior:</label>
+							<div class="campo-valor">${datos.direccionNoExt || ''}</div>
+						</div>
+						<div class="campo">
+							<label>No. Interior:</label>
+							<div class="campo-valor">${datos.direccionNoInt || ''}</div>
+						</div>
+						<div class="campo">
+							<label>Colonia:</label>
+							<div class="campo-valor">${datos.direccionColonia || ''}</div>
+						</div>
+						<div class="campo">
+							<label>Municipio/Delegación:</label>
+							<div class="campo-valor">${datos.direccionMunicipioDelegacion || ''}</div>
+						</div>
+						<div class="campo">
+							<label>C.P.:</label>
+							<div class="campo-valor">${datos.codigoPostal || ''}</div>
+						</div>
+						<div class="campo full-width">
+							<label>Ciudad/Estado:</label>
+							<div class="campo-valor">${datos.direccionCiudadEstado || ''}</div>
+						</div>
+					</div>
+				</div>
+
+				<div style="border: 2px solid #7E1D3B; padding: 15px; margin: 20px 0;">
+					<div class="grid grid-2">
+						<div class="campo">
+							<label>Nombre(s) del paciente:</label>
+							<div class="campo-valor">${datos.nombrePaciente || ''}</div>
+						</div>
+						<div class="campo">
+							<label>Apellido paterno:</label>
+							<div class="campo-valor">${datos.apellidoPaternoPaciente || ''}</div>
+						</div>
+						<div class="campo">
+							<label>Apellido materno:</label>
+							<div class="campo-valor">${datos.apellidoMaternoPaciente || ''}</div>
+						</div>
+						<div class="campo">
+							<label>Clave del paciente:</label>
+							<div class="campo-valor">${datos.clavePaciente || ''}</div>
+						</div>
+						<div class="campo full-width">
+							<label>Concepto del pago:</label>
+							<div class="campo-valor">${datos.concepto || ''}</div>
+						</div>
+					</div>
+				</div>
+
+				<table class="tabla">
+					<thead>
+						<tr>
+							<th>Concepto de pago</th>
+							<th style="text-align: right;">Monto</th>
+						</tr>
+					</thead>
+					<tbody>
+						${datos.montoPago > 0 ? `<tr><td>Tratamiento</td><td style="text-align: right;">$${parseFloat(datos.montoPago).toFixed(2)}</td></tr>` : ''}
+						${datos.montoPrograma > 0 ? `<tr><td>Programa Familiar</td><td style="text-align: right;">$${parseFloat(datos.montoPrograma).toFixed(2)}</td></tr>` : ''}
+						<tr style="font-weight: bold;">
+							<td>TOTAL</td>
+							<td style="text-align: right;">$${totalMonto.toFixed(2)}</td>
+						</tr>
+					</tbody>
+				</table>
+
+				<div class="campo full-width" style="margin-top: 20px;">
+					<label>Cantidad en letra:</label>
+					<div class="campo-valor" style="font-size: 13px; text-transform: capitalize;">${convertirNumeroALetra(Math.floor(totalMonto))} pesos con ${String(totalMonto).split('.')[1] || '00'} centavos</div>
+				</div>
+
+				<div class="firmas">
+					<div class="firma">
+						<div class="firma-linea"></div>
+						<div>Persona que recibe el pago</div>
+						<div>${datos.nombreRecibe || ''}</div>
+					</div>
+					<div class="firma">
+						<div class="firma-linea"></div>
+						<div>Persona que realiza el pago</div>
+						<div>${nombreCompletoPagador}</div>
+					</div>
+				</div>
+			</div>
+		</body>
+		</html>
+	`;
+};
+
 const ExpedienteAdmisiones = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -278,6 +467,34 @@ const ExpedienteAdmisiones = () => {
 	const [errorDetalleExpediente, setErrorDetalleExpediente] = useState('');
 	const [modalLlamadaInicialAbierto, setModalLlamadaInicialAbierto] = useState(false);
 	const [diagnosticoTab, setDiagnosticoTab] = useState('solicitante');
+	const [modalReciboAbierto, setModalReciboAbierto] = useState(false);
+	const [datosRecibo, setDatosRecibo] = useState({
+		nombrePagador: '',
+		apellidoPaternoPagador: '',
+		apellidoMaternoPagador: '',
+		fechaPago: new Date().toISOString().split('T')[0],
+		direccionCalle: '',
+		direccionNoExt: '',
+		direccionNoInt: '',
+		direccionColonia: '',
+		direccionMunicipioDelegacion: '',
+		codigoPostal: '',
+		direccionCiudadEstado: '',
+		rfc: '',
+		telefonoPagador: '',
+		nombrePaciente: '',
+		apellidoPaternoPaciente: '',
+		apellidoMaternoPaciente: '',
+		clavePaciente: '',
+		concepto: 'Tratamiento de desintoxicación',
+		montoPago: 0,
+		montoPrograma: 0,
+		nombreRecibe: '',
+	});
+	const [recibosSubidos, setRecibosSubidos] = useState([]);
+	const [cargandoRecibo, setCargandoRecibo] = useState(false);
+	const [tokenGenerado, setTokenGenerado] = useState(null);
+	const [generandoToken, setGenerandoToken] = useState(false);
 	const isInicioActive = location.pathname === '/admisiones';
 	const isExpedienteActive = location.pathname === '/admisiones/expediente';
 	const isEstudioActive = location.pathname === '/admisiones/estudio-socioeconomico';
@@ -289,6 +506,113 @@ const ExpedienteAdmisiones = () => {
 		setMostrarResultados(false);
 		setModalLlamadaInicialAbierto(false);
 		setDiagnosticoTab('solicitante');
+		
+		// Autocompletar datos del recibo con formato correcto
+		setDatosRecibo(prev => ({
+			...prev,
+			nombrePaciente: prospecto.nombres || '',
+			apellidoPaternoPaciente: prospecto.apellidoPaterno || '',
+			apellidoMaternoPaciente: prospecto.apellidoMaterno || '',
+			clavePaciente: formatClave(prospecto),
+			direccionCalle: prospecto.direccionCalle || '',
+			direccionNoExt: prospecto.direccionNoExt || '',
+			direccionNoInt: prospecto.direccionNoInt || '',
+			direccionColonia: prospecto.direccionColonia || '',
+			direccionMunicipioDelegacion: prospecto.direccionMunicipioDelegacion || '',
+			codigoPostal: prospecto.direccionCp || '',
+			direccionCiudadEstado: prospecto.direccionCiudadEstado || '',
+		}));
+	};
+
+	const descargarRecibo = () => {
+		const html = generarReciboHTML(datosRecibo);
+		const element = document.createElement('div');
+		element.innerHTML = html;
+		
+		const opt = {
+			margin: 5,
+			filename: `recibo-${datosRecibo.nombrePaciente}-${new Date().getTime().toString().slice(-4)}.pdf`,
+			image: { type: 'jpeg', quality: 0.98 },
+			html2canvas: { scale: 2 },
+			jsPDF: { orientation: 'portrait', unit: 'mm', format: 'letter' }
+		};
+		
+		html2pdf().set(opt).from(element).save();
+	};
+
+	const manejarCargaRecibo = (event) => {
+		const archivos = event.target.files;
+		if (archivos && archivos.length > 0) {
+			setCargandoRecibo(true);
+			const archivo = archivos[0];
+			
+			// Simular carga (en producción enviarías al backend)
+			setTimeout(() => {
+				setRecibosSubidos(prev => [...prev, {
+					nombre: archivo.name,
+					fecha: new Date().toLocaleDateString('es-MX'),
+					tamaño: `${(archivo.size / 1024).toFixed(2)} KB`,
+					tipo: 'Recibo firmado',
+					url: URL.createObjectURL(archivo)
+				}]);
+				setCargandoRecibo(false);
+			}, 1000);
+		}
+	};
+
+	const generarTokenIngreso = async () => {
+		if (!recibosSubidos.length) {
+			alert('Debe subir el recibo firmado antes de generar el token');
+			return;
+		}
+
+		setGenerandoToken(true);
+		
+		// Generar token único: fecha + ID paciente + aleatorio
+		const timestamp = new Date().getTime().toString(36);
+		const pacienteId = prospectoSeleccionado?.id || 'PAC';
+		const aleatorio = Math.random().toString(36).substring(2, 8).toUpperCase();
+		const tokenUnico = `TOKEN-${timestamp}-${pacienteId}-${aleatorio}`.toUpperCase();
+		
+		try {
+			// Simular llamada al backend para:
+			// 1. Guardar el recibo como evidencia
+			// 2. Actualizar estado del prospecto a "paciente"
+			// 3. Guardar el token como clave del paciente
+			setTimeout(async () => {
+				// En una aplicación real, esto sería:
+				// await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/ingreso`, {
+				//   method: 'POST',
+				//   headers: { 'Content-Type': 'application/json' },
+				//   body: JSON.stringify({ token: tokenUnico, recibo: recibosSubidos[0] })
+				// });
+
+				setTokenGenerado(tokenUnico);
+				
+				// Actualizar el prospecto a paciente
+				setProspectoSeleccionado(prev => ({
+					...prev,
+					estado: 'paciente',
+					clave: tokenUnico,
+					estadoSeguimiento: 'Paciente',
+					fechaIngreso: new Date().toISOString()
+				}));
+				
+				// Actualizar estado del tab documentos
+				setModalReciboAbierto(false);
+				
+				setTimeout(() => {
+					alert(`✅ Token generado exitosamente:\n\n${tokenUnico}\n\nEl prospecto ahora es PACIENTE`);
+					setTokenGenerado(null);
+					setRecibosSubidos([]);
+				}, 500);
+			}, 1500);
+		} catch (error) {
+			console.error('Error al generar token:', error);
+			alert('Error al generar el token. Intenta de nuevo.');
+		} finally {
+			setGenerandoToken(false);
+		}
 	};
 
 	useEffect(() => {
@@ -621,7 +945,6 @@ const ExpedienteAdmisiones = () => {
                         <div>
                             <div className="flex items-center gap-2">
                                 <p className="text-base font-black text-slate-900">Valoración Diagnóstica Inicial</p>
-                                {/* BADGE DISCRETO EN LUGAR DE AVISO AMARILLO */}
                                 {!diagnosticoReadOnlyData?.tieneSnapshot ? (
                                     <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">
                                         <X size={10} /> Incompleto
@@ -658,6 +981,92 @@ const ExpedienteAdmisiones = () => {
                         >
                             Actualizar
                         </button>
+                    </div>
+                </div>
+
+                {/* SECCIÓN: RECIBO DE PAGO */}
+                <div className="flex flex-col gap-4 rounded-2xl border border-cyan-200 bg-cyan-50/80 p-5 transition-all hover:border-cyan-300 md:flex-row md:items-start md:justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 flex-shrink-0">
+                            <FileText size={24} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <p className="text-base font-black text-slate-900">Recibo de Pago</p>
+                                {recibosSubidos.length === 0 ? (
+                                    <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">
+                                        <X size={10} /> Pendiente
+                                    </span>
+                                ) : (
+                                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">
+                                        {recibosSubidos.length} adjunto{recibosSubidos.length !== 1 ? 's' : ''}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs text-slate-500">Generar y subir recibos firmados como evidencia de pago.</p>
+                            {recibosSubidos.length > 0 && (
+                                <div className="mt-3 space-y-2">
+                                    {recibosSubidos.map((recibo, idx) => (
+                                        <div key={idx} className="flex items-center justify-between rounded-lg bg-emerald-50 p-3 border border-emerald-100">
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                <div className="text-lg">📎</div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-xs font-semibold text-slate-700 truncate">{recibo.nombre}</p>
+                                                    <p className="text-xs text-slate-400">{recibo.fecha}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={generarTokenIngreso}
+                                                disabled={generandoToken || tokenGenerado}
+                                                className={`ml-2 text-xs font-bold px-3 py-1.5 rounded-lg transition whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 ${
+                                                    tokenGenerado
+                                                        ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed border border-emerald-200'
+                                                        : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 border border-cyan-400'
+                                                }`}
+                                            >
+                                                {generandoToken ? (
+                                                    <>
+                                                        <span className="animate-spin inline-block">⏳</span>
+                                                        <span>Procesando...</span>
+                                                    </>
+                                                ) : tokenGenerado ? (
+                                                    <>
+                                                        <span>✅</span>
+                                                        <span className="hidden sm:inline text-xs">{tokenGenerado.substring(0, 6)}</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span>🔑</span>
+                                                        <span>Generar</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
+                        <button
+                            type="button"
+                            onClick={() => setModalReciboAbierto(true)}
+                            className="rounded-xl border border-cyan-300 bg-white px-4 py-2 text-xs font-bold text-cyan-700 transition hover:bg-cyan-50 flex items-center gap-2 whitespace-nowrap"
+                        >
+                            <Download size={14} />
+                            Generar
+                        </button>
+                        <label className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-cyan-700 flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                            <Upload size={14} />
+                            Subir firmado
+                            <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={manejarCargaRecibo}
+                                disabled={cargandoRecibo}
+                                className="hidden"
+                            />
+                        </label>
                     </div>
                 </div>
 
@@ -953,6 +1362,425 @@ const ExpedienteAdmisiones = () => {
 						</div>
 					</div>
 				) : null}
+
+				{/* MODAL PARA GENERAR RECIBO */}
+				{modalReciboAbierto && (
+					<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+						<div className="flex max-h-[95vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.35)]">
+							<div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 md:px-6">
+								<div>
+									<p className="text-xs font-bold uppercase tracking-[0.3em] text-[#7E1D3B]">Generador de Recibos</p>
+									<h3 className="text-2xl font-black text-slate-900 md:text-3xl">Crear recibo de pago</h3>
+									<p className="mt-1 text-sm text-slate-500">Complete los datos y descargue el PDF. El recibo no se guardará en el sistema.</p>
+								</div>
+								<button onClick={() => setModalReciboAbierto(false)} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-[#7E1D3B] hover:text-[#7E1D3B]">
+									<X size={20} />
+								</button>
+							</div>
+
+							<div className="flex-1 overflow-y-auto px-5 py-5 md:px-6">
+								<div className="space-y-6">
+									{/* SECCIÓN 1: Datos del Pagador */}
+									<div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-5">
+										<h4 className="mb-4 text-sm font-bold uppercase text-amber-900">Datos de la persona que realiza el pago</h4>
+										
+										{/* Nombres desglosados */}
+										<div className="mb-4">
+											<p className="text-xs font-semibold text-slate-600 mb-3">Nombre completo *</p>
+											<div className="grid gap-3 md:grid-cols-3">
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Nombre(s)</label>
+													<input
+														type="text"
+														value={datosRecibo.nombrePagador}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, nombrePagador: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Nombre"
+													/>
+												</div>
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Apellido paterno</label>
+													<input
+														type="text"
+														value={datosRecibo.apellidoPaternoPagador}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, apellidoPaternoPagador: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Apellido paterno"
+													/>
+												</div>
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Apellido materno</label>
+													<input
+														type="text"
+														value={datosRecibo.apellidoMaternoPagador}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, apellidoMaternoPagador: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Apellido materno"
+													/>
+												</div>
+											</div>
+										</div>
+
+										{/* Dirección desglosada */}
+										<div className="mb-4">
+											<p className="text-xs font-semibold text-slate-600 mb-3">Dirección</p>
+											<div className="grid gap-3 md:grid-cols-2 mb-3">
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Calle</label>
+													<input
+														type="text"
+														value={datosRecibo.direccionCalle}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionCalle: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Calle"
+													/>
+												</div>
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">No. Exterior</label>
+													<input
+														type="text"
+														value={datosRecibo.direccionNoExt}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionNoExt: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="No. Ext."
+													/>
+												</div>
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">No. Interior</label>
+													<input
+														type="text"
+														value={datosRecibo.direccionNoInt}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionNoInt: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="No. Int."
+													/>
+												</div>
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Colonia</label>
+													<input
+														type="text"
+														value={datosRecibo.direccionColonia}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionColonia: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Colonia"
+													/>
+												</div>
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Municipio/Delegación</label>
+													<input
+														type="text"
+														value={datosRecibo.direccionMunicipioDelegacion}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionMunicipioDelegacion: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Municipio/Delegación"
+													/>
+												</div>
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">C.P.</label>
+													<input
+														type="text"
+														value={datosRecibo.codigoPostal}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, codigoPostal: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="C.P."
+													/>
+												</div>
+												<div className="md:col-span-2">
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Ciudad/Estado</label>
+													<input
+														type="text"
+														value={datosRecibo.direccionCiudadEstado}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionCiudadEstado: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Ciudad/Estado"
+													/>
+												</div>
+											</div>
+										</div>
+
+										{/* Datos adicionales */}
+										<div className="grid gap-3 md:grid-cols-2">
+											<div>
+												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Fecha de pago</label>
+												<input
+													type="date"
+													value={datosRecibo.fechaPago}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, fechaPago: e.target.value })}
+													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+												/>
+											</div>
+											<div>
+												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">RFC</label>
+												<input
+													type="text"
+													value={datosRecibo.rfc}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, rfc: e.target.value })}
+													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+													placeholder="RFC"
+												/>
+											</div>
+											<div>
+												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Teléfono</label>
+												<input
+													type="tel"
+													value={datosRecibo.telefonoPagador}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, telefonoPagador: e.target.value })}
+													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+													placeholder="Teléfono"
+												/>
+											</div>
+										</div>
+									</div>
+
+									{/* SECCIÓN 2: Datos del Paciente */}
+									<div className="rounded-2xl border border-rose-100 bg-rose-50/60 p-5">
+										<h4 className="mb-4 text-sm font-bold uppercase text-rose-900">Datos del paciente</h4>
+										
+										{/* Nombres desglosados del paciente */}
+										<div className="mb-4">
+											<p className="text-xs font-semibold text-slate-600 mb-3">Nombre completo</p>
+											<div className="grid gap-3 md:grid-cols-3 mb-4">
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Nombre(s)</label>
+													<input
+														type="text"
+														value={datosRecibo.nombrePaciente}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, nombrePaciente: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Nombre"
+													/>
+												</div>
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Apellido paterno</label>
+													<input
+														type="text"
+														value={datosRecibo.apellidoPaternoPaciente}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, apellidoPaternoPaciente: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Apellido paterno"
+													/>
+												</div>
+												<div>
+													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Apellido materno</label>
+													<input
+														type="text"
+														value={datosRecibo.apellidoMaternoPaciente}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, apellidoMaternoPaciente: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Apellido materno"
+													/>
+												</div>
+											</div>
+										</div>
+										
+										<div className="grid gap-4 md:grid-cols-2">
+											<div>
+												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Clave del paciente</label>
+												<input
+													type="text"
+													value={datosRecibo.clavePaciente}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, clavePaciente: e.target.value })}
+													readOnly
+													className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-600 outline-none"
+													placeholder="Se autocompleta"
+												/>
+											</div>
+											<div>
+												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Concepto del pago</label>
+												<input
+													type="text"
+													value={datosRecibo.concepto}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, concepto: e.target.value })}
+													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+													placeholder="Concepto del pago"
+												/>
+											</div>
+										</div>
+									</div>
+
+									{/* SECCIÓN 3: Montos */}
+									<div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5">
+										<h4 className="mb-4 text-sm font-bold uppercase text-emerald-900">Detalles del pago</h4>
+										<div className="grid gap-4 md:grid-cols-3">
+											<div>
+												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Pago Tratamiento ($)</label>
+												<input
+													type="number"
+													value={datosRecibo.montoPago}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, montoPago: parseFloat(e.target.value) || 0 })}
+													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+													placeholder="0.00"
+													step="0.01"
+												/>
+											</div>
+											<div>
+												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Pago Programa Familiar ($)</label>
+												<input
+													type="number"
+													value={datosRecibo.montoPrograma}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, montoPrograma: parseFloat(e.target.value) || 0 })}
+													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+													placeholder="0.00"
+													step="0.01"
+												/>
+											</div>
+											<div>
+												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Total</label>
+												<div className="flex items-center rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-bold text-emerald-700">
+													${(parseFloat(datosRecibo.montoPago || 0) + parseFloat(datosRecibo.montoPrograma || 0)).toFixed(2)}
+												</div>
+											</div>
+										</div>
+									</div>
+
+									{/* SECCIÓN 4: Firmas */}
+									<div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+										<h4 className="mb-4 text-sm font-bold uppercase text-slate-700">Personas que firman</h4>
+										<div className="grid gap-4 md:grid-cols-2">
+											<div>
+												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Persona que recibe el pago</label>
+												<input
+													type="text"
+													value={datosRecibo.nombreRecibe}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, nombreRecibe: e.target.value })}
+													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+													placeholder="Nombre completo"
+												/>
+											</div>
+											<div>
+												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Nota sobre firmas</label>
+												<div className="flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-500">
+													Las firmas se añadirán al documento impreso
+												</div>
+											</div>
+										</div>
+									</div>
+
+									{/* VISTA PREVIA */}
+									<div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+										<h4 className="mb-3 text-sm font-bold uppercase text-slate-700">Información del recibo</h4>
+										<div className="grid gap-3 md:grid-cols-3">
+											<div className="flex items-center gap-2 rounded-lg bg-white p-3 text-xs">
+												<div className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-100 text-cyan-700 font-bold text-lg">👤</div>
+												<div>
+													<p className="text-slate-500">Pagador</p>
+													<p className="font-semibold text-slate-900">{`${datosRecibo.nombrePagador || ''} ${datosRecibo.apellidoPaternoPagador || ''} ${datosRecibo.apellidoMaternoPagador || ''}`.trim() || 'No especificado'}</p>
+												</div>
+											</div>
+											<div className="flex items-center gap-2 rounded-lg bg-white p-3 text-xs">
+												<div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-lg">💰</div>
+												<div>
+													<p className="text-slate-500">Total</p>
+													<p className="font-semibold text-slate-900">${(parseFloat(datosRecibo.montoPago || 0) + parseFloat(datosRecibo.montoPrograma || 0)).toFixed(2)}</p>
+												</div>
+											</div>
+											<div className="flex items-center gap-2 rounded-lg bg-white p-3 text-xs">
+												<div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-lg">📅</div>
+												<div>
+													<p className="text-slate-500">Fecha</p>
+													<p className="font-semibold text-slate-900">{new Date(datosRecibo.fechaPago).toLocaleDateString('es-MX')}</p>
+												</div>
+											</div>
+										</div>
+									</div>
+
+									{/* RECIBOS SUBIDOS */}
+									{recibosSubidos.length > 0 && (
+										<div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5">
+											<h4 className="mb-3 text-sm font-bold uppercase text-emerald-900 flex items-center gap-2">
+												<FileText size={16} /> Recibos firmados subidos
+											</h4>
+											<div className="space-y-2">
+												{recibosSubidos.map((recibo, idx) => (
+													<div key={idx} className="flex flex-col rounded-lg bg-white p-3 text-sm space-y-3">
+														<div className="flex items-center justify-between">
+															<div className="flex items-center gap-3 flex-1 min-w-0">
+																<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 flex-shrink-0">
+																	<FileText size={18} />
+																</div>
+																<div className="min-w-0 flex-1">
+																	<p className="font-semibold text-slate-900 truncate">{recibo.nombre}</p>
+																	<p className="text-xs text-slate-500">{recibo.fecha} • {recibo.tamaño}</p>
+																</div>
+															</div>
+															<a
+																href={recibo.url}
+																target="_blank"
+																rel="noreferrer"
+																className="rounded-lg p-2 text-emerald-600 hover:bg-emerald-100 transition flex-shrink-0"
+															>
+																<Download size={16} />
+															</a>
+														</div>
+														{/* BOTÓN GENERAR TOKEN */}
+														<button
+															onClick={generarTokenIngreso}
+															disabled={generandoToken || tokenGenerado}
+															className={`rounded-xl px-4 py-3 text-sm font-bold transition flex items-center justify-center gap-2 border ${
+																tokenGenerado
+																	? 'bg-emerald-50 text-emerald-700 cursor-not-allowed border-emerald-200'
+																	: 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-105 border-cyan-400 active:scale-95'
+															}`}
+														>
+															{generandoToken ? (
+																<>
+																	<div className="animate-spin text-lg">⏳</div>
+																	<span>Generando token...</span>
+																</>
+															) : tokenGenerado ? (
+																<>
+																	<span className="text-lg">✅</span>
+																	<span>Token: <code className="bg-emerald-100 px-2 py-1 rounded text-xs font-mono">{tokenGenerado.substring(0, 10)}</code></span>
+																</>
+															) : (
+																<>
+																	<span className="text-lg">🔑</span>
+																	<span>Generar token para ingreso</span>
+																</>
+															)}
+														</button>
+													</div>
+												))}
+											</div>
+										</div>
+									)}
+								</div>
+							</div>
+
+							<div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 md:px-6 md:flex-row md:items-center md:justify-between">
+								<button
+									type="button"
+									onClick={() => setModalReciboAbierto(false)}
+									className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+								>
+									Cancelar
+								</button>
+								<div className="flex gap-2 flex-wrap">
+									<label className="flex items-center gap-2 rounded-xl border border-cyan-300 bg-cyan-50 px-4 py-2.5 text-sm font-semibold text-cyan-700 cursor-pointer hover:bg-cyan-100 transition">
+										<Upload size={16} />
+										Subir recibo firmado
+										<input
+											type="file"
+											accept=".pdf,.jpg,.jpeg,.png"
+											onChange={manejarCargaRecibo}
+											disabled={cargandoRecibo}
+											className="hidden"
+										/>
+									</label>
+									<button
+										type="button"
+										onClick={descargarRecibo}
+										disabled={!datosRecibo.nombrePagador || datosRecibo.montoPago + datosRecibo.montoPrograma === 0}
+										className="flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#63162e] disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										<Download size={16} />
+										Descargar PDF
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				)}
 			</div>
 		</div>
 	);

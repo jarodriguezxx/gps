@@ -491,24 +491,24 @@ const AdmisionesInicio = ({ onOpenEstudio }) => {
 	const isExpedienteActive = location.pathname === '/admisiones/expediente';
 	const isEstudioActive = location.pathname === '/admisiones/estudio-socioeconomico';
 	const isValoracionActive = location.pathname === '/admisiones/valoracion-diagnostica';
-const headerActions = (
-        <div className="flex items-center gap-3">
-            {/* Botón de Alertas */}
-            <button className="relative p-2 text-slate-400 transition-colors hover:text-[#7E1D3B]">
-                <Bell size={22} />
-                <span className="absolute right-1 top-1 h-2 w-2 rounded-full border-2 border-white bg-rose-500"></span>
-            </button>
-            
+	const headerActions = (
+		<div className="flex items-center gap-3">
+			{/* Botón de Alertas */}
+			<button className="relative p-2 text-slate-400 transition-colors hover:text-[#7E1D3B]">
+				<Bell size={22} />
+				<span className="absolute right-1 top-1 h-2 w-2 rounded-full border-2 border-white bg-rose-500"></span>
+			</button>
+			
 			{/* Botón de Agenda */}
-            <button 
+			<button 
 				onClick={abrirAgenda}
-                className="flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:bg-[#63162e]"
-            >
+				className="flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:bg-[#63162e]"
+			>
 				<CalendarDays size={18} />
 				Agendar cita
-            </button>
-        </div>
-    );
+			</button>
+		</div>
+	);
 	return (
 	<div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-[1600px] p-4 md:p-6">
