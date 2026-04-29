@@ -194,59 +194,63 @@ export type ActualizarOrdenCompraRequest = {
 export const mapBackendToLocal = (
   backend: OrdenCompraBackend,
   req: requisicionTypes.Requisicion,
-): OrdenCompra => ({
-  id: backend.id,
-  requisicionId: backend.requisicionId,
-  numeroOrden:
-    backend.numeroOrden ??
-    `OC-${new Date(backend.fechaOrden).getFullYear()}-XXXX`,
-  consecutivo: backend.consecutivo?.toString() ?? "—",
-  fechaOrden: new Date(backend.fechaOrden),
-  estatus: backend.estatus === "ENVIADA" ? "AUTORIZADA" : "BORRADOR",
-  siguientePaso: null,
-  proveedor: backend.proveedorId
-    ? {
-        id: backend.proveedorId,
-        nombre: backend.proveedorNombre ?? "",
-        rfc: backend.proveedorRfc ?? "",
-        telefono: backend.proveedorTelefono ?? "",
-        correo: backend.proveedorCorreo ?? "",
-        contactoNombre: backend.proveedorContactoNombre ?? "",
-      }
-    : null,
-  articulos: backend.articulos.map((a) => ({
-    id: a.id,
-    articulo: a.articulo,
-    descripcion: a.descripcion,
-    unidad: a.unidad,
-    cantidad: a.cantidad,
-    precioUnitario: a.precioUnitario,
-  })),
-  justificacion: backend.justificacion ?? "",
-  firmas: {
-    encargadoCompras: {
-      cargo: "Encargado de Compras e Inventarios",
-      nombre: "Laura Martínez",
-      estado: backend.firmaEncargadoCompras ? "FIRMADA" : "PENDIENTE",
-      fechaFirma: null,
-      requiereAnterior: false,
+): OrdenCompra => {
+  const yaEnviada = backend.estatus === "ENVIADA";
+
+  return {
+    id: backend.id,
+    requisicionId: backend.requisicionId,
+    numeroOrden:
+      backend.numeroOrden ??
+      `OC-${new Date(backend.fechaOrden).getFullYear()}-XXXX`,
+    consecutivo: backend.consecutivo?.toString() ?? "—",
+    fechaOrden: new Date(backend.fechaOrden),
+    estatus: yaEnviada ? "AUTORIZADA" : "BORRADOR",
+    siguientePaso: null,
+    proveedor: backend.proveedorId
+      ? {
+          id: backend.proveedorId,
+          nombre: backend.proveedorNombre ?? "",
+          rfc: backend.proveedorRfc ?? "",
+          telefono: backend.proveedorTelefono ?? "",
+          correo: backend.proveedorCorreo ?? "",
+          contactoNombre: backend.proveedorContactoNombre ?? "",
+        }
+      : null,
+    articulos: backend.articulos.map((a) => ({
+      id: a.id,
+      articulo: a.articulo,
+      descripcion: a.descripcion,
+      unidad: a.unidad,
+      cantidad: a.cantidad,
+      precioUnitario: a.precioUnitario,
+    })),
+    justificacion: backend.justificacion ?? "",
+    firmas: {
+      encargadoCompras: {
+        cargo: "Encargado de Compras e Inventarios",
+        nombre: "Laura Martínez",
+        estado: (yaEnviada || backend.firmaEncargadoCompras) ? "FIRMADA" : "PENDIENTE",
+        fechaFirma: null,
+        requiereAnterior: false,
+      },
+      administradora: {
+        cargo: "Administradora",
+        nombre: "Lic. Patricia Hernández",
+        estado: (yaEnviada || req.firmaAdminsitradora) ? "FIRMADA" : "PENDIENTE",
+        fechaFirma: null,
+        requiereAnterior: true,
+      },
+      directoraGeneral: {
+        cargo: "Directora General",
+        nombre: "Dra. María Elena Rodríguez",
+        estado: (yaEnviada || req.firmaDirectoraGral) ? "FIRMADA" : "PENDIENTE",
+        fechaFirma: null,
+        requiereAnterior: true,
+      },
     },
-    administradora: {
-      cargo: "Administradora",
-      nombre: "Lic. Patricia Hernández",
-      estado: req.firmaAdminsitradora ? "FIRMADA" : "PENDIENTE",
-      fechaFirma: null,
-      requiereAnterior: true,
-    },
-    directoraGeneral: {
-      cargo: "Directora General",
-      nombre: "Dra. María Elena Rodríguez",
-      estado: req.firmaDirectoraGral ? "FIRMADA" : "PENDIENTE",
-      fechaFirma: null,
-      requiereAnterior: true,
-    },
-  },
-});
+  };
+};
 
 export const mapLocalToUpdateRequest = (
   orden: OrdenCompra,

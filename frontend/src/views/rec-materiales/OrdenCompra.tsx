@@ -43,6 +43,12 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
 
     setRequisicion(req);
 
+    // Pre-setear enviada desde el estado de la requisición antes de que llegue el backend,
+    // para evitar que controles de edición se activen brevemente en órdenes ya enviadas.
+    const requisicionYaEnviada =
+      req.estado === "EN-REVISION" || req.estado === "FINALIZADA";
+    setEnviada(requisicionYaEnviada);
+
     fetch(`${API_BASE}/ordenes-compra?requisicionId=${req.id}`)
       .then(async (res) => {
         if (res.ok) return res.json() as Promise<ordenTypes.OrdenCompraBackend>;
@@ -60,7 +66,7 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
       })
       .then((backend) => {
         setOrdenBackendId(backend.id);
-        setEnviada(backend.estatus === "ENVIADA");
+        setEnviada(backend.estatus === "ENVIADA" || requisicionYaEnviada);
 
         const ordenLocal = ordenTypes.mapBackendToLocal(backend, req);
 
@@ -311,10 +317,14 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
                 <label className="text-sm font-semibold text-slate-700">
                   Estatus
                 </label>
-                <div className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">
-                  {orden.estatus === "BORRADOR"
-                    ? "Pendiente de Autorización"
-                    : orden.estatus}
+                <div
+                  className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${
+                    enviada
+                      ? "bg-green-100 text-green-800"
+                      : "bg-amber-100 text-amber-800"
+                  }`}
+                >
+                  {enviada ? "Enviada a Almacén" : "Pendiente de Autorización"}
                 </div>
               </div>
 
