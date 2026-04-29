@@ -14,9 +14,10 @@ const moneda = new Intl.NumberFormat("es-MX", {
 
 interface OrdenCompraProps {
   requisiciones?: requisicionTypes.Requisicion[];
+  refrescar?: () => void;
 }
 
-const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
+const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const rol = useOutletContext() as string;
@@ -186,6 +187,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
       return;
     }
     setEnviada(true);
+    refrescar?.();
   };
 
   if (!requisicion || !orden) {

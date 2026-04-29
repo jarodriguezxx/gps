@@ -206,7 +206,7 @@ function App() {
           <Route path='proveedores' element = {<Proveedores/>}/>
           <Route path='historial' element={<Historial requisiciones={requisiciones}/>}/>
           <Route path='requisicion/:id' element={<DetallesRequisicion requisiciones={requisiciones} refrescar={cargarRequisiciones}/>}/>
-          <Route path='orden-compra/:id' element={<OrdenCompra requisiciones={requisiciones}/>}/>
+          <Route path='orden-compra/:id' element={<OrdenCompra requisiciones={requisiciones} refrescar={cargarRequisiciones}/>}/>
         </Route>
 
         {/* Almacén */}

@@ -25,7 +25,7 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
       const extraordinarias = requisiciones.filter(
         (r) =>
           r.tipo === "EXTRAORDINARIA" &&
-          (r.estado === "AUTORIZADA" || r.estado === "FINALIZADA"),
+          (r.estado === "AUTORIZADA" || r.estado === "EN-REVISION" || r.estado === "FINALIZADA"),
       );
 
       return [...ordinarias, ...extraordinarias];

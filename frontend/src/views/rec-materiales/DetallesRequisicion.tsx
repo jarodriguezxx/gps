@@ -40,15 +40,8 @@ const TarjetaCotizacion = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validaciones extras
-    const tiposPermitidos = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
-
-    if (!tiposPermitidos.includes(file.type)) {
-      alert("Solo se permiten archivos PDF o Word");
+    if (file.type !== "application/pdf") {
+      alert("Solo se permiten archivos PDF");
       return;
     }
     setArchivo(file); //se guarda el objeto file
@@ -95,7 +88,7 @@ const TarjetaCotizacion = ({
             ref={inputRef}
             hidden
             onChange={manejarCambioArchivo}
-            accept=".pdf,.doc,.docx"
+            accept=".pdf"
           />
           <button
             onClick={() => {
@@ -326,10 +319,14 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
         const formData = new FormData();
         formData.append("archivo", archivo);
         try {
-          await fetch(`${API_BASE}/requisiciones/${id}/adjuntos-factura`, {
+          const res = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos-factura`, {
             method: "POST",
             body: formData,
           });
+          if (!res.ok) {
+            const msg = await res.text().catch(() => res.status.toString());
+            alert(`Error al subir factura "${archivo.name}": ${msg}`);
+          }
         } catch (e) {
           console.log("error al subir factura expediente", e);
         }
@@ -347,6 +344,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
         console.log("error al obtener facturas expediente", e);
       }
 
+      refrescar();
       setArchivosCotizaciones({
         "1": null,
         "2": null,
