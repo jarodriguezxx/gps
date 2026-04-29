@@ -186,7 +186,9 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
       alert(`Error: ${await res.text()}`);
       return;
     }
+    const backend = await res.json();
     setEnviada(true);
+    setOrden((prev) => prev ? { ...prev, estatus: backend.estatus, numeroOrden: backend.numeroOrden, consecutivo: backend.consecutivo } : prev);
     refrescar?.();
   };
 
