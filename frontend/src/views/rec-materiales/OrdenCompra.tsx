@@ -178,10 +178,12 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
         { method: "PATCH" },
       );
       if (!res.ok) {
-        alert("Error al registrar la firma. Intenta de nuevo.");
+        const msg = await res.text().catch(() => String(res.status));
+        alert(`Error al registrar la firma. ${msg}`);
         return;
       }
 
+      const backend = await res.json() as ordenTypes.OrdenCompraBackend;
       setOrden((prev) =>
         prev
           ? {
@@ -190,8 +192,8 @@ const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
                 ...prev.firmas,
                 encargadoCompras: {
                   ...prev.firmas.encargadoCompras,
-                  estado: "FIRMADA",
-                  fechaFirma: new Date(),
+                  estado: backend.firmaEncargadoCompras ? "FIRMADA" : "PENDIENTE",
+                  fechaFirma: backend.firmaEncargadoCompras ? new Date() : null,
                 },
               },
             }

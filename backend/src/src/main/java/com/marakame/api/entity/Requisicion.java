@@ -112,6 +112,7 @@ public class Requisicion {
     public Boolean getFirmaResponsableArea() { return firmaResponsableArea; }
     public void setFirmaResponsableArea(Boolean firmaResponsableArea) { this.firmaResponsableArea = firmaResponsableArea; }
 
+    @JsonProperty("firmaAdminsitradora")
     public Boolean getFirmaAdministradora() { return firmaAdministradora; }
     public void setFirmaAdministradora(Boolean firmaAdministradora) { this.firmaAdministradora = firmaAdministradora; }
 
