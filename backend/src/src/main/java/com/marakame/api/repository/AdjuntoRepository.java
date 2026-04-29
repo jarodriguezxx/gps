@@ -9,4 +9,5 @@ import java.util.UUID;
 @Repository
 public interface AdjuntoRepository extends JpaRepository<AdjuntoRequisicion, UUID> {
     List<AdjuntoRequisicion> findByRequisicionId(UUID requisicionId);
+    List<AdjuntoRequisicion> findByRequisicionIdAndTipo(UUID requisicionId, String tipo);
 }

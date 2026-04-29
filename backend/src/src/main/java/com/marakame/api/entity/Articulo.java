@@ -43,4 +43,9 @@ public class Articulo {
     @Column(name = "articulos_pendientes")
     @JsonProperty("articulosPendientes")
     private Integer articulosPendientes;
+
+    public UUID getId() { return id; }
+    public String getArticuloRequisitado() { return articuloRequisitado; }
+    public UnidadesArticulos getUnidad() { return unidad; }
+    public Integer getArticulosPendientes() { return articulosPendientes; }
 }

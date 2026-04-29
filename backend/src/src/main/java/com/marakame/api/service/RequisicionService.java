@@ -62,9 +62,16 @@ public class RequisicionService {
         } else if (req.getEstado() == Estado.AUTORIZADA
                 && req.getTipo() == TipoCompra.ORDINARIA
                 && req.getTamanio() == TamanioCompra.MAYOR) {
-            if (adjuntoRepository.findByRequisicionId(id).size() < 3)
+            if (adjuntoRepository.findByRequisicionIdAndTipo(id, "COTIZACION").size() < 3)
                 throw new IllegalStateException("cotizacion-requerida");
             if (req.getFacturaPath() == null)
+                throw new IllegalStateException("factura-requerida");
+            req.setEstado(Estado.FINALIZADA);
+        } else if (req.getEstado() == Estado.EN_REVISION
+                && req.getTipo() == TipoCompra.EXTRAORDINARIA
+                && req.getTamanio() == TamanioCompra.MENOR) {
+            List<AdjuntoRequisicion> facturas = adjuntoRepository.findByRequisicionIdAndTipo(id, "FACTURA");
+            if (facturas.isEmpty())
                 throw new IllegalStateException("factura-requerida");
             req.setEstado(Estado.FINALIZADA);
         } else {
@@ -118,7 +125,7 @@ public class RequisicionService {
         if (!puedeSubirAdjunto)
             throw new IllegalStateException("estado-invalido");
 
-        if (adjuntoRepository.findByRequisicionId(id).size() >= 3)
+        if (adjuntoRepository.findByRequisicionIdAndTipo(id, "COTIZACION").size() >= 3)
             throw new IllegalStateException("maximo-cotizaciones");
 
         Path dir = Paths.get(cotizacionesDir);
@@ -133,6 +140,7 @@ public class RequisicionService {
         adjunto.setNombreOriginal(archivo.getOriginalFilename());
         adjunto.setRutaArchivo(dest.toAbsolutePath().toString());
         adjunto.setTipoContenido(archivo.getContentType());
+        adjunto.setTipo("COTIZACION");
         return adjuntoRepository.save(adjunto);
     }
 
@@ -183,5 +191,41 @@ public class RequisicionService {
             req.setFacturaPath(null);
         }
         return repository.save(req);
+    }
+
+    @Transactional
+    public AdjuntoRequisicion guardarAdjuntoFactura(UUID id, MultipartFile archivo) throws IOException {
+        if (!"application/pdf".equals(archivo.getContentType()))
+            throw new IllegalArgumentException("solo-pdf");
+
+        Requisicion req = repository.findById(id)
+                .orElseThrow(NoSuchElementException::new);
+
+        if (req.getEstado() != Estado.EN_REVISION
+                || req.getTipo() != TipoCompra.EXTRAORDINARIA
+                || req.getTamanio() != TamanioCompra.MENOR)
+            throw new IllegalStateException("estado-invalido");
+
+        if (adjuntoRepository.findByRequisicionIdAndTipo(id, "FACTURA").size() >= 5)
+            throw new IllegalStateException("maximo-facturas");
+
+        Path dir = Paths.get(cotizacionesDir);
+        Files.createDirectories(dir);
+        String filename = id + "_factura_adj_" + System.currentTimeMillis() + "_" + archivo.getOriginalFilename();
+        Path dest = dir.resolve(filename);
+        archivo.transferTo(dest);
+
+        AdjuntoRequisicion adjunto = new AdjuntoRequisicion();
+        adjunto.setRequisicion(req);
+        adjunto.setNombreArchivo(archivo.getOriginalFilename());
+        adjunto.setNombreOriginal(archivo.getOriginalFilename());
+        adjunto.setRutaArchivo(dest.toAbsolutePath().toString());
+        adjunto.setTipoContenido(archivo.getContentType());
+        adjunto.setTipo("FACTURA");
+        return adjuntoRepository.save(adjunto);
+    }
+
+    public List<AdjuntoRequisicion> listarAdjuntosPorTipo(UUID id, String tipo) {
+        return adjuntoRepository.findByRequisicionIdAndTipo(id, tipo);
     }
 }

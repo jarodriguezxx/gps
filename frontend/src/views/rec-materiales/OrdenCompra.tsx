@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { ui } from "../../config/theme";
+import { API_BASE } from "../../config/api.ts";
 import * as requisicionTypes from "../../types/requisicion.ts";
 import * as ordenTypes from "../../types/ordenCompra.ts";
 import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8080";
+import { buscarEnCatalogo, DATA_CATALOGO_ARTICULOS } from "../../types/catalogoArticulos.ts";
 
 const moneda = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -42,11 +42,11 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
 
     setRequisicion(req);
 
-    fetch(`${API_BASE}/api/ordenes-compra?requisicionId=${req.id}`)
+    fetch(`${API_BASE}/ordenes-compra?requisicionId=${req.id}`)
       .then(async (res) => {
         if (res.ok) return res.json() as Promise<ordenTypes.OrdenCompraBackend>;
         if (res.status === 404) {
-          const create = await fetch(`${API_BASE}/api/ordenes-compra`, {
+          const create = await fetch(`${API_BASE}/ordenes-compra`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ requisicionId: req.id }),
@@ -54,21 +54,40 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
           if (!create.ok) throw new Error("error-creando-orden");
           return create.json() as Promise<ordenTypes.OrdenCompraBackend>;
         }
-        throw new Error("error-cargando-orden");
+        const body = await res.text().catch(() => "");
+        throw new Error(`error-cargando-orden: status=${res.status} body=${body}`);
       })
       .then((backend) => {
         setOrdenBackendId(backend.id);
         setEnviada(backend.estatus === "ENVIADA");
-        setOrden(ordenTypes.mapBackendToLocal(backend, req));
+
+        const ordenLocal = ordenTypes.mapBackendToLocal(backend, req);
+
+        const articulosConCatalogo = ordenLocal.articulos.map((art, idx) => {
+          const entrada = buscarEnCatalogo(art.articulo) ?? DATA_CATALOGO_ARTICULOS[idx % DATA_CATALOGO_ARTICULOS.length];
+          return { ...art, unidad: entrada.unidad, precioUnitario: entrada.precioUnitario };
+        });
+
+        const primeraEntrada = buscarEnCatalogo(ordenLocal.articulos[0]?.articulo ?? "") ?? DATA_CATALOGO_ARTICULOS[0];
+        const proveedorAuto = DATA_PROVEEDORES.find((p) => p.id === primeraEntrada.proveedorId);
+
+        setOrden({
+          ...ordenLocal,
+          articulos: articulosConCatalogo,
+          proveedor: proveedorAuto
+            ? {
+                id: proveedorAuto.id,
+                nombre: proveedorAuto.nombre,
+                rfc: proveedorAuto.rfc,
+                telefono: proveedorAuto.contacto.telefono,
+                correo: proveedorAuto.contacto.correo,
+                contactoNombre: proveedorAuto.contacto.nombreEncargado,
+              }
+            : ordenLocal.proveedor,
+        });
       })
       .catch((e) => console.error("OrdenCompra load error:", e));
-  }, [id]);
-
-  const proveedoresActivos = useMemo(
-    () =>
-      DATA_PROVEEDORES.filter((proveedor) => proveedor.estatus === "ACTIVO"),
-    [],
-  );
+  }, [id, requisiciones]);
 
   const subtotal = useMemo(
     () => (orden ? ordenTypes.calcularSubtotalOrdenCompra(orden.articulos) : 0),
@@ -82,7 +101,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
     if (!orden || !ordenBackendId || enviada) return;
 
     const timeoutId = window.setTimeout(() => {
-      fetch(`${API_BASE}/api/ordenes-compra/${ordenBackendId}`, {
+      fetch(`${API_BASE}/ordenes-compra/${ordenBackendId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(ordenTypes.mapLocalToUpdateRequest(orden)),
@@ -114,35 +133,6 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
     navigate(`/${rol}`);
   };
 
-  const actualizarArticulo = (
-    articuloId: string,
-    campo:
-      | "articulo"
-      | "descripcion"
-      | "unidad"
-      | "cantidad"
-      | "precioUnitario",
-    valor: string | number,
-  ) => {
-    setOrden((prev) => {
-      if (!prev) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        articulos: prev.articulos.map((articulo) =>
-          articulo.id === articuloId
-            ? {
-                ...articulo,
-                [campo]: valor,
-              }
-            : articulo,
-        ),
-      };
-    });
-  };
-
   const firmarDocumento = async (
     clave: keyof ordenTypes.OrdenCompra["firmas"],
   ) => {
@@ -151,7 +141,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
     if (orden?.firmas.encargadoCompras.estado === "FIRMADA") return;
 
     const res = await fetch(
-      `${API_BASE}/api/ordenes-compra/${ordenBackendId}/firmar-encargado`,
+      `${API_BASE}/ordenes-compra/${ordenBackendId}/firmar-encargado`,
       { method: "PATCH" },
     );
     if (!res.ok) return;
@@ -176,7 +166,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
   const guardarBorrador = async () => {
     if (!orden || !ordenBackendId || enviada) return;
 
-    await fetch(`${API_BASE}/api/ordenes-compra/${ordenBackendId}`, {
+    await fetch(`${API_BASE}/ordenes-compra/${ordenBackendId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(ordenTypes.mapLocalToUpdateRequest(orden)),
@@ -188,7 +178,7 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
     if (!orden || !ordenBackendId) return;
 
     const res = await fetch(
-      `${API_BASE}/api/ordenes-compra/${ordenBackendId}/enviar`,
+      `${API_BASE}/ordenes-compra/${ordenBackendId}/enviar`,
       { method: "PATCH" },
     );
     if (!res.ok) {
@@ -196,7 +186,6 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
       return;
     }
     setEnviada(true);
-    navigate(`/${rol}`);
   };
 
   if (!requisicion || !orden) {
@@ -330,49 +319,14 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                 <label className="text-sm font-semibold text-slate-700">
                   Proveedor / Razón Social
                 </label>
-                <select
-                  disabled={enviada}
-                  value={orden.proveedor?.id ?? ""}
-                  onChange={(event) => {
-                    const proveedorSeleccionado = proveedoresActivos.find(
-                      (proveedor) => proveedor.id === event.target.value,
-                    );
-
-                    setOrden((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            proveedor: proveedorSeleccionado
-                              ? {
-                                  id: proveedorSeleccionado.id,
-                                  nombre: proveedorSeleccionado.nombre,
-                                  rfc: proveedorSeleccionado.rfc,
-                                  telefono:
-                                    proveedorSeleccionado.contacto.telefono,
-                                  correo: proveedorSeleccionado.contacto.correo,
-                                  contactoNombre:
-                                    proveedorSeleccionado.contacto
-                                      .nombreEncargado,
-                                }
-                              : null,
-                          }
-                        : prev,
-                    );
-                  }}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-[#7E1D3B] disabled:opacity-60"
-                >
-                  <option value="">Selecciona un proveedor activo</option>
-                  {proveedoresActivos.map((proveedor) => (
-                    <option key={proveedor.id} value={proveedor.id}>
-                      {proveedor.nombre}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-sm text-slate-500">
-                  {orden.proveedor
-                    ? `Razón Social: ${orden.proveedor.nombre} | ID: ${orden.proveedor.id}`
-                    : "Selecciona un proveedor para completar la orden."}
-                </p>
+                <div className="rounded-xl bg-slate-100 px-3 py-2 font-semibold text-slate-900">
+                  {orden.proveedor?.nombre ?? "—"}
+                </div>
+                {orden.proveedor && (
+                  <p className="text-sm text-slate-500">
+                    RFC: {orden.proveedor.rfc} | Tel: {orden.proveedor.telefono} | Contacto: {orden.proveedor.contactoNombre}
+                  </p>
+                )}
               </div>
             </div>
           </section>
@@ -406,92 +360,31 @@ const OrdenCompra = ({ requisiciones = [] }: OrdenCompraProps) => {
                           {index + 1}
                         </td>
                         <td className={ui.table.cell}>
-                          <input
-                            disabled={enviada}
-                            value={articulo.articulo}
-                            onChange={(event) =>
-                              actualizarArticulo(
-                                articulo.id,
-                                "articulo",
-                                event.target.value,
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] disabled:opacity-60"
-                            placeholder="Artículo"
-                          />
+                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800">
+                            {articulo.articulo}
+                          </div>
                         </td>
                         <td className={ui.table.cell}>
-                          <input
-                            disabled={enviada}
-                            value={articulo.descripcion}
-                            onChange={(event) =>
-                              actualizarArticulo(
-                                articulo.id,
-                                "descripcion",
-                                event.target.value,
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] disabled:opacity-60"
-                            placeholder="Descripción"
-                          />
+                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800">
+                            {articulo.descripcion}
+                          </div>
                         </td>
                         <td className={ui.table.cell}>
-                          <select
-                            disabled={enviada}
-                            value={articulo.unidad}
-                            onChange={(event) =>
-                              actualizarArticulo(
-                                articulo.id,
-                                "unidad",
-                                event.target
-                                  .value as requisicionTypes.UnidadesArticulos,
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] disabled:opacity-60"
-                          >
-                            <option value="PIEZA">Pieza</option>
-                            <option value="CAJA">Caja</option>
-                            <option value="PAQUETE">Paquete</option>
-                          </select>
+                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800">
+                            {articulo.unidad}
+                          </div>
                         </td>
                         <td className={ui.table.cell}>
-                          <input
-                            disabled={enviada}
-                            type="number"
-                            min={1}
-                            value={articulo.cantidad}
-                            onChange={(event) =>
-                              actualizarArticulo(
-                                articulo.id,
-                                "cantidad",
-                                Number(event.target.value),
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] disabled:opacity-60"
-                          />
+                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800 text-center">
+                            {articulo.cantidad}
+                          </div>
                         </td>
                         <td className={ui.table.cell}>
-                          <input
-                            disabled={enviada}
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            value={articulo.precioUnitario}
-                            onChange={(event) =>
-                              actualizarArticulo(
-                                articulo.id,
-                                "precioUnitario",
-                                Number(event.target.value),
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] disabled:opacity-60"
-                          />
+                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800 text-right">
+                            {moneda.format(articulo.precioUnitario)}
+                          </div>
                         </td>
-                        <td
-                          className={
-                            ui.table.cell + " text-right font-semibold"
-                          }
-                        >
+                        <td className={ui.table.cell + " text-right font-semibold"}>
                           {moneda.format(subtotalLinea)}
                         </td>
                       </tr>

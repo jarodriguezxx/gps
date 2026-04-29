@@ -164,7 +164,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
 
   const [activarSubirCotizacion, setSubirCotizacion] = useState(false);
 
-  type AdjuntoGuardado = { id: string; nombreArchivo: string };
+  type AdjuntoGuardado = { id: string; nombreArchivo: string; tipo?: string };
   const [adjuntosGuardados, setAdjuntosGuardados] = useState<AdjuntoGuardado[]>(
     [],
   );
@@ -310,6 +310,53 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
       setModal(false);
       return;
     }
+
+    if (
+      rol === "compras-inventario" &&
+      datos?.estado === "EN-REVISION" &&
+      datos?.tipo === "EXTRAORDINARIA" &&
+      datos?.tamanio === "MENOR"
+    ) {
+      const disponibles = 5 - adjuntosGuardados.length;
+      const archivosASubir = Object.values(archivosCotizaciones)
+        .filter((f): f is File => f !== null)
+        .slice(0, disponibles);
+
+      for (const archivo of archivosASubir) {
+        const formData = new FormData();
+        formData.append("archivo", archivo);
+        try {
+          await fetch(`${API_BASE}/requisiciones/${id}/adjuntos-factura`, {
+            method: "POST",
+            body: formData,
+          });
+        } catch (e) {
+          console.log("error al subir factura expediente", e);
+        }
+      }
+
+      try {
+        const adjRes = await fetch(
+          `${API_BASE}/requisiciones/${id}/adjuntos-factura`,
+        );
+        if (adjRes.ok) {
+          const lista: AdjuntoGuardado[] = await adjRes.json();
+          setAdjuntosGuardados(lista);
+        }
+      } catch (e) {
+        console.log("error al obtener facturas expediente", e);
+      }
+
+      setArchivosCotizaciones({
+        "1": null,
+        "2": null,
+        "3": null,
+        "4": null,
+        "5": null,
+      });
+      setModal(false);
+      return;
+    }
   };
 
   useEffect(() => {
@@ -336,6 +383,17 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
         parsed.estado === "FINALIZADA")
     ) {
       fetch(`${API_BASE}/requisiciones/${id}/adjuntos`)
+        .then((r) => r.json())
+        .then((lista: AdjuntoGuardado[]) => setAdjuntosGuardados(lista))
+        .catch(() => {});
+    }
+    if (
+      rol === "compras-inventario" &&
+      parsed.tipo === "EXTRAORDINARIA" &&
+      parsed.tamanio === "MENOR" &&
+      (parsed.estado === "EN-REVISION" || parsed.estado === "FINALIZADA")
+    ) {
+      fetch(`${API_BASE}/requisiciones/${id}/adjuntos-factura`)
         .then((r) => r.json())
         .then((lista: AdjuntoGuardado[]) => setAdjuntosGuardados(lista))
         .catch(() => {});
@@ -415,7 +473,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
     esExtraordinariaAutorizada && datos?.tamanio === "MAYOR";
   const mostrarOrdenDeCompra =
     rol === "compras-inventario" &&
-    datos?.estado === "AUTORIZADA" &&
+    (datos?.estado === "AUTORIZADA" || datos?.estado === "FINALIZADA") &&
     (datos?.tipo === "EXTRAORDINARIA" ||
       (datos?.tipo === "ORDINARIA" && datos?.tamanio === "MENOR"));
   const mostrarIntegrarExpediente =
@@ -426,6 +484,12 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
       datos?.estado === "EN-REVISION" &&
       datos?.tipo === "ORDINARIA") ||
     (rol === "compras-inventario" && datos?.estado === "FINALIZADA");
+
+  const esFlujoCargaFacturasExpediente =
+    rol === "compras-inventario" &&
+    datos?.tipo === "EXTRAORDINARIA" &&
+    datos?.tamanio === "MENOR" &&
+    (datos?.estado === "EN-REVISION" || datos?.estado === "FINALIZADA");
 
   const cotizacionesPendientes = Math.max(0, totalNecesarios - totalGuardados);
   const facturasPendientes = Math.max(0, 1 - totalFacturasGuardadas);
@@ -504,8 +568,12 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                 }
               }}
               disabled={
-                yaEnviada ||
-                (!mostrarOrdenDeCompra &&
+                (yaEnviada && !mostrarOrdenDeCompra) ||
+                (esFlujoCargaFacturasExpediente &&
+                  datos?.estado === "EN-REVISION" &&
+                  adjuntosGuardados.length < 1) ||
+                (!esFlujoCargaFacturasExpediente &&
+                  !mostrarOrdenDeCompra &&
                   !mostrarIntegrarExpediente &&
                   !mostrarEnviarFinanzas &&
                   (totalGuardados < totalNecesarios ||
@@ -531,6 +599,13 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
               onClick={() => setModal(true)}
             >
               Cargar cotizaciones
+            </button>
+            <button
+              className={`${ui.buttons.primary} py-2!`}
+              hidden={!esFlujoCargaFacturasExpediente || yaEnviada}
+              onClick={() => setModal(true)}
+            >
+              Cargar facturas
             </button>
           </div>
         </div>
@@ -771,6 +846,94 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
               </div>
 
               <div className="flex flex-1 min-h-0 flex-col items-start justify-start pt-1 gap-2">
+                {esFlujoCargaFacturasExpediente && !yaEnviada ? (
+                  <>
+                    <p className={ui.text.body + " font-bold"}>
+                      Facturas del expediente (mínimo 1, máximo 5)
+                    </p>
+                    <div className="w-full flex flex-col gap-3">
+                      {adjuntosGuardados.map((adj, idx) => (
+                        <div
+                          key={adj.id}
+                          className="border-slate-400 border bg-green-50 flex flex-row w-full justify-between items-center rounded-xl p-2"
+                        >
+                          <div className="flex w-full flex-row py-2 gap-4 h-12">
+                            <div className="h-full aspect-square flex justify-center items-center rounded-full bg-green-600">
+                              <p className="text-white font-bold text-xs">
+                                F{idx + 1}
+                              </p>
+                            </div>
+                            <div className="w-full h-full flex flex-col justify-center gap-1">
+                              <p
+                                className={
+                                  ui.text.body + " font-bold text-[12px]"
+                                }
+                              >
+                                Factura {idx + 1}
+                              </p>
+                              <p className="text-[10px] text-green-700 truncate max-w-[200px]">
+                                {adj.nombreArchivo}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            className={
+                              ui.buttons.primary +
+                              " p-0! bg-red-700 hover:bg-red-600 shrink-0 mr-2"
+                            }
+                            onClick={async () => {
+                              if (!id) return;
+                              try {
+                                const res = await fetch(
+                                  `${API_BASE}/requisiciones/${id}/adjuntos/${adj.id}`,
+                                  { method: "DELETE" },
+                                );
+                                if (!res.ok) throw new Error(await res.text());
+                                const adjRes = await fetch(
+                                  `${API_BASE}/requisiciones/${id}/adjuntos-factura`,
+                                );
+                                if (adjRes.ok) {
+                                  const lista: AdjuntoGuardado[] =
+                                    await adjRes.json();
+                                  setAdjuntosGuardados(lista);
+                                }
+                              } catch (e) {
+                                console.log("error al eliminar factura", e);
+                              }
+                            }}
+                          >
+                            <p className="px-4 py-1 text-[12px]">Cancelar</p>
+                          </button>
+                        </div>
+                      ))}
+                      {adjuntosGuardados.length < 5 && (
+                        <div className="w-full flex flex-col gap-3">
+                          {Array.from(
+                            { length: 5 - adjuntosGuardados.length },
+                            (_, i) => {
+                              const slotKey = String(i + 1);
+                              const slotNum = adjuntosGuardados.length + i + 1;
+                              return (
+                                <TarjetaCotizacion
+                                  key={slotKey}
+                                  archivoInicial={
+                                    archivosCotizaciones[slotKey] ?? null
+                                  }
+                                  numero={`F${slotNum}`}
+                                  titulo={`Factura ${slotNum}`}
+                                  onArchivoChange={(file) =>
+                                    actualizarArchivoGlobal(slotKey, file)
+                                  }
+                                />
+                              );
+                            },
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                <>
                 <p className={ui.text.body + " font-bold"}>
                   Cotizaciones requeridas ({cotizacionesPendientes})
                 </p>
@@ -1072,6 +1235,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                     </table>
                   </div>
                 </div>
+                </>
+                )}
               </div>
             </div>
           </div>,

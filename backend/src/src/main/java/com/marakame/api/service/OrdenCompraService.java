@@ -64,7 +64,7 @@ public class OrdenCompraService {
     }
 
     public Optional<OrdenCompra> obtenerPorRequisicion(UUID requisicionId) {
-        return ordenCompraRepository.findByRequisicion_Id(requisicionId);
+        return ordenCompraRepository.findFirstByRequisicion_Id(requisicionId);
     }
 
     @Transactional
@@ -136,7 +136,14 @@ public class OrdenCompraService {
         orden.setConsecutivo(cons.intValue());
         orden.setNumeroOrden("OC-" + Year.now().getValue() + "-" + String.format("%04d", cons.intValue()));
         orden.setEstatus("ENVIADA");
-        req.setEstado(Estado.FINALIZADA);
+        if (req.getTipo() == TipoCompra.ORDINARIA) {
+            req.setEstado(Estado.FINALIZADA);
+        } else if (req.getTipo() == TipoCompra.EXTRAORDINARIA
+                && req.getTamanio() == TamanioCompra.MENOR) {
+            req.setEstado(Estado.EN_REVISION);
+        } else {
+            req.setEstado(Estado.FINALIZADA);
+        }
         requisicionRepository.save(req);
 
         return ordenCompraRepository.save(orden);

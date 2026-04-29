@@ -142,4 +142,29 @@ public class RequisicionController {
                     .body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
+
+    @PostMapping(value = "/{id}/adjuntos-factura", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> subirAdjuntoFactura(
+            @PathVariable UUID id,
+            @RequestParam("archivo") MultipartFile archivo) {
+        try {
+            return ResponseEntity.ok(service.guardarAdjuntoFactura(id, archivo));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/adjuntos-factura")
+    public ResponseEntity<?> getAdjuntosFactura(@PathVariable UUID id) {
+        try {
+            return ResponseEntity.ok(service.listarAdjuntosPorTipo(id, "FACTURA"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-listando-facturas: " + e.getMessage());
+        }
+    }
 }

@@ -25,6 +25,10 @@ public class AdjuntoRequisicion {
     @jakarta.persistence.Column(name = "nombre_original")
     private String nombreOriginal;
 
+    @jakarta.persistence.Column(name = "tipo")
+    @com.fasterxml.jackson.annotation.JsonProperty("tipo")
+    private String tipo = "COTIZACION";
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
@@ -42,4 +46,7 @@ public class AdjuntoRequisicion {
 
     public String getNombreOriginal() { return nombreOriginal; }
     public void setNombreOriginal(String nombreOriginal) { this.nombreOriginal = nombreOriginal; }
+
+    public String getTipo() { return tipo; }
+    public void setTipo(String tipo) { this.tipo = tipo; }
 }
