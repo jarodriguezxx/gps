@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, Plus, Droplet, CalendarClock } from 'lucide-react';
 
 const ControlGlicemia = () => {
     const navigate = useNavigate();
+    const { id } = useParams(); // Obtenemos el ID del paciente desde la URL
     
-    // Datos dinámicos del paciente
-    const pacienteMock = { nombre: "Nombre del Paciente", clave: "0000" };
+    // Mock temporal para el banner (más adelante también lo podemos traer del backend)
+    const pacienteMock = { nombre: "Paciente Seleccionado", clave: id || "Pendiente" };
     
     const [registros, setRegistros] = useState([]);
     const [formData, setFormData] = useState({
@@ -15,15 +16,49 @@ const ControlGlicemia = () => {
         resultado: ''
     });
 
+    // 1. CARGAR DATOS DESDE SPRING BOOT AL ABRIR LA PANTALLA
+    useEffect(() => {
+        if (id) {
+            fetch(`http://localhost:4000/api/medico/pacientes/${id}/glicemia`)
+                .then(response => {
+                    if (!response.ok) throw new Error("Error al obtener los datos");
+                    return response.json();
+                })
+                .then(data => setRegistros(data))
+                .catch(error => console.error("Error cargando historial:", error));
+        }
+    }, [id]);
+
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const agregarRegistro = (e) => {
+    const agregarRegistro = async (e) => {
         e.preventDefault();
-        if (!formData.resultado) return;
-        setRegistros([...registros, { ...formData, id: Date.now() }]);
-        setFormData({ ...formData, resultado: '' });
+        if (!formData.resultado || !id) return;
+        
+        try {
+            const response = await fetch(`http://localhost:4000/api/medico/pacientes/${id}/glicemia`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    pacienteId: id,
+                    fecha: formData.fecha,
+                    hora: formData.hora,
+                    resultado: formData.resultado
+                })
+            });
+
+            if (response.ok) {
+                const nuevoRegistro = await response.json();
+                setRegistros([...registros, nuevoRegistro]);
+                setFormData({ ...formData, resultado: '' });
+            }
+        } catch (error) {
+            console.error('Error al guardar registro:', error);
+        }
     };
 
     return (

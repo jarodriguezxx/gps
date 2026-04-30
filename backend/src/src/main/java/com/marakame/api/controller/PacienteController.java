@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.marakame.api.dto.PacienteDTO;
 import com.marakame.api.entity.EstudioSocioeconomicoPdf;
+
 import com.marakame.api.entity.Paciente;
 import com.marakame.api.service.PacienteService;
 
@@ -38,6 +39,11 @@ public class PacienteController {
     @GetMapping("/estudio")
     public List<Paciente> obtenerPacientesParaEstudio(@RequestParam(required = false) String query) {
         return pacienteService.obtenerPacientesParaEstudio(query);
+    }
+
+    @GetMapping("/activos")
+    public ResponseEntity<List<Paciente>> obtenerPacientesActivos() {
+        return ResponseEntity.ok(pacienteService.obtenerPacientesActivos());
     }
 
     @GetMapping("/{id}/expediente")

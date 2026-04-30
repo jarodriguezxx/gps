@@ -24,6 +24,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -1701,5 +1702,17 @@ public class PacienteService {
         public void close() throws IOException {
             cerrarFlujoActual();
         }
+    }
+
+    public List<Paciente> obtenerPacientesActivos() {
+        return pacienteRepository.findAll();
+    }
+
+    public Paciente obtenerPacienteById(Long id) {
+        return pacienteRepository.findById(id).orElse(null);
+    }
+
+    public List<Paciente> obtenerTodosPacientes() {
+        return pacienteRepository.findAll();
     }
 }

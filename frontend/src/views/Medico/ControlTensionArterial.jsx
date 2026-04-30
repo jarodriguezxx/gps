@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Activity, CalendarClock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Plus, Activity, CalendarClock } from 'lucide-react';
 
 const ControlTensionArterial = () => {
     const navigate = useNavigate();
+    const { id } = useParams(); // Obtenemos el ID del paciente desde la URL
     
-    // Estos datos idealmente llegarían por props o desde tu estado global (Redux/Context)
-    const pacienteMock = { nombre: "Nombre del Paciente", clave: "0000" };
+    // Mock temporal para el banner (más adelante también lo podemos traer del backend)
+    const pacienteMock = { nombre: "Paciente Seleccionado", clave: id || "Pendiente" };
     
     const [registros, setRegistros] = useState([]);
     const [formData, setFormData] = useState({
@@ -16,15 +17,49 @@ const ControlTensionArterial = () => {
         firma: 'Dr. / Enf. en turno'
     });
 
+    // 1. CARGAR DATOS DESDE SPRING BOOT AL ABRIR LA PANTALLA
+    useEffect(() => {
+        if (id) {
+            fetch(`http://localhost:4000/api/medico/pacientes/${id}/tension`)
+                .then(response => {
+                    if (!response.ok) throw new Error("Error al obtener los datos");
+                    return response.json();
+                })
+                .then(data => setRegistros(data))
+                .catch(error => console.error("Error cargando historial:", error));
+        }
+    }, [id]);
+
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const agregarRegistro = (e) => {
+    const agregarRegistro = async (e) => {
         e.preventDefault();
         if (!formData.resultado) return;
-        setRegistros([...registros, { ...formData, id: Date.now() }]);
-        setFormData({ ...formData, resultado: '' }); // Limpia solo el resultado
+
+        try {
+            const response = await fetch(`http://localhost:4000/api/medico/pacientes/${id}/tension`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                const registroGuardado = await response.json();
+                // Agregamos el registro que nos devuelve la BD (que ya trae su ID oficial de Postgres)
+                setRegistros([registroGuardado, ...registros]); 
+                setFormData({ ...formData, resultado: '' }); // Limpiamos el input
+            } else {
+                console.error("Error al guardar en el servidor");
+                alert("Hubo un error al guardar. Verifica la conexión con el servidor.");
+            }
+        } catch (error) {
+            console.error("Error de red:", error);
+            alert("No se pudo conectar con el servidor Spring Boot.");
+        }
     };
 
     return (
@@ -51,7 +86,7 @@ const ControlTensionArterial = () => {
                 <section className="bg-white border border-slate-200 rounded-[24px] shadow-sm overflow-hidden">
                     <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Paciente</p>
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Paciente (ID BD)</p>
                             <p className="text-lg font-black text-[#7E1D3B]">{pacienteMock.nombre}</p>
                         </div>
                         <div className="text-left sm:text-right">
@@ -102,7 +137,7 @@ const ControlTensionArterial = () => {
                             </thead>
                             <tbody>
                                 {registros.length === 0 ? (
-                                    <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-400 italic">No hay tomas registradas.</td></tr>
+                                    <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-400 italic">No hay tomas registradas en la base de datos.</td></tr>
                                 ) : (
                                     registros.map((reg) => (
                                         <tr key={reg.id} className="border-b border-slate-100 hover:bg-slate-50">

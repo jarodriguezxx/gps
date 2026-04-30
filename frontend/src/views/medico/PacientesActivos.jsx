@@ -1,24 +1,54 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
     Activity, Droplet, FileText, Plus, Home, 
-    Stethoscope, ShieldAlert, Users, ClipboardList, BookOpen, Search 
-} from 'lucide-react';
+    Stethoscope, ShieldAlert, Users, ClipboardList, BookOpen, Search, Calendar
+ } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg'; // Asegúrate de que esta ruta sea correcta
 
-// Datos de prueba basados en tu captura
+// Datos de prueba como fallback
 const pacientesMocks = [
-    { clave: 'HGU-18', adiccion: 'Ludopatía', habitacion: '10', edad: 35, observaciones: 'El paciente no presentó comportamientos raros' },
-    { clave: 'HGU-22', adiccion: 'Alcoholismo', habitacion: '4', edad: 28, observaciones: 'Paciente estable, sin incidentes reportados' },
-    { clave: 'HGU-31', adiccion: 'Tabaquismo', habitacion: '7', edad: 41, observaciones: 'Presenta ansiedad moderada, bajo control' },
+    { id: 1, nombreCompleto: 'Juan Pérez', sustanciaConsumo: 'Ludopatía', edad: 35, ocupacion: 'Empleado' },
+    { id: 2, nombreCompleto: 'María García', sustanciaConsumo: 'Alcoholismo', edad: 28, ocupacion: 'Estudiante' },
+    { id: 3, nombreCompleto: 'Carlos López', sustanciaConsumo: 'Tabaquismo', edad: 41, ocupacion: 'Independiente' },
 ];
 
 const PacientesActivos = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const [pacientes, setPacientes] = useState([]);
+    const [cargando, setCargando] = useState(true);
+    const [error, setError] = useState(null);
 
     // Verificación de ruta activa para pintar el menú
     const currentPath = location.pathname;
+
+    // Cargar pacientes de la base de datos
+    useEffect(() => {
+        const obtenerPacientes = async () => {
+            try {
+                setCargando(true);
+                const response = await fetch('http://localhost:4000/api/pacientes/activos');
+                
+                if (!response.ok) {
+                    throw new Error('No se pudieron cargar los pacientes');
+                }
+                
+                const datos = await response.json();
+                setPacientes(datos);
+                setError(null);
+            } catch (err) {
+                console.error('Error al obtener pacientes:', err);
+                setError(err.message);
+                // Usar datos mock como fallback
+                setPacientes(pacientesMocks);
+            } finally {
+                setCargando(false);
+            }
+        };
+
+        obtenerPacientes();
+    }, []);
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 pb-10">
@@ -127,6 +157,12 @@ const PacientesActivos = () => {
                             <p className="text-sm font-semibold text-slate-500">Pacientes activos</p>
                         </div>
 
+                        {error && (
+                            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm">
+                                ⚠️ {error} - Mostrando datos de prueba
+                            </div>
+                        )}
+
                         <div className="mb-6">
                             <button 
                                 onClick={() => navigate('/medico/consulta-diaria')}
@@ -136,63 +172,72 @@ const PacientesActivos = () => {
                             </button>
                         </div>
 
-                        <div className="overflow-x-auto rounded-xl border border-slate-200">
-                            <table className="w-full text-left text-sm">
-                                <thead>
-                                    <tr className="bg-slate-50 text-xs font-bold uppercase tracking-widest text-slate-500 border-b border-slate-200">
-                                        <th className="px-4 py-4">Clave</th>
-                                        <th className="px-4 py-4">Adicción</th>
-                                        <th className="px-4 py-4 text-center">Habitación</th>
-                                        <th className="px-4 py-4 text-center">Edad</th>
-                                        <th className="px-4 py-4">Observaciones</th>
-                                        <th className="px-4 py-4 text-center">Acciones Clínicas</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {pacientesMocks.map((paciente) => (
-                                        <tr key={paciente.clave} className="hover:bg-slate-50/80 transition-colors">
-                                            <td className="px-4 py-4 font-bold text-[#7E1D3B]">{paciente.clave}</td>
-                                            <td className="px-4 py-4 text-slate-700">{paciente.adiccion}</td>
-                                            <td className="px-4 py-4 text-center text-slate-700">{paciente.habitacion}</td>
-                                            <td className="px-4 py-4 text-center text-slate-700">{paciente.edad}</td>
-                                            <td className="px-4 py-4 text-slate-600 truncate max-w-xs">{paciente.observaciones}</td>
-                                            
-                                            {/* COLUMNA DE ACCIONES CON LOS ÍCONOS */}
-                                            <td className="px-4 py-4">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button 
-                                                        onClick={() => navigate(`/medico/pacientes/${paciente.clave}/tension`)}
-                                                        className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition-colors"
-                                                        title="Registrar Tensión Arterial"
-                                                    >
-                                                        <Activity size={18} />
-                                                    </button>
-                                                    
-                                                    <button 
-                                                        onClick={() => navigate(`/medico/pacientes/${paciente.clave}/glicemia`)}
-                                                        className="p-2 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 hover:text-sky-700 transition-colors"
-                                                        title="Registrar Glicemia"
-                                                    >
-                                                        <Droplet size={18} />
-                                                    </button>
-
-                                                    <button 
-                                                        onClick={() => navigate(`/medico/expediente`)}
-                                                        className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-                                                        title="Ver Expediente General"
-                                                    >
-                                                        <FileText size={18} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            <div className="bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-400 border-t border-slate-200">
-                                {pacientesMocks.length} pacientes activos
+                        {cargando ? (
+                            <div className="flex items-center justify-center py-12">
+                                <div className="text-slate-500 text-center">
+                                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#7E1D3B] mb-3"></div>
+                                    <p>Cargando pacientes activos...</p>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                <table className="w-full text-left text-sm">
+                                    <thead>
+                                        <tr className="bg-slate-50 text-xs font-bold uppercase tracking-widest text-slate-500 border-b border-slate-200">
+                                            <th className="px-4 py-4">ID</th>
+                                            <th className="px-4 py-4">Nombre</th>
+                                            <th className="px-4 py-4">Sustancia/Adicción</th>
+                                            <th className="px-4 py-4 text-center">Edad</th>
+                                            <th className="px-4 py-4">Ocupación</th>
+                                            <th className="px-4 py-4 text-center">Acciones Clínicas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {pacientes.map((paciente) => (
+                                            <tr key={paciente.id} className="hover:bg-slate-50/80 transition-colors">
+                                                <td className="px-4 py-4 font-bold text-[#7E1D3B]">#{paciente.id}</td>
+                                                <td className="px-4 py-4 text-slate-700 font-medium">{paciente.nombreCompleto}</td>
+                                                <td className="px-4 py-4 text-slate-700">{paciente.sustanciaConsumo || 'No especificada'}</td>
+                                                <td className="px-4 py-4 text-center text-slate-700">{paciente.edad || '-'}</td>
+                                                <td className="px-4 py-4 text-slate-600 truncate max-w-xs">{paciente.ocupacion || '-'}</td>
+                                                
+                                                {/* COLUMNA DE ACCIONES CON LOS ÍCONOS */}
+                                                <td className="px-4 py-4">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button 
+                                                            onClick={() => navigate(`/medico/pacientes/${paciente.id}/tension`)}
+                                                            className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition-colors"
+                                                            title="Registrar Tensión Arterial"
+                                                        >
+                                                            <Activity size={18} />
+                                                        </button>
+                                                        
+                                                        <button 
+                                                            onClick={() => navigate(`/medico/pacientes/${paciente.id}/glicemia`)}
+                                                            className="p-2 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 hover:text-sky-700 transition-colors"
+                                                            title="Registrar Glicemia"
+                                                        >
+                                                            <Droplet size={18} />
+                                                        </button>
+
+                                                        <button 
+                                                            onClick={() => navigate(`/medico/pacientes/${paciente.id}/expediente`)}
+                                                            className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                                                            title="Ver Expediente Médico"
+                                                        >
+                                                            <FileText size={18} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <div className="bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-400 border-t border-slate-200">
+                                    {pacientes.length} pacientes activos
+                                </div>
+                            </div>
+                        )}
 
                     </div>
                 </div>
