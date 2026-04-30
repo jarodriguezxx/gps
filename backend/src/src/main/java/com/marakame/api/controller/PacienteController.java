@@ -21,8 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.marakame.api.dto.PacienteDTO;
+import com.marakame.api.dto.NotaEvolucionDTO;
 import com.marakame.api.entity.EstudioSocioeconomicoPdf;
-
 import com.marakame.api.entity.Paciente;
 import com.marakame.api.service.PacienteService;
 
@@ -93,6 +93,20 @@ public class PacienteController {
         } catch (Exception e) {
             return new ResponseEntity<>("Error al guardar el expediente: " + e.getMessage(),
                                         HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/{id}/notas-evolucion")
+        public ResponseEntity<?> agregarNotaEvolucion(
+            @PathVariable Long id, 
+            @RequestBody NotaEvolucionDTO notaDTO) {
+        try {
+            pacienteService.agregarNotaEvolucion(id, notaDTO);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of("mensaje", "Nota clínica guardada exitosamente"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 

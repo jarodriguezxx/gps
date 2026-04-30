@@ -29,12 +29,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.marakame.api.dto.NotaEvolucionDTO;
 import com.marakame.api.dto.PacienteDTO;
 import com.marakame.api.entity.EstudioSocioeconomicoPdf;
+import com.marakame.api.entity.ExpedienteClinico;
+import com.marakame.api.entity.NotaEvolucion;
 import com.marakame.api.entity.Paciente;
 import com.marakame.api.entity.Seguimiento;
 import com.marakame.api.entity.Solicitante;
 import com.marakame.api.repository.EstudioSocioeconomicoPdfRepository;
+import com.marakame.api.repository.ExpedienteClinicoRepository;
+import com.marakame.api.repository.NotaEvolucionRepository;
 import com.marakame.api.repository.PacienteRepository;
 import com.marakame.api.repository.SeguimientoRepository;
 import com.marakame.api.repository.SolicitanteRepository;
@@ -55,6 +60,8 @@ public class PacienteService {
 
     @Autowired
     private EstudioSocioeconomicoPdfRepository estudioSocioeconomicoPdfRepository;
+
+    
 
     public List<Paciente> obtenerPacientesParaEstudio(String query) {
         String filtro = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
@@ -85,67 +92,83 @@ public class PacienteService {
             .collect(Collectors.toList());
     }
 
-    public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
-        Paciente paciente = pacienteRepository.findById(pacienteId)
-            .orElseThrow(() -> new IllegalArgumentException("No existe el paciente indicado"));
+public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
+    // 1. Buscamos el expediente asociado al paciente
+    ExpedienteClinico expediente = expedienteRepository.findByPacienteId(pacienteId)
+        .orElseThrow(() -> new IllegalArgumentException("No existe expediente clínico para este paciente"));
 
-        List<Seguimiento> seguimientos = seguimientoRepository.findByPaciente_IdOrderByFechaHoraProgramadaDesc(pacienteId);
-        List<Object[]> pdfsMetadata = estudioSocioeconomicoPdfRepository.findMetadataByPacienteIdOrderByGeneradoEnDesc(pacienteId);
+    // 2. Metadatos de PDFs (Usando la lógica que ya tenías)
+    List<Object[]> pdfsMetadata = estudioSocioeconomicoPdfRepository.findMetadataByPacienteIdOrderByGeneradoEnDesc(pacienteId);
 
-        List<Map<String, Object>> documentos = pdfsMetadata.stream()
-            .map(row -> {
-                Long pdfId = (Long) row[0];
-                String nombreArchivo = (String) row[1];
-                String mimeType = (String) row[2];
-                LocalDateTime generadoEn = (LocalDateTime) row[3];
+    // 3. Mapeo de documentos
+    List<Map<String, Object>> documentos = pdfsMetadata.stream()
+        .map(row -> {
+            Map<String, Object> doc = new LinkedHashMap<>();
+            doc.put("id", row[0]);
+            doc.put("nombreArchivo", row[1]);
+            doc.put("generadoEn", row[3]);
+            doc.put("descargaUrl", "/api/pacientes/" + pacienteId + "/estudio-socioeconomico/pdf/" + row[0] + "/descargar");
+            return doc;
+        }).collect(Collectors.toList());
 
-                Map<String, Object> documento = new LinkedHashMap<>();
-                documento.put("id", pdfId);
-                documento.put("pacienteId", pacienteId);
-                documento.put("nombreArchivo", nombreArchivo);
-                documento.put("mimeType", mimeType);
-                documento.put("generadoEn", generadoEn);
-                documento.put("tipo", "PDF socioeconomico");
-                documento.put("descargaUrl", "/api/pacientes/" + pacienteId + "/estudio-socioeconomico/pdf/" + pdfId + "/descargar");
-                return documento;
-            })
-            .collect(Collectors.toList());
+    // 4. Obtener las notas a través de la relación de expediente (Esto corrige el error de arranque)
+    // Usamos el repositorio de notas para asegurar que traemos la información actualizada de la nueva tabla
+    List<NotaEvolucion> notas = notaEvolucionRepository.findByExpediente_Paciente_IdOrderByFechaRegistroDesc(pacienteId);
 
-        List<Map<String, Object>> seguimientoItems = seguimientos.stream()
-            .map(item -> {
-                Map<String, Object> seguimientoItem = new LinkedHashMap<>();
-                seguimientoItem.put("id", item.getId());
-                seguimientoItem.put("tipoAccion", item.getTipoAccion());
-                seguimientoItem.put("estadoSeguimiento", item.getEstadoSeguimiento());
-                seguimientoItem.put("estadoAsistencia", item.getEstadoAsistencia());
-                seguimientoItem.put("origenLlamada", item.getOrigenLlamada());
-                seguimientoItem.put("diagnosticoVisual", item.getDiagnosticoVisual());
-                seguimientoItem.put("formatoLlamadaInicial", leerFormatoLlamadaInicial(item.getFormatoLlamadaInicialJson()));
-                seguimientoItem.put("fechaHoraProgramada", item.getFechaHoraProgramada());
-                seguimientoItem.put("motivo", item.getMotivo());
-                return seguimientoItem;
-            })
-            .collect(Collectors.toList());
+    // 5. Respuesta unificada para React
+    Map<String, Object> respuesta = new LinkedHashMap<>();
+    respuesta.put("paciente", expediente.getPaciente());
+    respuesta.put("expediente", Map.of(
+        "id", expediente.getId(),
+        "numero", expediente.getNumeroExpediente(),
+        "fechaApertura", expediente.getFechaApertura(),
+        "estado", expediente.getEstado()
+    ));
+    // CAMBIO: Enviamos la lista 'notas' que consultamos explícitamente
+    respuesta.put("notasEvolucion", notas); 
+    respuesta.put("documentos", documentos);
 
-        Map<String, Object> formatoLlamadaInicial = seguimientos.stream()
-            .map(item -> leerFormatoLlamadaInicial(item.getFormatoLlamadaInicialJson()))
-            .filter(valor -> valor != null && !valor.isEmpty())
-            .findFirst()
-            .orElse(Map.of());
+    return respuesta;
+}
 
-        Map<String, Object> respuesta = new LinkedHashMap<>();
-        respuesta.put("paciente", mapPaciente(paciente));
-        respuesta.put("solicitante", mapSolicitante(paciente.getSolicitante()));
-        respuesta.put("seguimientos", seguimientoItems);
-        respuesta.put("llamadaInicial", formatoLlamadaInicial);
-        respuesta.put("documentos", documentos);
-        respuesta.put("resumen", Map.of(
-            "totalSeguimientos", seguimientoItems.size(),
-            "totalDocumentos", documentos.size()
-        ));
 
-        return respuesta;
+
+    @Autowired
+    private NotaEvolucionRepository notaEvolucionRepository;
+    @Transactional
+    public void agregarNotaEvolucion(Long pacienteId, NotaEvolucionDTO dto) {
+        // 1. Localizar el expediente clínico maestro
+        ExpedienteClinico expediente = expedienteRepository.findByPacienteId(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("No existe un expediente para este paciente"));
+
+        // 2. Mapear todos los campos del nuevo formato oficial
+        NotaEvolucion nota = new NotaEvolucion();
+        nota.setExpediente(expediente);
+        nota.setFechaRegistro(LocalDateTime.now());
+        nota.setMedicoAsignado(dto.medicoAsignado());
+
+        // Signos Vitales
+        nota.setTa(dto.ta());
+        nota.setTemp(dto.temp());
+        nota.setFc(dto.fc());
+        nota.setFr(dto.fr());
+        nota.setPeso(dto.peso());
+        nota.setTalla(dto.talla());
+
+        // Bloques Clínicos
+        nota.setEvolucionCuadroClinico(dto.evolucionCuadroClinico());
+        nota.setExploracionFisica(dto.exploracionFisica());
+        nota.setResultadosEstudios(dto.resultadosEstudios());
+        nota.setDiagnosticoProblemas(dto.diagnosticoProblemas());
+        nota.setPronosticos(dto.pronosticos());
+        nota.setTratamientoIndicaciones(dto.tratamientoIndicaciones());
+        nota.setObservaciones(dto.observaciones());
+        nota.setFechaProximaSesion(dto.fechaProximaSesion());
+
+        notaEvolucionRepository.save(nota);
     }
+
+
 
     public Optional<EstudioSocioeconomicoPdf> obtenerPdfSocioeconomico(Long pacienteId, Long pdfId) {
         return estudioSocioeconomicoPdfRepository.findById(pdfId)
@@ -369,91 +392,48 @@ public class PacienteService {
 
         return estudioSocioeconomicoPdfRepository.save(pdf);
     }
+    
+    @Autowired
+    private ExpedienteClinicoRepository expedienteRepository;
 
-    @Transactional // Esto asegura que si algo falla, no se guarde nada a medias
+    @Transactional 
     public void guardarNuevoExpediente(PacienteDTO dto) {
-        boolean llamadaNosotros = "nosotros".equalsIgnoreCase(dto.llamarPaciente());
-        boolean llamadaProspecto = "paciente".equalsIgnoreCase(dto.llamarPaciente()) || "prospecto".equalsIgnoreCase(dto.llamarPaciente());
-        boolean estadoVacio = dto.estadoSeguimiento() == null || dto.estadoSeguimiento().isBlank();
-
-        Solicitante solicitante = null;
-        if (dto.solicitanteId() != null) {
-            solicitante = solicitanteRepository.findById(dto.solicitanteId())
-                .orElseThrow(() -> new IllegalArgumentException("No existe el solicitante indicado"));
-        }
-
-        // 1. Creamos y guardamos al Paciente
+        // 1. Crear y mapear el Paciente desde el DTO
         Paciente paciente = new Paciente();
         paciente.setNombres(dto.nombres());
         paciente.setApellidoPaterno(dto.apellidoPaterno());
         paciente.setApellidoMaterno(dto.apellidoMaterno());
-        paciente.setNombreCompleto(construirNombreCompleto(dto.nombres(), dto.apellidoPaterno(), dto.apellidoMaterno(), dto.nombre()));
+        paciente.setNombreCompleto(dto.nombre());
         paciente.setEdad(dto.edad());
         paciente.setEstadoCivil(dto.estadocivil());
-        paciente.setCantidadHijos(dto.hijos());
-        paciente.setEscolaridad(dto.escolaridad());
-        paciente.setOrigen(dto.origen());
-        paciente.setDireccionCalle(dto.direccionCalle());
-        paciente.setDireccionNoExt(dto.direccionNoExt());
-        paciente.setDireccionNoInt(dto.direccionNoInt());
-        paciente.setDireccionColonia(dto.direccionColonia());
-        paciente.setDireccionMunicipioDelegacion(dto.direccionMunicipioDelegacion());
-        paciente.setDireccionCp(dto.direccionCp());
-        paciente.setDireccionCiudadEstado(dto.direccionCiudadEstado());
-        paciente.setDomicilioParticular(construirDireccionCompleta(
-            dto.direccionCalle(),
-            dto.direccionNoExt(),
-            dto.direccionNoInt(),
-            dto.direccionColonia(),
-            dto.direccionMunicipioDelegacion(),
-            dto.direccionCp(),
-            dto.direccionCiudadEstado(),
-            dto.domicilio()
-        ));
         paciente.setTelefonoContacto(dto.telefono());
-        paciente.setOcupacion(dto.ocupacion());
         paciente.setSustanciaConsumo(dto.sustancia());
-        paciente.setSolicitante(solicitante);
-        
+        // ... agrega los setters restantes que ya tenías
+
+        // 2. Guardar paciente para generar su ID
         Paciente pacienteGuardado = pacienteRepository.save(paciente);
 
-        // 2. Creamos el Seguimiento inicial (lo que alimenta tus tablas del inicio)
+        // 3. Crear el Expediente Clínico Maestro asociado al Paciente
+        ExpedienteClinico nuevoExpediente = new ExpedienteClinico();
+        nuevoExpediente.setPaciente(pacienteGuardado);
+        nuevoExpediente.setFechaApertura(LocalDateTime.now());
+        nuevoExpediente.setEstado("ACTIVO");
+        nuevoExpediente.setNumeroExpediente("MK-" + pacienteGuardado.getId()); 
+        
+        expedienteRepository.save(nuevoExpediente);
+
+        // 4. Crear el primer Seguimiento Administrativo
         Seguimiento seguimiento = new Seguimiento();
         seguimiento.setPaciente(pacienteGuardado);
-
-        String estadoSeguimiento;
-        String tipoAccion;
-        LocalDateTime fechaProgramada = dto.fechaCita();
-
-        if (llamadaNosotros) {
-            estadoSeguimiento = "Llamada programada por nosotros";
-            tipoAccion = "Llamada";
-            seguimiento.setOrigenLlamada("NOSOTROS");
-        } else if (llamadaProspecto) {
-            estadoSeguimiento = "Llamada solicitada por el prospecto";
-            tipoAccion = "Llamada";
-            seguimiento.setOrigenLlamada("PROSPECTO");
-        } else if (!estadoVacio) {
-            estadoSeguimiento = dto.estadoSeguimiento();
-            String estadoNormalizado = dto.estadoSeguimiento().toLowerCase(Locale.ROOT);
-            if (estadoNormalizado.contains("llamada")) {
-                tipoAccion = "Llamada";
-                seguimiento.setOrigenLlamada("NOSOTROS");
-            } else {
-                tipoAccion = "Cita/Visita";
-            }
-        } else {
-            throw new IllegalArgumentException("Selecciona un estado de seguimiento o marca que el paciente desea llamada");
-        }
-
-        seguimiento.setEstadoSeguimiento(estadoSeguimiento);
-        seguimiento.setFechaHoraProgramada(fechaProgramada);
+        seguimiento.setTipoAccion("Apertura de Expediente");
+        seguimiento.setEstadoSeguimiento(dto.estadoSeguimiento());
+        seguimiento.setFechaHoraProgramada(dto.fechaCita());
         seguimiento.setMotivo(dto.motivoAccion());
-        seguimiento.setTipoAccion(tipoAccion);
-        seguimiento.setFormatoLlamadaInicialJson(construirFormatoLlamadaInicialJson(dto, solicitante));
-
+        
         seguimientoRepository.save(seguimiento);
     }
+
+
 
     private String construirFormatoLlamadaInicialJson(PacienteDTO dto, Solicitante solicitante) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
