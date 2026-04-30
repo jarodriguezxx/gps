@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, FileText, Search, Sparkles, X, Download, Upload } from 'lucide-react';
-import html2pdf from 'html2pdf.js';
 import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
 import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
 
