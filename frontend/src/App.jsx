@@ -8,10 +8,6 @@ import AltaPersonal from './views/rh/AltaPersonal';
 import BajaPersonal from './views/rh/BajaPersonal';
 import CatalogoRoles from './views/rh/CatalogoRoles';
 import AsignacionRoles from './views/rh/AsignacionRoles';
-import EvaluacionEnfermeria from './views/medico/EvaluacionEnfermeria';
-import ProtocoloDesintoxicacion from './views/medico/ProtocoloDesintoxicacion';
-import PacientesActivos from './views/medico/PacientesActivos';
-import HistorialMedicoPaciente from './views/medico/HistorialMedicoPaciente';
 import ArchivoContable from './views/financiero/ArchivoContable';
 import DigitalizarComprobantes from './views/financiero/DigitalizarComprobantes';
 import GestionarCorreciones from './views/financiero/GestionarCorrecciones';
@@ -20,25 +16,8 @@ import ComprobantesFiscales from './views/financiero/ComprobantesFiscales';
 import RequisicionesAlmacen from './views/financiero/RequisicionesAlmacen';
 import DepositoBancario from './views/financiero/DepositoBancario';
 import AlmacenDashboard from './views/almacen/AlmacenDashboard';
-
-
-import MedicoInicio from './views/Medico/Medico-inicio';
-import EvaluacionNutricional from './views/Medico/Nutriologia/EvaluacionNutricional';
-import InventarioPertenencias from './views/Medico/InventarioPertenencias';
-import HistoriaMedica from './views/Medico/HistoriaMedica';
-import NutriologiaInicio from './views/Nutriologia/Nutriologia-inicio';
 import ExpedienteAdmisiones from './views/admisiones/ExpedienteAdmisiones';
-import ExpedienteMedico from './views/Medico/ExpedienteMedico';
-import ConsultaDiaria from './views/Medico/ConsultaDiaria';
-import ControlTensionArterial from './views/Medico/ControlTensionArterial';
-import ControlGlicemia from './views/Medico/ControlGlicemia';
-import HistorialPreAdmision from './views/Medico/HistorialPreAdmision.jsx'; 
 
-
-//Clinico
-import PsicologiaInicio from './views/Clinico/PsicologiaInicio'; 
-import GestionDocumentosPsicologia from './views/Clinico/GestionDocumentosPsicologia';
-import NotasEvolucionPsicologia from './views/Clinico/NotasEvolucionPsicologia';
 
 // Importaciones para Recursos Materiales
 import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
@@ -57,22 +36,7 @@ const quickViews = [
   { label: 'Exp. Admisiones', path: '/admisiones/expediente' },
   { label: 'Estudio', path: '/admisiones/estudio-socioeconomico' },
   { label: 'Valoración', path: '/admisiones/valoracion-diagnostica' },
-  { label: 'Médico', path: '/medico' },
-  { label: 'Exp. Médico', path: '/medico/expediente' },
-  { label: 'Historia', path: '/medico/historia-medica' },
-  { label: 'Inventario', path: '/medico/inventario-pertenencias' },
-  { label: 'Eval. Enfermería', path: '/medico/evaluacion-medica' },
-  { label: 'Protocolo', path: '/medico/protocolo-desintoxicacion' },
-  { label: 'Pacientes Activos', path: '/medico/pacientes-activos' },
-  { label: 'Consulta Diaria', path: '/medico/consulta-diaria' },
-  { label: 'Historial Paciente', path: '/medico/historial-paciente' },
-  { label: 'Nutriología', path: '/nutriologia' },
-  { label: 'Evaluación Nutri', path: '/nutriologia/evaluacion-nutricional' },
-  
-  { label: 'Historial Pre-Admisión', path: '/medico/historial-pre-admision' },
-  { label: 'Inicio Psicología', path: '/psicologia' },
-  { label: 'Psi. Documentos', path: '/psicologia/paciente/HGU-18/documentos' },
-  { label: 'Psi. Notas Evol.', path: '/psicologia/paciente/HGU-18/notas-evolucion' },
+ 
   { label: 'RH - Alta', path: '/rh/alta-personal' },
   { label: 'RH - Baja', path: '/rh/baja-personal' },
   { label: 'RH - Catálogo', path: '/rh/catalogo-roles' },
@@ -164,37 +128,11 @@ function App() {
         <Route path="/admisiones/estudio-socioeconomico"       element={<EstudioSocioeconomico />} />
         <Route path="/admisiones/valoracion-diagnostica"       element={<ValoracionDiagnostica />} />
 
-        <Route path="/medico"                                  element={<MedicoInicio />} />
-        <Route path="/medico/expediente"                       element={<ExpedienteMedico />} />
-        <Route path="/medico/historia-medica"                  element={<HistoriaMedica />} />
-        <Route path="/medico/inventario-pertenencias"          element={<InventarioPertenencias />} />
         <Route path="/rh/alta-personal"                        element={<AltaPersonal />} />
         <Route path="/rh/baja-personal"                        element={<BajaPersonal />} />
         <Route path="/rh/catalogo-roles"                       element={<CatalogoRoles />} />
         <Route path="/rh/asignacion-roles"                     element={<AsignacionRoles />} />
 
-        <Route path="/medico/evaluacion-medica"                element={<EvaluacionEnfermeria />} />
-        <Route path="/medico/protocolo-desintoxicacion"        element={<ProtocoloDesintoxicacion />} />
-        <Route path="/medico/pacientes-activos"                element={<PacientesActivos />} />
-        <Route path="/medico/historial-paciente"               element={<HistorialMedicoPaciente />} />
-        <Route path="/medico/consulta-diaria"                  element={<ConsultaDiaria />} />
-        <Route path="/medico/pacientes/:pacienteId/consulta-diaria" element={<ConsultaDiaria />} />
-        <Route path="/medico/pacientes/:id/tension" element={<ControlTensionArterial />} />
-        <Route path="/medico/pacientes/:id/glicemia" element={<ControlGlicemia />} />
-        <Route path="/medico/pacientes/:pacienteId/expediente" element={<ExpedienteMedico />} />
-        <Route path="/medico/historial-pre-admision" element={<HistorialPreAdmision />} />
-        <Route path="/medico/historia-medica" element={<HistoriaMedica />} />
-        
-
-
-        <Route path="/nutriologia"                             element={<NutriologiaInicio />} />
-        <Route path="/nutriologia/evaluacion-nutricional"      element={<EvaluacionNutricional />} />
-        <Route path="/medico/nutriologia/evaluacion-nutricional" element={<EvaluacionNutricional />} />
-        <Route path="/medico/cuestionario-salud"               element={<EvaluacionNutricional />} />
-
-        <Route path="/psicologia" element={<PsicologiaInicio />} />   
-        <Route path="/psicologia/paciente/:id/documentos" element={<GestionDocumentosPsicologia />} />
-        <Route path="/psicologia/paciente/:id/notas-evolucion" element={<NotasEvolucionPsicologia />} />
 
         <Route path="/financiero/archivo-contable"             element={<ArchivoContable />} />
         <Route path="/financiero/digitalizar-comprobantes"     element={<DigitalizarComprobantes />} />
