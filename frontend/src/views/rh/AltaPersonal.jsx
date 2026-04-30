@@ -11,41 +11,50 @@ const navItems = [
 ];
 
 const PUESTOS_POR_DEPARTAMENTO = {
-  'DEPARTAMENTO MÉDICO': [
-    'ENFERMERA (O)',
-    'NUTRIÓLOGA (O)',
-    'MÉDICA (O)',
-    'JEFE DEP. MÉDICO',
-  ],
-  'DEPARTAMENTO DE ADMISIONES': [
-    'ASESOR (A)',
-    'COMISIONADA (O) TRABAJO SOCIAL',
-    'RECEPCIONISTA',
-    'JEFE DEP. ADMISIONES',
-    'COMISIONADA (O) TERAPEUTA AMBULATORIO',
+  'DEPARTAMENTO DE ADMINISTRACIÓN': [
+    'ASISTENTE CONTABLE',
+    'ASISTENTE DE DIRECCIÓN',
+    'CHOFER DE DIRECCIÓN',
+    'DIRECTORA GENERAL',
+    'ENCARGADA (O) DE RECURSOS FINANCIEROS',
+    'ENCARGADA (O) DE RECURSOS MATERIALES',
+    'ENCARGADA (O) DE RECURSOS HUMANOS',
+    'JEFA (E) DEP. ADMINISTRACIÓN',
+    'TITULAR DE UNIDAD JURÍDICA',
+    'TITULAR DE LA UNIDAD DE TRANSPARENCIA',
+    'ENCARGADA (O) DE DIFUSIÓN Y MEDIOS',
   ],
   'DEPARTAMENTO CLÍNICO': [
-    'TERAPEUTA DE GRUPO',
-    'JEFE DEP. CLÍNICO',
-    'TERAPEUTA ESPIRITUAL',
-    'PSICÓMETRA',
-    'TALLERISTA',
+    'AUXILIAR ADMINISTRATIVO',
+    'CONSEJERA (O) ASIGNADO',
     'COTERAPEUTA',
-    'TERAPEUTA DE CAMPO',
-    'ASISTENTE CLÍNICO EXTERNO',
-    'ASISTENTE CLÍNICO',
-    'ENCARGADA DE FAMILIA',
-    'ENCARGADA (O) POST TRATAMIENTO',
+    'TERAPEUTA DE POST-TRATAMIENTO',
+    'ENCARGADA (O) DE FAMILIA',
+    'ENCARGADA (O) DE CONSEJEROS ASIGNADOS',
+    'ENCARGADA (O) DE POST TRATAMIENTO',
+    'JEFA (E) DEP. CLÍNICO',
+    'TERAPEUTA DE GRUPO',
+    'TERAPEUTA FAMILIAR',
   ],
-  'DEPARTAMENTO DE ADMINISTRACIÓN': [
-    'JEFE DEP. ADMINISTRACIÓN',
-    'VELADOR',
-    'CHOFER',
-    'ENCARGADO (A) DE COCINA',
-    'AUXILIAR DE COCINA',
+  'DEPARTAMENTO DE ADMISIONES': [
+    'JEFA (E) DEP. ADMISIONES',
+    'ASESOR (A)',
+    'ENCARGADA (O) DE PREVENCIÓN Y ESTADÍSTICA',
+    'RECEPCIÓN',
+  ],
+  'DEPARTAMENTO DE MANTENIMIENTO E INTENDENCIA': [
+    'ENCARGADA (O) DE MANTENIMIENTO E INTENDENCIA',
     'AUXILIAR DE MANTENIMIENTO',
     'AUXILIAR DE INTENDENCIA',
-    'AUXILIAR CONTABLE',
+  ],
+  'DEPARTAMENTO MÉDICO': [
+    'JEFA (E) DEP. MÉDICO',
+    'MÉDICO',
+    'NUTRIÓLOGA (O)',
+    'ENFERMERA (O)',
+  ],
+  'DEPARTAMENTO DE COCINA': [
+    'AUXILIAR DE COCINA',
   ],
 };
 
@@ -369,15 +378,7 @@ const AltaPersonal = () => {
                   <div className="grid grid-cols-1 gap-4">
                     <div className="grid grid-cols-2 gap-4">
                       <SelectField label="Departamento" required {...field('departamento')}
-                        options={[
-                          'DIRECCIÓN GENERAL',
-                          'UNIDAD DE TRANSPARENCIA',
-                          'DEPARTAMENTO CLÍNICO',
-                          'DEPARTAMENTO MÉDICO',
-                          'DEPARTAMENTO DE ADMISIONES',
-                          'DEPARTAMENTO DE ADMINISTRACIÓN',
-                          'OFICINA DE RECURSOS MATERIALES',
-                        ]}
+                        options={Object.keys(PUESTOS_POR_DEPARTAMENTO)}
                       />
                       {puestosDisponibles.length > 0 ? (
                         <SelectField label="Puesto / Rol" required {...field('puesto')}
