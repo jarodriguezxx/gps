@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Search, Sparkles, X, Download, Upload } from 'lucide-react';
-import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, FileText, Search, Sparkles, X, Download, Upload, CheckCircle2, Briefcase, Phone, User, HeartPulse } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
+import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
 import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
 
 const formatDateValue = (value) => {
@@ -452,7 +453,6 @@ const generarReciboHTML = (datos) => {
 
 const ExpedienteAdmisiones = () => {
 	const navigate = useNavigate();
-	const location = useLocation();
 	const [tab, setTab] = useState('general');
 	const [busquedaExpediente, setBusquedaExpediente] = useState('');
 	const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
@@ -494,25 +494,48 @@ const ExpedienteAdmisiones = () => {
 	const [cargandoRecibo, setCargandoRecibo] = useState(false);
 	const [tokenGenerado, setTokenGenerado] = useState(null);
 	const [generandoToken, setGenerandoToken] = useState(false);
-	const isInicioActive = location.pathname === '/admisiones';
-	const isExpedienteActive = location.pathname === '/admisiones/expediente';
-	const isEstudioActive = location.pathname === '/admisiones/estudio-socioeconomico';
-	const isValoracionActive = location.pathname === '/admisiones/valoracion-diagnostica';
-
-	const seleccionarProspecto = (prospecto) => {
+	const [expedienteModo, setExpedienteModo] = useState('prospecto');
+	const seleccionarProspecto = async (prospecto) => {
 		setProspectoSeleccionado(prospecto);
 		setBusquedaExpediente(getNombreProspecto(prospecto));
 		setMostrarResultados(false);
 		setModalLlamadaInicialAbierto(false);
 		setDiagnosticoTab('solicitante');
-		
+
+		// Consultar el estado real del paciente desde el backend
+		try {
+			const response = await fetch(`http://localhost:4000/api/pacientes/${prospecto.id}`);
+			if (response.ok) {
+				const pacienteActualizado = await response.json();
+				const estadoPaciente = pacienteActualizado.estadoPaciente || 'PROSPECTO';
+				
+				setProspectoSeleccionado(prev => ({
+					...prev,
+					estadoPaciente: estadoPaciente,
+					clavePaciente: pacienteActualizado.clavePaciente || null,
+					fechaIngreso: pacienteActualizado.fechaIngreso || null,
+				}));
+
+				// Actualizar automáticamente el modo del expediente basado en el estado
+				if (estadoPaciente === 'INGRESADO') {
+					setExpedienteModo('ingresado');
+				} else {
+					setExpedienteModo('prospecto');
+				}
+			}
+		} catch (error) {
+			console.error('Error al obtener estado del paciente:', error);
+			// Por defecto mostrar vista de prospecto si hay error
+			setExpedienteModo('prospecto');
+		}
+
 		// Autocompletar datos del recibo con formato correcto
 		setDatosRecibo(prev => ({
 			...prev,
 			nombrePaciente: prospecto.nombres || '',
 			apellidoPaternoPaciente: prospecto.apellidoPaterno || '',
 			apellidoMaternoPaciente: prospecto.apellidoMaterno || '',
-			clavePaciente: formatClave(prospecto),
+			clavePaciente: prospecto.clavePaciente || formatClave(prospecto),
 			direccionCalle: prospecto.direccionCalle || '',
 			direccionNoExt: prospecto.direccionNoExt || '',
 			direccionNoInt: prospecto.direccionNoInt || '',
@@ -566,49 +589,57 @@ const ExpedienteAdmisiones = () => {
 		}
 
 		setGenerandoToken(true);
-		
-		// Generar token único: fecha + ID paciente + aleatorio
-		const timestamp = new Date().getTime().toString(36);
-		const pacienteId = prospectoSeleccionado?.id || 'PAC';
-		const aleatorio = Math.random().toString(36).substring(2, 8).toUpperCase();
-		const tokenUnico = `TOKEN-${timestamp}-${pacienteId}-${aleatorio}`.toUpperCase();
-		
-		try {
-			// Simular llamada al backend para:
-			// 1. Guardar el recibo como evidencia
-			// 2. Actualizar estado del prospecto a "paciente"
-			// 3. Guardar el token como clave del paciente
-			setTimeout(async () => {
-				// En una aplicación real, esto sería:
-				// await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/ingreso`, {
-				//   method: 'POST',
-				//   headers: { 'Content-Type': 'application/json' },
-				//   body: JSON.stringify({ token: tokenUnico, recibo: recibosSubidos[0] })
-				// });
 
-				setTokenGenerado(tokenUnico);
-				
-				// Actualizar el prospecto a paciente
-				setProspectoSeleccionado(prev => ({
-					...prev,
-					estado: 'paciente',
-					clave: tokenUnico,
-					estadoSeguimiento: 'Paciente',
-					fechaIngreso: new Date().toISOString()
-				}));
-				
-				// Actualizar estado del tab documentos
-				setModalReciboAbierto(false);
-				
-				setTimeout(() => {
-					alert(`✅ Token generado exitosamente:\n\n${tokenUnico}\n\nEl prospecto ahora es PACIENTE`);
-					setTokenGenerado(null);
-					setRecibosSubidos([]);
-				}, 500);
-			}, 1500);
+		try {
+			// Llamar al backend para validar ingreso y generar token
+			const response = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/validar-ingreso`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					reciboPagado: true,
+					montoPago: datosRecibo.montoPago || 0,
+					montoPrograma: datosRecibo.montoPrograma || 0,
+					concepto: datosRecibo.concepto,
+					nombrePagador: datosRecibo.nombrePagador,
+					rfc: datosRecibo.rfc || '',
+				}),
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'No se pudo validar el ingreso');
+			}
+
+			const data = await response.json();
+			const tokenGenerado = data.clavePaciente;
+
+			setTokenGenerado(tokenGenerado);
+
+			// Actualizar el prospecto con el nuevo estado
+			setProspectoSeleccionado(prev => ({
+				...prev,
+				estado: 'INGRESADO',
+				estadoPaciente: 'INGRESADO',
+				clavePaciente: tokenGenerado,
+				fechaIngreso: new Date().toISOString()
+			}));
+
+			setModalReciboAbierto(false);
+
+			setTimeout(() => {
+				alert(`✅ Token generado exitosamente:\n\n${tokenGenerado}\n\nEl prospecto ahora es PACIENTE INGRESADO`);
+				setTokenGenerado(null);
+				setRecibosSubidos([]);
+				// Recargar detalles del paciente para obtener estado actualizado
+				if (prospectoSeleccionado?.id) {
+					// Aquí podrías volver a cargar el detalle si lo necesitas
+				}
+			}, 500);
 		} catch (error) {
 			console.error('Error al generar token:', error);
-			alert('Error al generar el token. Intenta de nuevo.');
+			alert(`Error al generar el token: ${error.message}`);
 		} finally {
 			setGenerandoToken(false);
 		}
@@ -780,40 +811,74 @@ const ExpedienteAdmisiones = () => {
 	);
 
 	return (
-		<div className="min-h-screen bg-slate-50 text-slate-900">
-			<div className="mx-auto max-w-[1600px] p-4 md:p-6">
-				<header className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-					<InstitutionalHeader
-						title="Expediente de admisiones"
-						moduleLabel="Documento maestro del área"
-						sessionValue="Admisiones"
-						badge={<FileText size={16} className="text-[#7E1D3B]" />}
-					/>
-				</header>
+		<div className="min-h-screen bg-slate-100 text-slate-900">
+			<div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
+				<AdminHeader submodule="Expediente de Admisiones" />
 
 				<main className="space-y-5">
 				<div className="grid gap-4 md:grid-cols-[220px_1fr]">
-					<aside className="rounded-3xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner">
+					<AdmisionesSidebar />
+					<div className="space-y-5">
 						<PrimarySidebarActionButton
 							label="Volver a admisiones"
 							onClick={() => navigate('/admisiones')}
 							icon={<ArrowRight size={18} />}
 						/>
-						<button type="button" onClick={() => navigate('/admisiones')} className={`mb-3 w-full rounded-xl px-3 py-3 text-sm font-semibold shadow-md transition ${isInicioActive ? 'bg-[#7E1D3B] text-white hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
-							Inicio
-						</button>
-						<button type="button" onClick={() => navigate('/admisiones/expediente')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isExpedienteActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
-							Expediente
-						</button>
-						<button type="button" onClick={() => navigate('/admisiones/estudio-socioeconomico')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isEstudioActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
-							Estudio socioeconómico
-						</button>
-						<button type="button" onClick={() => navigate('/admisiones/valoracion-diagnostica')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isValoracionActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
-							Valoración diagnóstica
-						</button>
-					</aside>
+							<section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
+								<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+									<div>
+										<p className="text-xs font-bold uppercase tracking-[0.25em] text-[#7E1D3B]">Diseño de expediente</p>
+										<h2 className="text-2xl font-black text-slate-900">Separado por Prospecto e Ingresado</h2>
+										<p className="mt-1 text-sm text-slate-500">Usa Prospecto para la admisión inicial y Ingresado cuando el paciente ya forma parte activa del proceso.</p>
+									</div>
+									<div className="inline-flex rounded-2xl bg-slate-100 p-1">
+										<button
+											type="button"
+											onClick={() => setExpedienteModo('prospecto')}
+											className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${expedienteModo === 'prospecto' ? 'bg-[#7E1D3B] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+										>
+											Prospecto
+										</button>
+										<button
+											type="button"
+											onClick={() => setExpedienteModo('ingresado')}
+											className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${expedienteModo === 'ingresado' ? 'bg-[#7E1D3B] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+										>
+											Ingresado
+										</button>
+									</div>
+								</div>
 
-					<div className="space-y-5">
+								<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+									{(expedienteModo === 'prospecto' ? [
+										{ title: 'Captura inicial', text: 'Datos del solicitante, contacto y origen de referencia.', icon: User },
+										{ title: 'Llamadas y agenda', text: 'Citas, seguimiento telefónico y pendientes urgentes.', icon: Phone },
+										{ title: 'Estudio socioeconómico', text: 'Evaluación social y económica previa al ingreso.', icon: FileText },
+										{ title: 'Valoración diagnóstica', text: 'Criterios de internamiento y lectura clínica inicial.', icon: HeartPulse },
+									] : [
+										{ title: 'Ingreso activo', text: 'Clave de paciente, estado actual y fecha de ingreso.', icon: CheckCircle2 },
+										{ title: 'Evolución clínica', text: 'Notas, indicaciones y seguimiento de tratamiento.', icon: HeartPulse },
+										{ title: 'Documentos', text: 'Recibos, formatos firmados y evidencia de ingreso.', icon: FileText },
+										{ title: 'Salida / egreso', text: 'Preparación de cierre, alta o cambio de área.', icon: ArrowRight },
+									]).map((item) => {
+										const Icon = item.icon;
+
+										return (
+											<article key={item.title} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+												<div className="flex items-start gap-3">
+													<div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#7E1D3B]/10 text-[#7E1D3B]">
+														<Icon size={18} />
+													</div>
+													<div>
+														<p className="font-black text-slate-900">{item.title}</p>
+														<p className="mt-1 text-sm text-slate-500">{item.text}</p>
+													</div>
+												</div>
+											</article>
+										);
+									})}
+								</div>
+							</section>
 						<section className="rounded-[24px] border border-slate-200 bg-slate-100/70 p-4 shadow-sm md:p-5">
 							<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-start">
 								<div

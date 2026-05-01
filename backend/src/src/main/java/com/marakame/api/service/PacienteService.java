@@ -32,10 +32,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.marakame.api.dto.PacienteDTO;
 import com.marakame.api.entity.EstudioSocioeconomicoPdf;
 import com.marakame.api.entity.Paciente;
+import com.marakame.api.entity.ReciboPago;
+import com.marakame.api.entity.EstadoPaciente;
 import com.marakame.api.entity.Seguimiento;
 import com.marakame.api.entity.Solicitante;
 import com.marakame.api.repository.EstudioSocioeconomicoPdfRepository;
 import com.marakame.api.repository.PacienteRepository;
+import com.marakame.api.repository.ReciboPagoRepository;
 import com.marakame.api.repository.SeguimientoRepository;
 import com.marakame.api.repository.SolicitanteRepository;
 
@@ -55,6 +58,9 @@ public class PacienteService {
 
     @Autowired
     private EstudioSocioeconomicoPdfRepository estudioSocioeconomicoPdfRepository;
+
+    @Autowired
+    private ReciboPagoRepository reciboPagoRepository;
 
     public List<Paciente> obtenerPacientesParaEstudio(String query) {
         String filtro = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
@@ -1714,5 +1720,76 @@ public class PacienteService {
 
     public List<Paciente> obtenerTodosPacientes() {
         return pacienteRepository.findAll();
+    }
+
+    // ========== NUEVOS MÉTODOS PARA GESTIÓN DE ESTADO Y PAGOS ==========
+
+    public Optional<Paciente> obtenerPacientePorId(Long id) {
+        return pacienteRepository.findById(id);
+    }
+
+    @Transactional
+    public String validarIngresoYGenerarClave(Long pacienteId, Map<String, Object> payload) {
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
+
+        // Validar que el recibo esté cargado
+        String reciboPagadoStr = String.valueOf(payload.getOrDefault("reciboPagado", false));
+        boolean reciboPagado = Boolean.parseBoolean(reciboPagadoStr);
+
+        if (!reciboPagado) {
+            throw new IllegalArgumentException("El recibo debe estar marcado como pagado para generar clave");
+        }
+
+        // Generar clave única: INST-AÑO-IDPACIENTE-ALEATORIO
+        String año = String.valueOf(LocalDateTime.now().getYear());
+        String aleatorio = String.format("%05d", (int)(Math.random() * 100000));
+        String clavePaciente = String.format("INST-%s-%d-%s", año, pacienteId, aleatorio);
+
+        // Crear registro de recibo de pago
+        ReciboPago recibo = new ReciboPago();
+        recibo.setPaciente(paciente);
+        recibo.setNumeroRecibo(clavePaciente);
+        recibo.setTokenGenerado(clavePaciente);
+        recibo.setMontoPago(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPago", 0))));
+        recibo.setMontoPrograma(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPrograma", 0))));
+        recibo.setConcepto((String) payload.getOrDefault("concepto", "Tratamiento de desintoxicación"));
+        recibo.setNombrePagador((String) payload.getOrDefault("nombrePagador", ""));
+        recibo.setRfcPagador((String) payload.getOrDefault("rfc", ""));
+        recibo.setFechaPago(LocalDateTime.now());
+        recibo.setEstadoPago("VALIDADO");
+        recibo.setFechaValidacion(LocalDateTime.now());
+        reciboPagoRepository.save(recibo);
+
+        // Actualizar estado del paciente
+        paciente.setEstadoPaciente(EstadoPaciente.INGRESADO);
+        paciente.setClavePaciente(clavePaciente);
+        paciente.setFechaIngreso(LocalDateTime.now());
+        pacienteRepository.save(paciente);
+
+        return clavePaciente;
+    }
+
+    @Transactional
+    public Paciente cambiarEstadoPaciente(Long pacienteId, String nuevoEstado) {
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
+
+        try {
+            EstadoPaciente estado = EstadoPaciente.valueOf(nuevoEstado.toUpperCase());
+            paciente.setEstadoPaciente(estado);
+
+            if (estado == EstadoPaciente.EGRESO) {
+                // Aquí puedes agregar lógica adicional para egreso si es necesario
+            }
+
+            return pacienteRepository.save(paciente);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Estado inválido: " + nuevoEstado);
+        }
+    }
+
+    public List<ReciboPago> obtenerRecibosPorPaciente(Long pacienteId) {
+        return reciboPagoRepository.findByPaciente_Id(pacienteId);
     }
 }

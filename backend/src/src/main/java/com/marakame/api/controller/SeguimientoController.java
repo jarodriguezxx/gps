@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.marakame.api.dto.SeguimientoTablaDTO;
 import com.marakame.api.entity.Paciente;
+import com.marakame.api.entity.Prioridad;
 import com.marakame.api.entity.Seguimiento;
 import com.marakame.api.repository.PacienteRepository;
 import com.marakame.api.repository.SeguimientoRepository;
@@ -112,6 +113,9 @@ public class SeguimientoController {
         cita.setFechaHoraProgramada(request.fechaHoraProgramada());
         cita.setMotivo(request.motivo() == null ? "" : request.motivo().trim());
         cita.setOrigenLlamada(null);
+        cita.setPrioridad(Prioridad.MEDIA);
+        cita.setResponsable("Admisiones");
+        cita.setFechaSiguienteAccion(request.fechaHoraProgramada());
 
         Seguimiento guardado = seguimientoRepository.save(cita);
         return new ResponseEntity<>(Map.of(
@@ -180,7 +184,10 @@ public class SeguimientoController {
             seguimiento.getFechaHoraProgramada(),
             seguimiento.getMotivo(),
             nombre,
-            telefono
+            telefono,
+            seguimiento.getPrioridad(),
+            seguimiento.getResponsable(),
+            seguimiento.getFechaSiguienteAccion()
         );
     }
 

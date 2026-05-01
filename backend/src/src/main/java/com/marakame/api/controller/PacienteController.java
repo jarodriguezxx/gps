@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -172,5 +173,67 @@ public class PacienteController {
             .contentType(MediaType.APPLICATION_PDF)
             .header(HttpHeaders.CONTENT_DISPOSITION, disposition + "; filename=\"" + nombreArchivo + "\"")
             .body(pdf.getContenidoPdf());
+    }
+
+    // ========== NUEVOS ENDPOINTS PARA GESTIÓN DE ESTADO Y PAGOS ==========
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> obtenerPaciente(@PathVariable Long id) {
+        try {
+            var paciente = pacienteService.obtenerPacientePorId(id);
+            if (paciente.isEmpty()) {
+                return new ResponseEntity<>(Map.of("error", "Paciente no encontrado"), HttpStatus.NOT_FOUND);
+            }
+            return ResponseEntity.ok(paciente.get());
+        } catch (Exception e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/{id}/validar-ingreso")
+    public ResponseEntity<?> validarIngresoYGenerarClave(
+        @PathVariable Long id,
+        @RequestBody Map<String, Object> payload
+    ) {
+        try {
+            String clavePaciente = pacienteService.validarIngresoYGenerarClave(id, payload);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "clavePaciente", clavePaciente,
+                "estadoPaciente", "INGRESADO",
+                "mensaje", "Paciente validado e ingresado exitosamente"
+            ));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of(
+                "error", e.getMessage()
+            ), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Map.of(
+                "error", "Error al validar ingreso: " + e.getMessage()
+            ), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<?> cambiarEstadoPaciente(
+        @PathVariable Long id,
+        @RequestBody Map<String, String> payload
+    ) {
+        try {
+            String nuevoEstado = payload.get("estado");
+            if (nuevoEstado == null || nuevoEstado.isBlank()) {
+                return new ResponseEntity<>(Map.of("error", "Estado no puede estar vacío"), HttpStatus.BAD_REQUEST);
+            }
+            var paciente = pacienteService.cambiarEstadoPaciente(id, nuevoEstado);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "estadoPaciente", paciente.getEstadoPaciente(),
+                "mensaje", "Estado actualizado exitosamente"
+            ));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight, AlertTriangle } from 'lucide-react';
-
-import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
+import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight, AlertTriangle, FileText, Phone } from 'lucide-react';
+import { AdminHeader, AdminMainTitle, AdminErrorAlert, AdminSuccessAlert } from '../../components/layout/AdminLayout';
 
 const EstudioSocioeconomico = () => {
   const navigate = useNavigate();
@@ -272,7 +271,6 @@ const EstudioSocioeconomico = () => {
   };
 
   const currentTabIndex = tabs.findIndex((tab) => tab.id === activeTab);
-  const stepNumber = currentTabIndex + 1;
   const isFirstStep = currentTabIndex === 0;
   const isLastStep = currentTabIndex === tabs.length - 1;
 
@@ -1028,28 +1026,6 @@ const EstudioSocioeconomico = () => {
     });
   };
 
-  const sectionProgress = tabs.map((tab) => {
-    const requiredFields = getActiveRequiredFields(tab.id);
-    const completedFields = requiredFields.filter((name) => String(formData[name] || '').trim() !== '').length;
-    const hasCrossIssues = getCrossRuleFindings(tab.id).some((item) => item.severity === 'error');
-    const hasFamilyIssue = tab.id === 'familiar' && !hasMinimumFamilyReferences;
-    const percentage = requiredFields.length === 0
-      ? 0
-      : Math.round((completedFields / requiredFields.length) * 100);
-
-    return {
-      id: tab.id,
-      label: tab.label,
-      required: requiredFields.length,
-      completed: completedFields,
-      percentage,
-      hasIssues: hasCrossIssues || hasFamilyIssue,
-    };
-  });
-
-  const completedSections = sectionProgress.filter((item) => item.percentage === 100 && !item.hasIssues).length;
-  const overallProgress = Math.round((completedSections / tabs.length) * 100);
-
   const isTabCompleted = (tabId) => {
     const fields = getActiveRequiredFields(tabId);
     if (fields.length === 0) return false;
@@ -1671,15 +1647,7 @@ const EstudioSocioeconomico = () => {
         <div className="mx-auto max-w-[1600px] p-4 md:p-6">
 
       {/* --- HEADER DE ACCIÓN --- */}
-      <header className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <InstitutionalHeader
-          title="Estudio Socioeconómico"
-          moduleLabel="Formulario de Ingreso Institucional"
-          areaLabel={`Paso ${stepNumber} de ${tabs.length} • ${tabs[stepNumber - 1]?.label}`}
-          sessionValue="Admisiones"
-          badge={<Users size={16} className="text-[#7E1D3B]" />}
-        />
-      </header>
+      <AdminHeader submodule="Estudio Socioeconómico" />
 
         <main className="space-y-5">
 
