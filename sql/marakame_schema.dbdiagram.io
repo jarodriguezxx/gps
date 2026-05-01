@@ -96,13 +96,6 @@ Table pacientes {
   celular varchar(20)
   email varchar(150)
   direccion text
-  direccion_calle varchar(150)
-  direccion_no_ext varchar(30)
-  direccion_no_int varchar(30)
-  direccion_colonia varchar(150)
-  direccion_municipio_delegacion varchar(150)
-  direccion_cp varchar(10)
-  direccion_ciudad_estado varchar(150)
   municipio varchar(100)
   estado_paciente estado_paciente [default: 'activo']
   estado_paciente_texto varchar(20)
