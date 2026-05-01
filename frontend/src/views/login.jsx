@@ -1,50 +1,98 @@
-// src/views/Login/Login.jsx
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import marakameLogo from '../assets/marakame.jpeg';
 
 const Login = () => {
+  const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const res = await fetch('http://localhost:4000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Error al iniciar sesión.');
+        return;
+      }
+
+      localStorage.setItem('marakame_user', JSON.stringify(data));
+      navigate('/admisiones', { replace: true });
+    } catch {
+      setError('No se pudo conectar con el servidor.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#7E1D3B] to-[#1E3A2A] p-4">
-      
+
       <div className="bg-white p-8 md:p-12 rounded-xl shadow-2xl w-full max-w-md flex flex-col items-center">
-        
-        {/* Encabezado de Logos */}
-          <div className="mb-10 w-full flex flex-col items-center border border-gray-100 p-4 rounded-lg shadow-sm">
-            <img
-             src={marakameLogo}
-             alt="Logo Nayarit Marakame"
-             className="mb-3 h-auto w-full max-w-[380px] rounded-md"
-            />
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest">Gobierno del Estado</p>
+
+        <div className="mb-10 w-full flex flex-col items-center border border-gray-100 p-4 rounded-lg shadow-sm">
+          <img
+            src={marakameLogo}
+            alt="Logo Nayarit Marakame"
+            className="mb-3 h-auto w-full max-w-[380px] rounded-md"
+          />
+          <p className="text-[10px] text-gray-400 uppercase tracking-widest">Gobierno del Estado</p>
         </div>
 
         <h1 className="text-3xl font-bold text-gray-800 mb-1">Sistema de Gestión</h1>
         <p className="text-gray-500 mb-10 text-sm">Instituto Marakame</p>
 
-        <form className="w-full space-y-6">
+        <form className="w-full space-y-6" onSubmit={handleSubmit}>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5 text-left">Usuario</label>
-            <input 
-              type="text" 
-              className="w-full px-4 py-3 border-0 bg-gray-100 rounded-md focus:ring-2 focus:ring-[#7E1D3B] outline-none transition-all" 
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-3 border-0 bg-gray-100 rounded-md focus:ring-2 focus:ring-[#7E1D3B] outline-none transition-all"
               placeholder="Introduce tu usuario"
+              autoComplete="username"
+              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5 text-left">Contraseña</label>
-            <input 
-              type="password" 
-              className="w-full px-4 py-3 border-0 bg-gray-100 rounded-md focus:ring-2 focus:ring-[#7E1D3B] outline-none transition-all" 
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border-0 bg-gray-100 rounded-md focus:ring-2 focus:ring-[#7E1D3B] outline-none transition-all"
               placeholder="••••••••"
+              autoComplete="current-password"
+              required
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="w-full bg-[#7E1D3B] text-white py-3.5 rounded-lg font-semibold hover:bg-[#63162e] transition-all shadow-lg active:scale-95"
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2 text-center">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#7E1D3B] text-white py-3.5 rounded-lg font-semibold hover:bg-[#63162e] transition-all shadow-lg active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Iniciar sesión
+            {loading ? 'Verificando...' : 'Iniciar sesión'}
           </button>
         </form>
 

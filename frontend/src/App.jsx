@@ -1,15 +1,33 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+
+// Autenticación
+import Login from './views/login';
+
+// Admisiones
 import AdmisionesInicio from './views/admisiones/Admisiones-inicio';
 import BandejaOperativa from './views/admisiones/BandejaOperativa';
 import AgendaCitas from './views/admisiones/AgendaCitas';
 import SeguimientoTelefonico from './views/admisiones/SeguimientoTelefonico';
-import Login from './views/login';
+import ExpedienteAdmisiones from './views/admisiones/ExpedienteAdmisiones';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
+import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
+
+// Médico
+import InicioJefeMedico from './views/medico/InicioJefeMedico';
+import PacientesActivos from './views/medico/PacientesActivos';
+import ExpedientesClinicos from './views/medico/ExpedientesClinicos';
+import DetalleExpediente from './views/medico/DetalleExpediente';
+import ValoracionMedica from './views/medico/ValoracionMedica';
+import Prospectos from './views/medico/Prospectos';
+
+// Recursos Humanos
 import AltaPersonal from './views/rh/AltaPersonal';
 import BajaPersonal from './views/rh/BajaPersonal';
 import CatalogoRoles from './views/rh/CatalogoRoles';
 import AsignacionRoles from './views/rh/AsignacionRoles';
+
+// Financiero
 import ArchivoContable from './views/financiero/ArchivoContable';
 import DigitalizarComprobantes from './views/financiero/DigitalizarComprobantes';
 import GestionarCorreciones from './views/financiero/GestionarCorrecciones';
@@ -17,66 +35,62 @@ import FacturaElectronica from './views/financiero/FacturaElectronica';
 import ComprobantesFiscales from './views/financiero/ComprobantesFiscales';
 import RequisicionesAlmacen from './views/financiero/RequisicionesAlmacen';
 import DepositoBancario from './views/financiero/DepositoBancario';
-import AlmacenDashboard from './views/almacen/AlmacenDashboard';
-import ExpedienteAdmisiones from './views/admisiones/ExpedienteAdmisiones';
 
-
-// Importaciones para Recursos Materiales
+// Recursos Materiales
 import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
 import Proveedores from './views/rec-materiales/Proveedores';
 import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
 import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion';
 import OrdenCompra from './views/rec-materiales/OrdenCompra';
 import Historial from './views/rec-materiales/Historial';
-import { REQUISICIONES_COMPLETO } from '../src/types/requisicion.ts'
+import { REQUISICIONES_COMPLETO } from './types/requisicion.ts';
 
-// Importación para módulo médico
-import InicioJefeMedico from './views/medico/InicioJefeMedico'; 
-import PacientesActivos from './views/medico/PacientesActivos';
-import ExpedientesClinicos from './views/medico/ExpedientesClinicos';
-import DetalleExpediente from './views/medico/DetalleExpediente';
-import ValoracionMedica from './views/medico/ValoracionMedica';
-import Prospectos from './views/medico/Prospectos';
+// Almacén
+import AlmacenDashboard from './views/almacen/AlmacenDashboard';
 
+const PrivateRoute = ({ children }) => {
+  const user = localStorage.getItem('marakame_user');
+  return user ? children : <Navigate to="/login" replace />;
+};
 
 const quickViews = [
-  { label: 'Login', path: '/login' },
-  { label: 'Admisiones', path: '/admisiones' },
-  { label: 'Exp. Admisiones', path: '/admisiones/expediente' },
-  { label: 'Estudio', path: '/admisiones/estudio-socioeconomico' },
-  { label: 'Valoración', path: '/admisiones/valoracion-diagnostica' },
-  { label: 'Médico - Inicio', path: '/medico/inicio-jefe-medico' },
-  { label: 'Médico - Pacientes', path: '/medico/pacientes' },
-  { label: 'Médico - Expedientes', path: '/medico/expedientes' },
-  { label: 'Médico - Detalles', path: '/medico/expedientes/:id' },
-  { label: 'Médico - Valoración', path: '/medico/valoracion/:id' },
-  { label: 'Médico - Prospectos', path: '/medico/prospectos' },
-  { label: 'RH - Alta', path: '/rh/alta-personal' },
-  { label: 'RH - Baja', path: '/rh/baja-personal' },
-  { label: 'RH - Catálogo', path: '/rh/catalogo-roles' },
-  { label: 'RH - Asignación', path: '/rh/asignacion-roles' },
-  { label: 'Fin - Archivo', path: '/financiero/archivo-contable' },
-  { label: 'Fin - Digitalizar', path: '/financiero/digitalizar-comprobantes' },
-  { label: 'Fin - Correcciones', path: '/financiero/gestionar-correcciones' },
-  { label: 'Fin - Factura', path: '/financiero/factura-electronica' },
-  { label: 'Fin - Comprobantes', path: '/financiero/comprobantes-fiscales' },
-  { label: 'Fin - Requisiciones', path: '/financiero/requisiciones-almacen' },
-  { label: 'Fin - Depósito', path: '/financiero/deposito-bancario' },
-  { label: 'Rec. Materiales', path: '/rec-materiales/rec-materiales' },
-  { label: 'Rec. Proveedores', path: '/rec-materiales/rec-materiales/proveedores' },
-  { label: 'Rec. Historial', path: '/rec-materiales/rec-materiales/historial' },
-  { label: 'Almacén', path: '/almacen' },
+  { label: 'Login',                  path: '/login' },
+  { label: 'Admisiones',             path: '/admisiones' },
+  { label: 'Bandeja Operativa',      path: '/admisiones/bandeja-operativa' },
+  { label: 'Agenda Citas',           path: '/admisiones/agenda-citas' },
+  { label: 'Seguimiento Tel.',       path: '/admisiones/seguimiento-telefonico' },
+  { label: 'Exp. Admisiones',        path: '/admisiones/expediente' },
+  { label: 'Estudio Socioeconómico', path: '/admisiones/estudio-socioeconomico' },
+  { label: 'Valoración Diagnóstica', path: '/admisiones/valoracion-diagnostica' },
+  { label: 'Médico - Inicio',        path: '/medico/inicio-jefe-medico' },
+  { label: 'Médico - Pacientes',     path: '/medico/pacientes' },
+  { label: 'Médico - Expedientes',   path: '/medico/expedientes' },
+  { label: 'Médico - Prospectos',    path: '/medico/prospectos' },
+  { label: 'RH - Alta',              path: '/rh/alta-personal' },
+  { label: 'RH - Baja',              path: '/rh/baja-personal' },
+  { label: 'RH - Catálogo',          path: '/rh/catalogo-roles' },
+  { label: 'RH - Asignación',        path: '/rh/asignacion-roles' },
+  { label: 'Fin - Archivo',          path: '/financiero/archivo-contable' },
+  { label: 'Fin - Digitalizar',      path: '/financiero/digitalizar-comprobantes' },
+  { label: 'Fin - Correcciones',     path: '/financiero/gestionar-correcciones' },
+  { label: 'Fin - Factura',          path: '/financiero/factura-electronica' },
+  { label: 'Fin - Comprobantes',     path: '/financiero/comprobantes-fiscales' },
+  { label: 'Fin - Requisiciones',    path: '/financiero/requisiciones-almacen' },
+  { label: 'Fin - Depósito',         path: '/financiero/deposito-bancario' },
+  { label: 'Rec. Materiales',        path: '/rec-materiales/rec-materiales' },
+  { label: 'Rec. Proveedores',       path: '/rec-materiales/rec-materiales/proveedores' },
+  { label: 'Rec. Historial',         path: '/rec-materiales/rec-materiales/historial' },
+  { label: 'Almacén',                path: '/almacen' },
 ];
 
 const QuickNavigator = () => {
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [abierto, setAbierto] = useState(false);
-  const uniqueQuickViews = Array.from(new Map(quickViews.map((view) => [view.path, view])).values());
+  const uniqueQuickViews = Array.from(new Map(quickViews.map((v) => [v.path, v])).values());
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      {/* Panel desplegable */}
       {abierto && (
         <div className="mb-2 w-[220px] rounded-2xl border border-slate-200 bg-white/95 p-3
                         shadow-[0_12px_30px_rgba(15,23,42,0.14)] backdrop-blur
@@ -105,7 +119,6 @@ const QuickNavigator = () => {
         </div>
       )}
 
-      {/* Botón flotante toggle */}
       <button
         onClick={() => setAbierto(prev => !prev)}
         className="ml-auto flex items-center gap-2 px-4 py-2.5 bg-[#7E1D3B] text-white
@@ -135,57 +148,60 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/"                                        element={<Navigate to="/admisiones" replace />} />
-        <Route path="/login"                                   element={<Login />} />
-          <Route path="/admisiones"                              element={<AdmisionesInicio />} />
-          <Route path="/admisiones/bandeja-operativa"            element={<BandejaOperativa />} />
-          <Route path="/admisiones/agenda-citas"                 element={<AgendaCitas />} />
-          <Route path="/admisiones/seguimiento-telefonico"       element={<SeguimientoTelefonico />} />
-          <Route path="/admisiones/expediente"                   element={<ExpedienteAdmisiones />} />
-          <Route path="/admisiones/estudio-socioeconomico"       element={<EstudioSocioeconomico />} />
-          <Route path="/admisiones/valoracion-diagnostica"       element={<Navigate to="/admisiones/seguimiento-telefonico" replace />} />
-          <Route path="/admisiones/bandeja"                      element={<Navigate to="/admisiones/bandeja-operativa" replace />} />
+        <Route path="/"      element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
 
-        <Route path="/rh/alta-personal"                        element={<AltaPersonal />} />
-        <Route path="/rh/baja-personal"                        element={<BajaPersonal />} />
-        <Route path="/rh/catalogo-roles"                       element={<CatalogoRoles />} />
-        <Route path="/rh/asignacion-roles"                     element={<AsignacionRoles />} />
-        
-        <Route path="/medico/inicio-jefe-medico"               element={<InicioJefeMedico />} />
-        <Route path="/medico/pacientes"                        element={<PacientesActivos />} />
-        <Route path="/medico/expedientes"                      element={<ExpedientesClinicos/>} />
-        <Route path="/medico/expedientes/:id"                  element={<DetalleExpediente />} />
-        <Route path="/medico/prospectos"                       element={<Prospectos />} />
-        <Route path="/medico/valoracion/:id"                   element={<ValoracionMedica />} />
+        {/* Admisiones */}
+        <Route path="/admisiones"                              element={<PrivateRoute><AdmisionesInicio /></PrivateRoute>} />
+        <Route path="/admisiones/bandeja-operativa"            element={<PrivateRoute><BandejaOperativa /></PrivateRoute>} />
+        <Route path="/admisiones/agenda-citas"                 element={<PrivateRoute><AgendaCitas /></PrivateRoute>} />
+        <Route path="/admisiones/seguimiento-telefonico"       element={<PrivateRoute><SeguimientoTelefonico /></PrivateRoute>} />
+        <Route path="/admisiones/expediente"                   element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
+        <Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
+        <Route path="/admisiones/valoracion-diagnostica"       element={<PrivateRoute><ValoracionDiagnostica /></PrivateRoute>} />
+        <Route path="/admisiones/bandeja"                      element={<Navigate to="/admisiones/bandeja-operativa" replace />} />
 
+        {/* Médico */}
+        <Route path="/medico"                                  element={<Navigate to="/medico/inicio-jefe-medico" replace />} />
+        <Route path="/medico/inicio-jefe-medico"               element={<PrivateRoute><InicioJefeMedico /></PrivateRoute>} />
+        <Route path="/medico/pacientes"                        element={<PrivateRoute><PacientesActivos /></PrivateRoute>} />
+        <Route path="/medico/expedientes"                      element={<PrivateRoute><ExpedientesClinicos /></PrivateRoute>} />
+        <Route path="/medico/expedientes/:id"                  element={<PrivateRoute><DetalleExpediente /></PrivateRoute>} />
+        <Route path="/medico/prospectos"                       element={<PrivateRoute><Prospectos /></PrivateRoute>} />
+        <Route path="/medico/valoracion/:id"                   element={<PrivateRoute><ValoracionMedica /></PrivateRoute>} />
 
-        <Route path="/financiero/archivo-contable"             element={<ArchivoContable />} />
-        <Route path="/financiero/digitalizar-comprobantes"     element={<DigitalizarComprobantes />} />
-        <Route path="/financiero/factura-electronica"          element={<FacturaElectronica />} />
-        <Route path="/financiero/comprobantes-fiscales"        element={<ComprobantesFiscales />} />
-        <Route path="/financiero/requisiciones-almacen"        element={<RequisicionesAlmacen />} />
-        <Route path="/financiero/gestionar-correcciones"       element={<GestionarCorreciones />} />
-        <Route path="/financiero/deposito-bancario"            element={<DepositoBancario />} />
+        {/* Recursos Humanos */}
+        <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
+        <Route path="/rh/baja-personal"                        element={<PrivateRoute><BajaPersonal /></PrivateRoute>} />
+        <Route path="/rh/catalogo-roles"                       element={<PrivateRoute><CatalogoRoles /></PrivateRoute>} />
+        <Route path="/rh/asignacion-roles"                     element={<PrivateRoute><AsignacionRoles /></PrivateRoute>} />
 
-{/* Rutas para Recursos Materiales y Compras/Inventario */}
-        <Route path='/rec-materiales/:rol' element={<RecMaterialesDashboard/>}>
+        {/* Financiero */}
+        <Route path="/financiero/archivo-contable"             element={<PrivateRoute><ArchivoContable /></PrivateRoute>} />
+        <Route path="/financiero/digitalizar-comprobantes"     element={<PrivateRoute><DigitalizarComprobantes /></PrivateRoute>} />
+        <Route path="/financiero/factura-electronica"          element={<PrivateRoute><FacturaElectronica /></PrivateRoute>} />
+        <Route path="/financiero/comprobantes-fiscales"        element={<PrivateRoute><ComprobantesFiscales /></PrivateRoute>} />
+        <Route path="/financiero/requisiciones-almacen"        element={<PrivateRoute><RequisicionesAlmacen /></PrivateRoute>} />
+        <Route path="/financiero/gestionar-correcciones"       element={<PrivateRoute><GestionarCorreciones /></PrivateRoute>} />
+        <Route path="/financiero/deposito-bancario"            element={<PrivateRoute><DepositoBancario /></PrivateRoute>} />
+
+        {/* Recursos Materiales */}
+        <Route path='/rec-materiales/:rol' element={<PrivateRoute><RecMaterialesDashboard /></PrivateRoute>}>
           <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
-          <Route path='proveedores' element = {<Proveedores/>}/>
-          <Route path='historial' element = {<Historial/>}/>
+          <Route path='proveedores' element={<Proveedores/>}/>
+          <Route path='historial' element={<Historial/>}/>
           <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
           <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
         </Route>
 
-        {/* Rutas para Almacen */}
-        <Route path="/almacen" element={<AlmacenDashboard />} />
+        {/* Almacén */}
+        <Route path="/almacen" element={<PrivateRoute><AlmacenDashboard /></PrivateRoute>} />
 
-        {/* Ruta comodín para redirigir si no existe la URL */}
-        <Route path="*" element={<Navigate to="/admisiones" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       <QuickNavigator />
     </BrowserRouter>
   );
 }
-
 
 export default App;
