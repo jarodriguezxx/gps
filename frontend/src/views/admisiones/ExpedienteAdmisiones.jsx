@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Search, Sparkles, X, Download, Upload, CheckCircle2, Briefcase, Phone, User, HeartPulse } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowRight, FileText, Search, Sparkles, X, Download, Upload, CheckCircle2, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
 import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
@@ -456,12 +456,12 @@ const generarReciboHTML = (datos) => {
 
 const ExpedienteAdmisiones = () => {
 	const navigate = useNavigate();
+	const { id: expedienteIdParam } = useParams();
 	const [tab, setTab] = useState('general');
 	const [busquedaExpediente, setBusquedaExpediente] = useState('');
 	const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
 	const [cargandoBusqueda, setCargandoBusqueda] = useState(false);
 	const [errorBusqueda, setErrorBusqueda] = useState('');
-	const [mostrarResultados, setMostrarResultados] = useState(false);
 	const [indiceResaltado, setIndiceResaltado] = useState(-1);
 	const [prospectoSeleccionado, setProspectoSeleccionado] = useState(null);
 	const [detalleExpediente, setDetalleExpediente] = useState(null);
@@ -502,12 +502,15 @@ const ExpedienteAdmisiones = () => {
 	const [tokenGenerado, setTokenGenerado] = useState(null);
 	const [generandoToken, setGenerandoToken] = useState(false);
 	const [expedienteModo, setExpedienteModo] = useState('prospecto');
-	const seleccionarProspecto = async (prospecto) => {
+	const [expedienteExpandidoId, setExpedienteExpandidoId] = useState(null);
+
+	const seleccionarProspecto = async (prospecto, opciones = {}) => {
+		const { abrirConsulta = false, tabConsulta = 'solicitante' } = opciones;
 		setProspectoSeleccionado(prospecto);
 		setBusquedaExpediente(getNombreProspecto(prospecto));
-		setMostrarResultados(false);
-		setModalLlamadaInicialAbierto(false);
-		setDiagnosticoTab('solicitante');
+		setModalLlamadaInicialAbierto(abrirConsulta);
+		setDiagnosticoTab(tabConsulta);
+		setExpedienteExpandidoId(prospecto?.id || null);
 
 		// Consultar el estado real del paciente desde el backend
 		try {
@@ -653,6 +656,34 @@ const ExpedienteAdmisiones = () => {
 	};
 
 	useEffect(() => {
+		if (!expedienteIdParam) return;
+
+		const controller = new AbortController();
+
+		const cargarProspectoDesdeRuta = async () => {
+			try {
+				const response = await fetch(`http://localhost:4000/api/pacientes/${expedienteIdParam}`, {
+					signal: controller.signal,
+				});
+
+				if (!response.ok) return;
+
+				const paciente = await response.json();
+				setProspectoSeleccionado(paciente);
+				setBusquedaExpediente(getNombreProspecto(paciente));
+				setExpedienteExpandidoId(paciente?.id || null);
+			} catch (error) {
+				if (error.name !== 'AbortError') {
+					console.error('No se pudo cargar el expediente desde la ruta:', error);
+				}
+			}
+		};
+
+		cargarProspectoDesdeRuta();
+		return () => controller.abort();
+	}, [expedienteIdParam]);
+
+	useEffect(() => {
 		const query = busquedaExpediente.trim();
 		const controller = new AbortController();
 
@@ -660,7 +691,6 @@ const ExpedienteAdmisiones = () => {
 			setResultadosBusqueda([]);
 			setCargandoBusqueda(false);
 			setErrorBusqueda('');
-			setMostrarResultados(false);
 			setIndiceResaltado(-1);
 			return () => controller.abort();
 		}
@@ -686,14 +716,12 @@ const ExpedienteAdmisiones = () => {
 					seleccionarProspecto(resultados[0]);
 					setIndiceResaltado(0);
 				} else {
-					setMostrarResultados(true);
 					setIndiceResaltado(resultados.length > 0 ? 0 : -1);
 				}
 			} catch (error) {
 				if (error.name !== 'AbortError') {
 					console.error('Error al buscar prospectos de expediente:', error);
 					setErrorBusqueda('No se pudo consultar prospectos. Revisa backend o conexión.');
-					setMostrarResultados(true);
 				}
 			} finally {
 				setCargandoBusqueda(false);
@@ -765,8 +793,8 @@ const ExpedienteAdmisiones = () => {
 		setBusquedaExpediente('');
 		setResultadosBusqueda([]);
 		setErrorBusqueda('');
-		setMostrarResultados(false);
 		setIndiceResaltado(-1);
+		setExpedienteExpandidoId(null);
 		setProspectoSeleccionado(null);
 		setDetalleExpediente(null);
 		setErrorDetalleExpediente('');
@@ -774,10 +802,26 @@ const ExpedienteAdmisiones = () => {
 		setDiagnosticoTab('solicitante');
 	};
 
+	const toggleExpedienteExpandido = (id) => {
+		setExpedienteExpandidoId((prev) => (prev === id ? null : id));
+	};
+
+	const expedientesLista = useMemo(() => {
+		const query = busquedaExpediente.trim();
+		if (query.length >= 2) {
+			return resultadosBusqueda;
+		}
+
+		if (prospectoSeleccionado?.id) {
+			return [prospectoSeleccionado];
+		}
+
+		return [];
+	}, [busquedaExpediente, resultadosBusqueda, prospectoSeleccionado]);
+
 	const handleBusquedaKeyDown = (event) => {
 		if (event.key === 'ArrowDown') {
 			event.preventDefault();
-			setMostrarResultados(true);
 			setIndiceResaltado((prev) => {
 				const siguiente = prev + 1;
 				return siguiente >= resultadosBusqueda.length ? 0 : siguiente;
@@ -787,7 +831,6 @@ const ExpedienteAdmisiones = () => {
 
 		if (event.key === 'ArrowUp') {
 			event.preventDefault();
-			setMostrarResultados(true);
 			setIndiceResaltado((prev) => {
 				const anterior = prev - 1;
 				return anterior < 0 ? resultadosBusqueda.length - 1 : anterior;
@@ -796,7 +839,7 @@ const ExpedienteAdmisiones = () => {
 		}
 
 		if (event.key === 'Escape') {
-			setMostrarResultados(false);
+			setIndiceResaltado(-1);
 			return;
 		}
 
@@ -848,139 +891,8 @@ const ExpedienteAdmisiones = () => {
 							onClick={() => navigate('/admisiones')}
 							icon={<ArrowRight size={18} />}
 						/>
-							<section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
-								<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-									<div>
-										<p className="text-xs font-bold uppercase tracking-[0.25em] text-[#7E1D3B]">Diseño de expediente</p>
-										<h2 className="text-2xl font-black text-slate-900">Separado por Prospecto y Paciente</h2>
-										<p className="mt-1 text-sm text-slate-500">Usa Prospecto para la admisión inicial y Paciente cuando ya existe una ficha activa en el sistema.</p>
-									</div>
-									<div className="inline-flex rounded-2xl bg-slate-100 p-1">
-										<button
-											type="button"
-											onClick={() => setExpedienteModo('prospecto')}
-											className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${expedienteModo === 'prospecto' ? 'bg-[#7E1D3B] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-										>
-											Prospecto
-										</button>
-										<button
-											type="button"
-											onClick={() => setExpedienteModo('ingresado')}
-											className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${expedienteModo === 'ingresado' ? 'bg-[#7E1D3B] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-										>
-											Paciente
-										</button>
-									</div>
-								</div>
-
-								<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-									{(expedienteModo === 'prospecto' ? [
-										{ title: 'Captura inicial', text: 'Datos del solicitante, contacto y origen de referencia.', icon: User },
-										{ title: 'Llamadas y agenda', text: 'Citas, seguimiento telefónico y pendientes urgentes.', icon: Phone },
-										{ title: 'Estudio socioeconómico', text: 'Evaluación social y económica previa al ingreso.', icon: FileText },
-										{ title: 'Valoración diagnóstica', text: 'Criterios de internamiento y lectura clínica inicial.', icon: HeartPulse },
-									] : [
-										{ title: 'Paciente activo', text: 'Clave de paciente, estado actual y fecha de ingreso.', icon: CheckCircle2 },
-										{ title: 'Evolución clínica', text: 'Notas, indicaciones y seguimiento de tratamiento.', icon: HeartPulse },
-										{ title: 'Documentos', text: 'Recibos, formatos firmados y evidencia de ingreso.', icon: FileText },
-										{ title: 'Salida / egreso', text: 'Preparación de cierre, alta o cambio de área.', icon: ArrowRight },
-									]).map((item) => {
-										const Icon = item.icon;
-
-										return (
-											<article key={item.title} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-												<div className="flex items-start gap-3">
-													<div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#7E1D3B]/10 text-[#7E1D3B]">
-														<Icon size={18} />
-													</div>
-													<div>
-														<p className="font-black text-slate-900">{item.title}</p>
-														<p className="mt-1 text-sm text-slate-500">{item.text}</p>
-													</div>
-												</div>
-											</article>
-										);
-									})}
-								</div>
-							</section>
-						<section className="rounded-[24px] border border-slate-200 bg-slate-100/70 p-4 shadow-sm md:p-5">
-							<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-start">
-								<div
-									className="relative w-full md:max-w-md"
-									onBlur={() => {
-										window.setTimeout(() => setMostrarResultados(false), 120);
-									}}
-								>
-									<Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-									<input
-										type="text"
-										value={busquedaExpediente}
-										onChange={(event) => {
-											const value = event.target.value;
-											setBusquedaExpediente(value);
-											if (prospectoSeleccionado && value !== getNombreProspecto(prospectoSeleccionado)) {
-												setProspectoSeleccionado(null);
-											}
-										}}
-										onKeyDown={handleBusquedaKeyDown}
-										onFocus={() => {
-											if (busquedaExpediente.trim().length >= 2) {
-												setMostrarResultados(true);
-											}
-										}}
-										placeholder="Buscar expediente, nombre o clave..."
-										className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-									/>
-
-									{mostrarResultados && busquedaExpediente.trim().length >= 2 ? (
-										<div className="absolute left-0 right-0 z-10 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.14)]">
-											<div className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Resultados de prospectos</div>
-											{cargandoBusqueda ? <p className="px-4 py-3 text-sm text-slate-500">Buscando prospectos...</p> : null}
-											{errorBusqueda ? <p className="px-4 py-3 text-sm text-rose-700">{errorBusqueda}</p> : null}
-											{!cargandoBusqueda && !errorBusqueda && resultadosBusqueda.length === 0 ? (
-												<p className="px-4 py-3 text-sm text-slate-500">No se encontraron coincidencias.</p>
-											) : null}
-											{!cargandoBusqueda && resultadosBusqueda.length > 0 ? (
-												<ul className="max-h-64 overflow-y-auto">
-													{resultadosBusqueda.map((item, index) => (
-														<li key={item.id || `${getNombreProspecto(item)}-${index}`}>
-															<button
-																type="button"
-																onMouseEnter={() => setIndiceResaltado(index)}
-																onClick={() => seleccionarProspecto(item)}
-																className={`w-full border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 ${
-																	indiceResaltado === index ? 'bg-[#7E1D3B]/10' : 'bg-white hover:bg-slate-50'
-																}`}
-															>
-																<p className="text-sm font-semibold text-slate-900">{getNombreProspecto(item) || 'Sin nombre'}</p>
-																<p className="text-xs text-slate-500">Clave: {formatClave(item)} • Tel: {item.telefonoContacto || item.telefono || item.solicitante?.telefono || '--'}</p>
-															</button>
-														</li>
-													))}
-												</ul>
-											) : null}
-										</div>
-									) : null}
-								</div>
-								<button
-									type="button"
-									onClick={limpiarBusqueda}
-									className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-								>
-									Limpiar búsqueda
-								</button>
-							</div>
-							{prospectoSeleccionado ? (
-								<p className="mt-3 text-sm text-slate-600">
-									Prospecto seleccionado: <span className="font-semibold text-slate-900">{getNombreProspecto(prospectoSeleccionado)}</span>
-								</p>
-							) : (
-								<p className="mt-3 text-sm text-slate-500">Escribe al menos 2 letras para autocompletar prospectos.</p>
-							)}
-							{cargandoDetalleExpediente ? <p className="mt-2 text-xs text-slate-500">Cargando detalle del expediente...</p> : null}
-							{errorDetalleExpediente ? <p className="mt-2 text-xs text-rose-700">{errorDetalleExpediente}</p> : null}
-						</section>
-
+							
+						
 						<section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
 							<div className="mb-3 flex items-center justify-between gap-3">
 								<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Navegación</p>

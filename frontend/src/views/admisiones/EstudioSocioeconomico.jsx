@@ -1562,17 +1562,40 @@ const EstudioSocioeconomico = () => {
         telefonoCelularPaciente: formData.pacienteTelefonoCelular,
       };
 
-      const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteSeleccionadoId}/estudio-basico`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      // Sólo actualizar datos básicos (activar ficha de solicitante) si la cita programada
+      // para este paciente ya ocurrió (o es exactamente ahora).
+      const citaPaciente = citasRegistradas.find((c) => c.pacienteId === pacienteSeleccionadoId);
+      const ahora = new Date();
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'No fue posible actualizar los datos.');
+      if (citaPaciente && citaPaciente.fechaHoraProgramada) {
+        const fechaCita = new Date(citaPaciente.fechaHoraProgramada);
+        if (fechaCita.getTime() <= ahora.getTime()) {
+          // La cita ya ocurrió, activar la ficha
+          const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteSeleccionadoId}/datos-basicos`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'No fue posible actualizar los datos.');
+          }
+        } else {
+          // La cita está en el futuro, no activamos la ficha aún
+          setFeedback({
+            type: 'info',
+            message: 'La ficha de solicitante se activará cuando llegue la fecha y hora de la cita.',
+          });
+        }
+      } else {
+        // No hay cita registrada, mostrar aviso pero continuar con el PDF
+        setFeedback({
+          type: 'warning',
+          message: 'No se encontró cita registrada para este paciente; la ficha no se activará.',
+        });
       }
 
       const pdfPayload = {

@@ -380,8 +380,7 @@ const ValoracionDiagnostica = () => {
 
       const solicitanteGuardado = await solicitanteResponse.json();
 
-      // AQUÍ ESTÁ EL CAMBIO IMPORTANTE DE LA URL:
-      const pacienteResponse = await fetch('http://localhost:4000/api/pacientes', {
+      const pacienteResponse = await fetch('http://localhost:4000/api/pacientes/guardar-expediente', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -394,11 +393,11 @@ const ValoracionDiagnostica = () => {
         throw new Error(errorText || 'No se pudo guardar el paciente.');
       }
 
-      window.alert('Valoración diagnóstica guardada correctamente.');
+      window.alert('Valoracion diagnostica guardada correctamente.');
       navigate('/admisiones/expediente');
     } catch (error) {
-      console.error('Error al guardar valoración diagnóstica:', error);
-      window.alert('Error al guardar. Revisa la consola o conexión.');
+      console.error('Error al guardar valoracion diagnostica:', error);
+      window.alert('Error al guardar. Revisa que el backend este corriendo en el puerto 4000.');
     } finally {
       setIsSaving(false);
     }
@@ -415,6 +414,7 @@ const ValoracionDiagnostica = () => {
 
             <div className="space-y-5">
               
+
         {/* Datos Generales */}
         <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <div>

@@ -27,6 +27,7 @@ const AgendaCitas = () => {
 	const [citas, setCitas] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
+	
 	const [searchQuery, setSearchQuery] = useState('');
 	const [agendaOpen, setAgendaOpen] = useState(false);
 	const [registroOpen, setRegistroOpen] = useState(false);
@@ -37,6 +38,8 @@ const AgendaCitas = () => {
 	const [agendaMensajeTipo, setAgendaMensajeTipo] = useState('success');
 	const [registroMensaje, setRegistroMensaje] = useState('');
 	const [registroMensajeTipo, setRegistroMensajeTipo] = useState('success');
+	const [tabActiva, setTabActiva] = useState('citas'); // 'citas' o 'llamadas'
+const [llamadas, setLlamadas] = useState([]);
 	const [form, setForm] = useState({
 		pacienteNombre: '',
 		fecha: '',
@@ -53,27 +56,23 @@ const AgendaCitas = () => {
 	});
 
 	useEffect(() => {
-		const cargarAgenda = async () => {
-			try {
-				setLoading(true);
-				setError('');
-				const response = await fetch('http://localhost:4000/api/seguimientos/tablas');
-				if (!response.ok) {
-					throw new Error('No se pudo cargar la agenda.');
-				}
-
-				const data = await response.json();
-				setCitas(Array.isArray(data?.citas) ? data.citas : []);
-			} catch (fetchError) {
-				setError('No se pudo conectar con el backend para cargar la agenda de citas.');
-				console.error('Error al cargar agenda de citas:', fetchError);
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		cargarAgenda();
-	}, []);
+		const cargarDatos = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('http://localhost:4000/api/seguimientos/tablas');
+            if (!response.ok) throw new Error('Error al cargar datos');
+            const data = await response.json();
+            
+            setCitas(Array.isArray(data?.citas) ? data.citas : []);
+            setLlamadas(Array.isArray(data?.llamadas) ? data.llamadas : []); // Nueva tabla
+        } catch (fetchError) {
+            setError('No se pudo conectar con el backend.');
+        } finally {
+            setLoading(false);
+        }
+    };
+    cargarDatos();
+}, []);
 
 	const resumen = useMemo(() => ({
 		total: citas.length,
@@ -267,116 +266,201 @@ const AgendaCitas = () => {
 							</section>
 
 							<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-								<div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-									<div className="flex items-center gap-3">
-										<h3 className="text-xl font-bold text-slate-900">Lista de citas programadas</h3>
-										<button
-											type="button"
-											onClick={abrirAgenda}
-											className="inline-flex items-center gap-2 rounded-2xl bg-[#7E1D3B] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#63162e]"
-										>
-											<Plus size={16} />
-											Agendar
-										</button>
+								<div className="mb-5 flex flex-col gap-4">
+									<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+										<div className="flex items-center gap-3">
+											<h3 className="text-xl font-bold text-slate-900">Agenda del día</h3>
+											<button
+												type="button"
+												onClick={abrirAgenda}
+												className="inline-flex items-center gap-2 rounded-2xl bg-[#7E1D3B] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#63162e]"
+											>
+												<Plus size={16} />
+												Agendar
+											</button>
+										</div>
+
+										<div className="w-full lg:max-w-md">
+											<div className="relative">
+												<Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+												<input
+													type="text"
+													value={searchQuery}
+													onChange={(event) => setSearchQuery(event.target.value)}
+													placeholder="Buscar por nombre de paciente..."
+													className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+												/>
+												{searchQuery ? (
+													<button
+														type="button"
+														onClick={() => setSearchQuery('')}
+														className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
+													>
+														<X size={16} />
+													</button>
+												) : null}
+											</div>
+										</div>
 									</div>
 
-									<div className="w-full lg:max-w-md">
-										<div className="relative">
-											<Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-											<input
-												type="text"
-												value={searchQuery}
-												onChange={(event) => setSearchQuery(event.target.value)}
-												placeholder="Buscar por nombre de paciente..."
-												className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-											/>
-											{searchQuery ? (
-												<button
-													type="button"
-													onClick={() => setSearchQuery('')}
-													className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
-												>
-													<X size={16} />
-												</button>
-											) : null}
-										</div>
+									<div className="flex gap-2 border-b border-slate-200">
+										<button
+											type="button"
+											onClick={() => setTabActiva('citas')}
+											className={`px-4 py-3 text-sm font-semibold transition ${
+												tabActiva === 'citas'
+													? 'border-b-2 border-[#7E1D3B] text-[#7E1D3B]'
+													: 'text-slate-600 hover:text-slate-900'
+											}`}
+										>
+											Citas programadas
+										</button>
+										<button
+											type="button"
+											onClick={() => setTabActiva('llamadas')}
+											className={`px-4 py-3 text-sm font-semibold transition ${
+												tabActiva === 'llamadas'
+													? 'border-b-2 border-[#7E1D3B] text-[#7E1D3B]'
+													: 'text-slate-600 hover:text-slate-900'
+											}`}
+										>
+											Llamadas en seguimiento
+										</button>
 									</div>
 								</div>
 
-								{loading ? (
-									<div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-										<LoaderCircle className="animate-spin" size={18} />
-										Cargando agenda...
-									</div>
-								) : error ? (
-									<div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
-								) : (
-									<div className="overflow-x-auto">
-										<table className="min-w-full border-collapse text-left text-sm">
-											<thead>
-												<tr className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-													<th className="px-3 py-2 font-semibold">Hora</th>
-													<th className="px-3 py-2 font-semibold">Paciente</th>
-													<th className="px-3 py-2 font-semibold">Tipo</th>
-													<th className="px-3 py-2 font-semibold">Profesional</th>
-													<th className="px-3 py-2 font-semibold">Estado</th>
-													<th className="px-3 py-2 font-semibold">Acciones</th>
-												</tr>
-											</thead>
-											<tbody>
-												{citasFiltradas.length === 0 ? (
-													<tr>
-														<td className="px-3 py-3 text-slate-500" colSpan={6}>No hay citas para mostrar con ese filtro.</td>
-													</tr>
-												) : citasFiltradas.map((cita) => {
-													const estado = String(cita.estadoAsistencia || cita.estadoSeguimiento || 'Pendiente');
-													const estadoLower = estado.toLowerCase();
-													const estadoClass = estadoLower.includes('lleg') ? 'bg-emerald-100 text-emerald-800' : estadoLower.includes('no se presentó') ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
-													const esNoPresento = estadoLower.includes('no se presentó');
-
-													return (
-														<tr key={cita.id} className="border-b border-slate-100 align-middle">
-															<td className="px-3 py-3 font-medium text-slate-700">{formatHora(cita.fechaHoraProgramada)}</td>
-															<td className="px-3 py-3 font-semibold text-slate-900">{getCitaNombre(cita)}</td>
-															<td className="px-3 py-3 text-slate-700">{cita.tipoAccion || 'Entrevista'}</td>
-															<td className="px-3 py-3 text-slate-700">{cita.profesionalNombre || cita.responsableNombre || 'Admisiones'}</td>
-															<td className="px-3 py-3">
-																<span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${estadoClass}`}>
-																	{estado}
-																</span>
-															</td>
-															<td className="px-3 py-3">
-																{esNoPresento ? (
-																	<span className="inline-block rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-500">
-																		Cita cerrada
-																	</span>
-																) : (
-																	<div className="flex flex-wrap gap-2">
-																		<button
-																			type="button"
-																			onClick={() => abrirRegistro(cita)}
-																			className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
-																		>
-																			<Eye size={14} />
-																			Llegó
-																		</button>
-																		<button
-																			type="button"
-																			onClick={() => marcarNoPresento(cita.id)}
-																			className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800 transition hover:bg-rose-100"
-																		>
-																			No se presentó
-																		</button>
-																	</div>
-																)}
-															</td>
+								<div>
+									{tabActiva === 'citas' && (
+										<div>
+											<h4 className="mb-3 text-lg font-bold text-slate-900">Citas programadas</h4>
+										{loading ? (
+											<div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+												<LoaderCircle className="animate-spin" size={18} />
+												Cargando citas...
+											</div>
+										) : error ? (
+											<div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+										) : (
+											<div className="overflow-x-auto">
+												<table className="min-w-full border-collapse text-left text-sm">
+													<thead>
+														<tr className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+															<th className="px-3 py-2 font-semibold">Hora</th>
+															<th className="px-3 py-2 font-semibold">Paciente</th>
+															<th className="px-3 py-2 font-semibold">Tipo</th>
+															<th className="px-3 py-2 font-semibold">Profesional</th>
+															<th className="px-3 py-2 font-semibold">Estado</th>
+															<th className="px-3 py-2 font-semibold">Acciones</th>
 														</tr>
-													);
-												})}
-											</tbody>
-										</table>
+													</thead>
+													<tbody>
+														{citasFiltradas.length === 0 ? (
+															<tr>
+																<td className="px-3 py-3 text-slate-500" colSpan={6}>No hay citas para mostrar con ese filtro.</td>
+															</tr>
+														) : citasFiltradas.map((cita) => {
+															const estado = String(cita.estadoAsistencia || cita.estadoSeguimiento || 'Pendiente');
+															const estadoLower = estado.toLowerCase();
+															const estadoClass = estadoLower.includes('lleg') ? 'bg-emerald-100 text-emerald-800' : estadoLower.includes('no se presentó') ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
+															const esNoPresento = estadoLower.includes('no se presentó');
+
+															return (
+																<tr key={cita.id} className="border-b border-slate-100 align-middle">
+																	<td className="px-3 py-3 font-medium text-slate-700">{formatHora(cita.fechaHoraProgramada)}</td>
+																	<td className="px-3 py-3 font-semibold text-slate-900">{getCitaNombre(cita)}</td>
+																	<td className="px-3 py-3 text-slate-700">{cita.tipoAccion || 'Entrevista'}</td>
+																	<td className="px-3 py-3 text-slate-700">{cita.profesionalNombre || cita.responsableNombre || 'Admisiones'}</td>
+																	<td className="px-3 py-3">
+																		<span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${estadoClass}`}>
+																			{estado}
+																		</span>
+																	</td>
+																	<td className="px-3 py-3">
+																		{esNoPresento ? (
+																			<span className="inline-block rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-500">
+																				Cita cerrada
+																			</span>
+																		) : (
+																			<div className="flex flex-wrap gap-2">
+																				<button
+																					type="button"
+																					onClick={() => abrirRegistro(cita)}
+																					className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
+																				>
+																					<Eye size={14} />
+																					Llegó
+																				</button>
+																				<button
+																					type="button"
+																					onClick={() => marcarNoPresento(cita.id)}
+																					className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800 transition hover:bg-rose-100"
+																				>
+																					No se presentó
+																				</button>
+																			</div>
+																		)}
+																	</td>
+																</tr>
+															);
+														})}
+													</tbody>
+												</table>
+											</div>
+										)}
 									</div>
-								)}
+									)}
+
+									{tabActiva === 'llamadas' && (
+										<div>
+											<h4 className="mb-3 text-lg font-bold text-slate-900">Llamadas en seguimiento</h4>
+										{loading ? (
+											<div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+												<LoaderCircle className="animate-spin" size={18} />
+												Cargando llamadas...
+											</div>
+										) : (
+											<div className="overflow-x-auto">
+												<table className="min-w-full border-collapse text-left text-sm">
+													<thead>
+														<tr className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+															<th className="px-3 py-2 font-semibold">Paciente</th>
+															<th className="px-3 py-2 font-semibold">Teléfono</th>
+															<th className="px-3 py-2 font-semibold">Fecha/Hora</th>
+															<th className="px-3 py-2 font-semibold">Motivo</th>
+															<th className="px-3 py-2 font-semibold">Estado</th>
+														</tr>
+													</thead>
+													<tbody>
+														{llamadas.length === 0 ? (
+															<tr>
+																<td className="px-3 py-3 text-slate-500" colSpan={5}>No hay llamadas de seguimiento registradas.</td>
+															</tr>
+														) : llamadas.map((item) => {
+															const estado = String(item.estadoSeguimiento || 'Pendiente');
+															const estadoLower = estado.toLowerCase();
+															const estadoClass = estadoLower.includes('hecha') || estadoLower.includes('llamó') ? 'bg-emerald-100 text-emerald-800' : estadoLower.includes('no') ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
+
+															return (
+																<tr key={item.id} className="border-b border-slate-100 align-middle">
+																	<td className="px-3 py-3 font-semibold text-slate-900">{item.pacienteNombre || '--'}</td>
+																	<td className="px-3 py-3 text-slate-700">{item.pacienteTelefono || '--'}</td>
+																	<td className="px-3 py-3 text-slate-700">{formatFecha(item.fechaHoraProgramada)}</td>
+																	<td className="px-3 py-3 text-slate-700">{item.motivo || '--'}</td>
+																	<td className="px-3 py-3">
+																		<span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${estadoClass}`}>
+																			{estado}
+																		</span>
+																	</td>
+																</tr>
+															);
+														})}
+													</tbody>
+												</table>
+											</div>
+										)}
+									</div>
+									)}
+								</div>
 							</section>
 						</div>
 					</div>

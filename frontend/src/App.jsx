@@ -10,6 +10,7 @@ import BandejaOperativa from './views/admisiones/BandejaOperativa';
 import AgendaCitas from './views/admisiones/AgendaCitas';
 import SeguimientoTelefonico from './views/admisiones/SeguimientoTelefonico';
 import ExpedienteAdmisiones from './views/admisiones/ExpedienteAdmisiones';
+import DirectorioAdmisiones from './views/admisiones/DirectorioAdmisiones';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
 import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 
@@ -156,7 +157,8 @@ function App() {
         <Route path="/admisiones/bandeja-operativa"            element={<PrivateRoute><BandejaOperativa /></PrivateRoute>} />
         <Route path="/admisiones/agenda-citas"                 element={<PrivateRoute><AgendaCitas /></PrivateRoute>} />
         <Route path="/admisiones/seguimiento-telefonico"       element={<PrivateRoute><SeguimientoTelefonico /></PrivateRoute>} />
-        <Route path="/admisiones/expediente"                   element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
+        <Route path="/admisiones/expediente"                   element={<PrivateRoute><DirectorioAdmisiones /></PrivateRoute>} />
+        <Route path="/admisiones/expediente-digital/:id"       element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
         <Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
         <Route path="/admisiones/valoracion-diagnostica"       element={<PrivateRoute><ValoracionDiagnostica /></PrivateRoute>} />
         <Route path="/admisiones/bandeja"                      element={<Navigate to="/admisiones/bandeja-operativa" replace />} />
