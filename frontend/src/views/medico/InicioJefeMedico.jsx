@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Stethoscope, Users, ClipboardList, 
-  Activity, Search, UserCheck, AlertTriangle, FileBarChart
+  Activity, Search, UserCheck, AlertTriangle, FileBarChart, UserPlus
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
-  { label: 'Inicio Jefatura',       icon: Activity,       key: 'inicio',      path: '/medico/inicio' },
+  { label: 'Inicio Jefatura',       icon: Activity,       key: 'inicio',      path: '/medico/inicio-jefe-medico' },
+  { label: 'Prospectos',            icon: UserPlus,       key: 'prospectos',  path: '/medico/prospectos' },
   { label: 'Pacientes Activos',     icon: Users,          key: 'pacientes',   path: '/medico/pacientes' },
   { label: 'Expedientes Clínicos',  icon: ClipboardList,  key: 'expedientes', path: '/medico/expedientes' },
   { label: 'Personal Médico',       icon: Stethoscope,    key: 'personal',    path: '/medico/personal' },
-  { label: 'Reportes y Estadísticas',icon: FileBarChart,  key: 'reportes',    path: '/medico/reportes' },
+  { label: 'Reportes y Estadísticas', icon: FileBarChart, key: 'reportes',    path: '/medico/reportes' },
 ];
 
 const pacientesMock = [

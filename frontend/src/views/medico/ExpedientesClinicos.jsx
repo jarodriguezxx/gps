@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   Stethoscope, Users, ClipboardList, Activity, FileBarChart,
   Search, Filter, Phone, ArrowRight, User, AlertTriangle, 
-  ChevronDown, ChevronUp, Briefcase, MapPin
+  ChevronDown, ChevronUp, Briefcase, MapPin, UserPlus
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
   { label: 'Inicio Jefatura',       icon: Activity,       key: 'inicio',      path: '/medico/inicio-jefe-medico' },
+  { label: 'Prospectos',            icon: UserPlus,       key: 'prospectos',  path: '/medico/prospectos' },
   { label: 'Pacientes Activos',     icon: Users,          key: 'pacientes',   path: '/medico/pacientes' },
   { label: 'Expedientes Clínicos',  icon: ClipboardList,  key: 'expedientes', path: '/medico/expedientes' },
   { label: 'Personal Médico',       icon: Stethoscope,    key: 'personal',    path: '/medico/personal' },
