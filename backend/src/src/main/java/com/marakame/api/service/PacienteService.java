@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -565,7 +566,13 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
     }
 
     private boolean contiene(String texto, String filtro) {
-        return texto != null && texto.toLowerCase(Locale.ROOT).contains(filtro);
+        return texto != null && normalizarTexto(texto).contains(normalizarTexto(filtro));
+    }
+
+    private String normalizarTexto(String texto) {
+        String normalizado = Normalizer.normalize(texto, Normalizer.Form.NFD);
+        normalizado = normalizado.replaceAll("\\p{M}+", "");
+        return normalizado.toLowerCase(Locale.ROOT).trim();
     }
 
     private String construirDireccionCompleta(

@@ -1,33 +1,30 @@
 package com.marakame.api.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import javax.annotation.PostConstruct;
-import jakarta.persistence.EntityManager;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Inicializa datos de la BD al arrancar la aplicación
- * - Establece estado_paciente por defecto en registros existentes
- */
 @Component
 public class DataInitializer {
 
     @Autowired
-    private EntityManager entityManager;
+    private JdbcTemplate jdbcTemplate;
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class) // <--- CAMBIA ESTO
+    @Transactional // Ahora sí funcionará porque el contexto está listo
     public void init() {
         try {
-            // Actualizar pacientes existentes sin estado
             String updateQuery = "UPDATE pacientes SET estado_paciente = 'PROSPECTO' WHERE estado_paciente IS NULL";
-            int updated = entityManager.createNativeQuery(updateQuery).executeUpdate();
+            int updated = jdbcTemplate.update(updateQuery);
             
             if (updated > 0) {
-                System.out.println("✅ [DataInitializer] Actualizados " + updated + " pacientes a estado PROSPECTO");
+                System.out.println(" [DataInitializer] Actualizados " + updated + " pacientes a estado PROSPECTO");
             }
         } catch (Exception e) {
-            System.err.println("⚠️ [DataInitializer] Error al inicializar datos: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println(" [DataInitializer] Error al inicializar datos: " + e.getMessage());
         }
     }
 }

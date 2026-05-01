@@ -26,8 +26,7 @@ const PacientesActivos = () => {
   const fetchPacientes = async () => {
     setLoading(true);
     try {
-      // Reemplazar URL con la correcta de tu entorno si difiere
-      const response = await fetch('http://localhost:4000/api/pacientes/activos');
+      const response = await fetch('http://localhost:4000/api/pacientes');
       if (response.ok) {
         const data = await response.json();
         setPacientes(data);
@@ -54,7 +53,14 @@ const PacientesActivos = () => {
     setBusqueda(e.target.value);
   };
 
-  const pacientesFiltrados = pacientes.filter(p => {
+  const esPacienteActivo = (paciente) => {
+    const estado = (paciente.estadoPaciente || paciente.estado || '').toUpperCase();
+    return estado === 'INGRESADO';
+  };
+
+  const pacientesActivos = pacientes.filter(esPacienteActivo);
+
+  const pacientesFiltrados = pacientesActivos.filter(p => {
     const termino = busqueda.toLowerCase();
     return (
       (p.nombreCompleto && p.nombreCompleto.toLowerCase().includes(termino)) ||
@@ -122,8 +128,8 @@ const PacientesActivos = () => {
                   <div className="flex items-center gap-2">
                     <div className="h-5 w-1 rounded-full bg-[#7E1D3B]" />
                     <div>
-                      <h2 className="text-base font-black uppercase tracking-[0.2em] text-slate-700">Pacientes Internados</h2>
-                      <p className="text-xs text-slate-500 mt-0.5">Listado general de pacientes activos en tratamiento</p>
+                      <h2 className="text-base font-black uppercase tracking-[0.2em] text-slate-700">Pacientes</h2>
+                      <p className="text-xs text-slate-500 mt-0.5">Listado de pacientes con ficha activa en la base de datos</p>
                     </div>
                   </div>
                   
@@ -194,7 +200,7 @@ const PacientesActivos = () => {
                             
                             <td className="px-5 py-4">
                               <p className="text-xs text-slate-600 font-medium">Edad: <span className="font-bold text-slate-800">{p.edad ? `${p.edad} años` : 'N/D'}</span></p>
-                              <p className="text-xs text-slate-500 mt-0.5">Sexo: {p.sexo || 'N/D'} • Hijos: {p.cantidadHijos !== null ? p.cantidadHijos : 'N/D'}</p>
+                              <p className="text-xs text-slate-500 mt-0.5">Sexo: {p.sexo || 'N/D'} • Hijos: {p.cantidadHijos !== null && p.cantidadHijos !== undefined ? p.cantidadHijos : 'N/D'}</p>
                             </td>
                             
                             <td className="px-5 py-4">
@@ -221,7 +227,7 @@ const PacientesActivos = () => {
                   </table>
                 </div>
                 <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                  <p className="text-xs text-slate-500 font-medium">Mostrando <span className="font-bold text-slate-700">{pacientesFiltrados.length}</span> pacientes en tratamiento.</p>
+                  <p className="text-xs text-slate-500 font-medium">Mostrando <span className="font-bold text-slate-700">{pacientesFiltrados.length}</span> pacientes activos.</p>
                   <button className="text-xs font-bold text-[#7E1D3B] hover:underline flex items-center gap-1">
                     Exportar listado <UserCheck size={14} />
                   </button>

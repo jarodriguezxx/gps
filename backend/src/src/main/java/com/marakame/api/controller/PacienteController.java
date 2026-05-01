@@ -11,10 +11,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -92,19 +92,6 @@ public class PacienteController {
         return ResponseEntity.ok(pacienteService.obtenerTodosPacientes());
     }
 
-    @GetMapping("/activos")
-    public ResponseEntity<List<Paciente>> obtenerPacientesActivos() {
-        return ResponseEntity.ok(pacienteService.obtenerPacientesActivos());
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerPacienteById(@PathVariable Long id) {
-        Paciente paciente = pacienteService.obtenerPacienteById(id);
-        if (paciente != null) {
-            return ResponseEntity.ok(paciente);
-        }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Paciente no encontrado"));
-    }
 
     @GetMapping("/busqueda")
     public ResponseEntity<List<Paciente>> buscarPacientesParaEstudio(@RequestParam(required = false) String query) {
@@ -173,8 +160,8 @@ public class PacienteController {
     // ========== NUEVOS ENDPOINTS PARA GESTIÓN DE ESTADO Y PAGOS ==========
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerPaciente(@PathVariable Long id) {
-        try {
+public ResponseEntity<?> buscarPacientePorIdEspecifico(@PathVariable Long id) {
+            try {
             var paciente = pacienteService.obtenerPacientePorId(id);
             if (paciente.isEmpty()) {
                 return new ResponseEntity<>(Map.of("error", "Paciente no encontrado"), HttpStatus.NOT_FOUND);

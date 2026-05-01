@@ -662,7 +662,7 @@ const ExpedienteAdmisiones = () => {
 			try {
 				setCargandoBusqueda(true);
 				setErrorBusqueda('');
-				const response = await fetch(`http://localhost:4000/api/pacientes/estudio?query=${encodeURIComponent(query)}`, {
+				const response = await fetch(`http://localhost:4000/api/pacientes/busqueda?query=${encodeURIComponent(query)}`, {
 					signal: controller.signal,
 				});
 
@@ -828,8 +828,8 @@ const ExpedienteAdmisiones = () => {
 								<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 									<div>
 										<p className="text-xs font-bold uppercase tracking-[0.25em] text-[#7E1D3B]">Diseño de expediente</p>
-										<h2 className="text-2xl font-black text-slate-900">Separado por Prospecto e Ingresado</h2>
-										<p className="mt-1 text-sm text-slate-500">Usa Prospecto para la admisión inicial y Ingresado cuando el paciente ya forma parte activa del proceso.</p>
+										<h2 className="text-2xl font-black text-slate-900">Separado por Prospecto y Paciente</h2>
+										<p className="mt-1 text-sm text-slate-500">Usa Prospecto para la admisión inicial y Paciente cuando ya existe una ficha activa en el sistema.</p>
 									</div>
 									<div className="inline-flex rounded-2xl bg-slate-100 p-1">
 										<button
@@ -844,7 +844,7 @@ const ExpedienteAdmisiones = () => {
 											onClick={() => setExpedienteModo('ingresado')}
 											className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${expedienteModo === 'ingresado' ? 'bg-[#7E1D3B] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
 										>
-											Ingresado
+											Paciente
 										</button>
 									</div>
 								</div>
@@ -856,7 +856,7 @@ const ExpedienteAdmisiones = () => {
 										{ title: 'Estudio socioeconómico', text: 'Evaluación social y económica previa al ingreso.', icon: FileText },
 										{ title: 'Valoración diagnóstica', text: 'Criterios de internamiento y lectura clínica inicial.', icon: HeartPulse },
 									] : [
-										{ title: 'Ingreso activo', text: 'Clave de paciente, estado actual y fecha de ingreso.', icon: CheckCircle2 },
+										{ title: 'Paciente activo', text: 'Clave de paciente, estado actual y fecha de ingreso.', icon: CheckCircle2 },
 										{ title: 'Evolución clínica', text: 'Notas, indicaciones y seguimiento de tratamiento.', icon: HeartPulse },
 										{ title: 'Documentos', text: 'Recibos, formatos firmados y evidencia de ingreso.', icon: FileText },
 										{ title: 'Salida / egreso', text: 'Preparación de cierre, alta o cambio de área.', icon: ArrowRight },

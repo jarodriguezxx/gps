@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Stethoscope, Users, ClipboardList, Activity, FileBarChart,
   UserCheck, AlertTriangle, Search, Save, FileSignature
@@ -18,19 +18,39 @@ const navItems = [
 
 const ValoracionMedica = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
   const [activeNav, setActiveNav] = useState('valoracion');
+  const [prospecto, setProspecto] = useState(null);
+  const [cargandoPaciente, setCargandoPaciente] = useState(true);
+  const [errorPaciente, setErrorPaciente] = useState('');
 
-  // Datos mock del prospecto a evaluar
-  const [prospecto] = useState({
-    nombreCompleto: "Manuel Uribe",
-    edad: 22,
-    sexo: "Masculino",
-    origen: "Tepic, Nayarit", //[cite: 1]
-    residente: "Sí", //[cite: 1]
-    escolaridad: "S/E", //[cite: 1]
-    ocupacion: "No especificada", //[cite: 1]
-    estadoCivil: "Soltero" //[cite: 1]
-  });
+  useEffect(() => {
+    const cargarPaciente = async () => {
+      if (!id) {
+        setErrorPaciente('No se recibió el identificador del paciente.');
+        setCargandoPaciente(false);
+        return;
+      }
+
+      setCargandoPaciente(true);
+      try {
+        const response = await fetch(`http://localhost:4000/api/pacientes/${id}`);
+        if (!response.ok) {
+          throw new Error('No se pudo cargar el paciente para la valoración.');
+        }
+
+        const data = await response.json();
+        setProspecto(data);
+        setErrorPaciente('');
+      } catch (error) {
+        setErrorPaciente(error.message);
+      } finally {
+        setCargandoPaciente(false);
+      }
+    };
+
+    cargarPaciente();
+  }, [id]);
 
   const [formulario, setFormulario] = useState({
     tipoValoracion: 'PRESENCIAL', //[cite: 1]
@@ -50,7 +70,7 @@ const ValoracionMedica = () => {
 
   const handleNavClick = (item) => { 
     setActiveNav(item.key); 
-    navigate(item.path); 
+    navigate(item.key === 'valoracion' ? `/medico/valoracion/${id}` : item.path); 
   };
 
   const handleChange = (e) => {
@@ -148,17 +168,17 @@ const ValoracionMedica = () => {
 
                   <div className="p-6">
                     <div className="mb-5">
-                      <h3 className="text-lg font-black text-slate-800">{prospecto.nombreCompleto}</h3>
+                      <h3 className="text-lg font-black text-slate-800">{prospecto?.nombreCompleto || prospecto?.nombres || 'Sin nombre registrado'}</h3>
                       <p className="text-sm font-semibold text-slate-500">
-                        {prospecto.edad} años • {prospecto.sexo} • {prospecto.estadoCivil}
+                        {prospecto?.edad ? `${prospecto.edad} años` : 'Edad N/D'} • {prospecto?.sexo || 'S/E'} • {prospecto?.estadoCivil || 'S/E'}
                       </p>
                     </div>
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 border border-slate-100 p-4 rounded-xl">
-                      <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Origen</p><p className="text-sm font-semibold text-slate-700">{prospecto.origen}</p></div>
-                      <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Residente</p><p className="text-sm font-semibold text-slate-700">{prospecto.residente}</p></div>
-                      <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Escolaridad</p><p className="text-sm font-semibold text-slate-700">{prospecto.escolaridad}</p></div>
-                      <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ocupación</p><p className="text-sm font-semibold text-slate-700">{prospecto.ocupacion}</p></div>
+                      <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Origen</p><p className="text-sm font-semibold text-slate-700">{prospecto?.origen || prospecto?.domicilioParticular || 'Sin dato'}</p></div>
+                      <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Residente</p><p className="text-sm font-semibold text-slate-700">{prospecto?.residente || 'S/N'}</p></div>
+                      <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Escolaridad</p><p className="text-sm font-semibold text-slate-700">{prospecto?.escolaridad || 'S/E'}</p></div>
+                      <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ocupación</p><p className="text-sm font-semibold text-slate-700">{prospecto?.ocupacion || 'No especificada'}</p></div>
                     </div>
                   </div>
                 </section>
