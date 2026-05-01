@@ -148,6 +148,7 @@ function App() {
         <Route path="/medico/inicio-jefe-medico"               element={<InicioJefeMedico />} />
         <Route path="/medico/pacientes"                        element={<PacientesActivos />} />
         <Route path="/medico/expedientes"                      element={<ExpedientesClinicos/>} />
+        <Route path="/medico/expedientes/:id"                  element={<DetalleExpediente />} />
         <Route path="/medico/prospectos"                       element={<Prospectos />} />
         <Route path="/medico/valoracion/:id"                   element={<ValoracionMedica />} />
 
