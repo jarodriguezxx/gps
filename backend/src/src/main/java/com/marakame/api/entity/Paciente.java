@@ -2,12 +2,15 @@ package com.marakame.api.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "pacientes")
@@ -85,6 +88,16 @@ public class Paciente {
 
     @Column(name = "sustancia_consumo")
     private String sustanciaConsumo;
+
+    @Column(name = "estado_paciente")
+    @Enumerated(EnumType.STRING)
+    private EstadoPaciente estadoPaciente = EstadoPaciente.PROSPECTO;
+
+    @Column(name = "clave_paciente", unique = true)
+    private String clavePaciente;
+
+    @Column(name = "fecha_ingreso")
+    private LocalDateTime fechaIngreso;
 
     @ManyToOne
     @JoinColumn(name = "solicitante_id")
@@ -288,5 +301,29 @@ public class Paciente {
 
     public void setSolicitante(Solicitante solicitante) {
         this.solicitante = solicitante;
+    }
+
+    public EstadoPaciente getEstadoPaciente() {
+        return estadoPaciente;
+    }
+
+    public void setEstadoPaciente(EstadoPaciente estadoPaciente) {
+        this.estadoPaciente = estadoPaciente;
+    }
+
+    public String getClavePaciente() {
+        return clavePaciente;
+    }
+
+    public void setClavePaciente(String clavePaciente) {
+        this.clavePaciente = clavePaciente;
+    }
+
+    public LocalDateTime getFechaIngreso() {
+        return fechaIngreso;
+    }
+
+    public void setFechaIngreso(LocalDateTime fechaIngreso) {
+        this.fechaIngreso = fechaIngreso;
     }
 }

@@ -1,6 +1,7 @@
 package com.marakame.api.dto;
 
 import java.time.LocalDateTime;
+import com.marakame.api.entity.Prioridad;
 
 public record SeguimientoTablaDTO(
     Long id,
@@ -13,5 +14,8 @@ public record SeguimientoTablaDTO(
     LocalDateTime fechaHoraProgramada,
     String motivo,
     String pacienteNombre,
-    String pacienteTelefono
+    String pacienteTelefono,
+    Prioridad prioridad,
+    String responsable,
+    LocalDateTime fechaSiguienteAccion
 ) {}

@@ -2,9 +2,8 @@ package com.marakame.api.controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -12,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -20,157 +20,202 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.marakame.api.dto.NotaEvolucionDTO;
 import com.marakame.api.dto.PacienteDTO;
 import com.marakame.api.entity.EstudioSocioeconomicoPdf;
-
 import com.marakame.api.entity.Paciente;
 import com.marakame.api.service.PacienteService;
 
 @RestController
 @RequestMapping("/api/pacientes")
-@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
+@CrossOrigin(origins = "http://localhost:5173") 
 public class PacienteController {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(PacienteController.class);
 
     @Autowired
     private PacienteService pacienteService;
 
-    @GetMapping("/estudio")
-    public List<Paciente> obtenerPacientesParaEstudio(@RequestParam(required = false) String query) {
-        return pacienteService.obtenerPacientesParaEstudio(query);
-    }
-
-    @GetMapping("/activos")
-    public ResponseEntity<List<Paciente>> obtenerPacientesActivos() {
-        return ResponseEntity.ok(pacienteService.obtenerPacientesActivos());
-    }
+    // ==========================================
+    // 1. GESTIÓN DE EXPEDIENTES Y NOTAS MÉDICAS
+    // ==========================================
 
     @GetMapping("/{id}/expediente")
-    public ResponseEntity<Map<String, Object>> obtenerDetalleExpediente(@PathVariable Long id) {
+    public ResponseEntity<?> obtenerDetalleExpediente(@PathVariable Long id) {
         try {
-            return ResponseEntity.ok(pacienteService.obtenerDetalleExpediente(id));
+            // Carga el expediente con sus notas y PDFs (Si no existe, lo crea automáticamente)
+            Map<String, Object> detalle = pacienteService.obtenerDetalleExpediente(id);
+            return ResponseEntity.ok(detalle);
         } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            LOGGER.error("Error al cargar detalle de expediente para paciente {}", id, e);
-            return new ResponseEntity<>(Map.of(
-                "error", "No se pudo cargar el detalle del expediente.",
-                "detalle", e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage())
-            ), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error interno: " + e.getMessage()));
         }
     }
 
-    @GetMapping("/{pacienteId}/estudio-socioeconomico/pdf/{pdfId}/descargar")
-    public ResponseEntity<?> descargarPdfSocioeconomico(
-        @PathVariable Long pacienteId,
-        @PathVariable Long pdfId
-    ) {
-        return responderPdfSocioeconomico(pacienteId, pdfId, false);
+    @GetMapping("/dashboard/metricas")
+    public ResponseEntity<?> obtenerMetricasJefatura() {
+        try {
+            return ResponseEntity.ok(pacienteService.obtenerMetricasDashboard());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body(Map.of("error", "Error al calcular métricas: " + e.getMessage()));
+        }
     }
 
-    @GetMapping("/{pacienteId}/estudio-socioeconomico/pdf/{pdfId}/ver")
-    public ResponseEntity<?> verPdfSocioeconomico(
-        @PathVariable Long pacienteId,
-        @PathVariable Long pdfId
-    ) {
-        return responderPdfSocioeconomico(pacienteId, pdfId, true);
+    @PostMapping("/{id}/notas-evolucion")
+    public ResponseEntity<?> agregarNotaEvolucion(@PathVariable Long id, @RequestBody NotaEvolucionDTO notaDTO) {
+        try {
+            pacienteService.agregarNotaEvolucion(id, notaDTO);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("mensaje", "Nota médica guardada exitosamente"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Error al guardar la nota: " + e.getMessage()));
+        }
     }
 
-    @GetMapping("/{pacienteId}/estudio-socioeconomico/pdf/{pdfId}/imprimir")
-    public ResponseEntity<?> imprimirPdfSocioeconomico(
-        @PathVariable Long pacienteId,
-        @PathVariable Long pdfId
-    ) {
-        return responderPdfSocioeconomico(pacienteId, pdfId, true);
-    }
-
-    @PostMapping("/guardar-expediente")
-    public ResponseEntity<String> guardarExpediente(@RequestBody PacienteDTO dto) {
+    @PostMapping
+    public ResponseEntity<?> guardarNuevoExpediente(@RequestBody PacienteDTO dto) {
         try {
             pacienteService.guardarNuevoExpediente(dto);
-            return new ResponseEntity<>("Expediente y seguimiento creados con éxito", HttpStatus.CREATED);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("mensaje", "Expediente y paciente creados correctamente"));
         } catch (Exception e) {
-            return new ResponseEntity<>("Error al guardar el expediente: " + e.getMessage(),
-                                        HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
     }
+
+    // ==========================================
+    // 2. BÚSQUEDAS Y LISTADOS DE PACIENTES
+    // ==========================================
+
+    @GetMapping
+    public ResponseEntity<List<Paciente>> obtenerTodosPacientes() {
+        return ResponseEntity.ok(pacienteService.obtenerTodosPacientes());
+    }
+
+
+    @GetMapping("/busqueda")
+    public ResponseEntity<List<Paciente>> buscarPacientesParaEstudio(@RequestParam(required = false) String query) {
+        return ResponseEntity.ok(pacienteService.obtenerPacientesParaEstudio(query));
+    }
+
+    // ==========================================
+    // 3. ACTUALIZACIÓN DE DATOS (TRABAJO SOCIAL / LLAMADAS)
+    // ==========================================
 
     @PutMapping("/{id}/llamada-inicial")
-    public ResponseEntity<String> actualizarLlamadaInicial(
-        @PathVariable Long id,
-        @RequestBody PacienteDTO dto
-    ) {
+    public ResponseEntity<?> actualizarLlamadaInicial(@PathVariable Long id, @RequestBody PacienteDTO dto) {
         try {
             pacienteService.actualizarLlamadaInicial(id, dto);
-            return new ResponseEntity<>("Llamada inicial actualizada con exito", HttpStatus.OK);
+            return ResponseEntity.ok(Map.of("mensaje", "Llamada inicial actualizada correctamente"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return new ResponseEntity<>("Error al actualizar la llamada inicial: " + e.getMessage(),
-                                        HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error interno: " + e.getMessage()));
         }
     }
 
-    @PutMapping("/{id}/estudio-basico")
-    public ResponseEntity<String> actualizarEstudioBasico(
-        @PathVariable Long id,
-        @RequestBody Map<String, Object> payload
-    ) {
+    @PutMapping("/{id}/datos-basicos")
+    public ResponseEntity<?> actualizarDatosBasicosEstudio(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         try {
             pacienteService.actualizarDatosBasicosEstudio(id, payload);
-            return new ResponseEntity<>("Datos basicos actualizados con exito", HttpStatus.OK);
+            return ResponseEntity.ok(Map.of("mensaje", "Datos básicos actualizados correctamente"));
         } catch (Exception e) {
-            return new ResponseEntity<>("Error al actualizar estudio basico: " + e.getMessage(),
-                                        HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
     }
 
+    // ==========================================
+    // 4. GENERACIÓN Y DESCARGA DE PDFs
+    // ==========================================
+
     @PostMapping("/{id}/estudio-socioeconomico/pdf")
-    public ResponseEntity<Map<String, Object>> generarPdfSocioeconomico(
-        @PathVariable Long id,
-        @RequestBody Map<String, Object> payload
-    ) {
+    public ResponseEntity<?> generarPdfEstudio(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         try {
-            var pdf = pacienteService.generarYGuardarPdfEstudio(id, payload);
-            return ResponseEntity.ok(Map.of(
+            EstudioSocioeconomicoPdf pdf = pacienteService.generarYGuardarPdfEstudio(id, payload);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "mensaje", "PDF generado exitosamente",
                 "pdfId", pdf.getId(),
-                "pacienteId", id,
                 "nombreArchivo", pdf.getNombreArchivo()
             ));
         } catch (Exception e) {
-            return new ResponseEntity<>(Map.of(
-                "error", "Error al generar el PDF: " + e.getMessage()
-            ), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al generar PDF: " + e.getMessage()));
         }
     }
 
-    private ResponseEntity<?> responderPdfSocioeconomico(Long pacienteId, Long pdfId, boolean inline) {
-        try {
-            var pdf = pacienteService.obtenerPdfSocioeconomico(pacienteId, pdfId);
-            if (pdf.isEmpty()) {
-                return new ResponseEntity<>(Map.of(
-                    "error", "No se encontró el PDF solicitado para este paciente."
-                ), HttpStatus.NOT_FOUND);
-            }
+    @GetMapping("/{id}/estudio-socioeconomico/pdf/{pdfId}/descargar")
+    public ResponseEntity<?> descargarPdfSocioeconomico(@PathVariable Long id, @PathVariable Long pdfId) {
+        Optional<EstudioSocioeconomicoPdf> pdfOptional = pacienteService.obtenerPdfSocioeconomico(id, pdfId);
 
-            return buildPdfResponse(pdf.get(), inline);
+        if (pdfOptional.isPresent()) {
+            EstudioSocioeconomicoPdf pdf = pdfOptional.get();
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + pdf.getNombreArchivo() + "\"")
+                    .body(pdf.getContenidoPdf());
+        }
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "PDF no encontrado o no pertenece a este paciente"));
+    }
+
+    // ========== NUEVOS ENDPOINTS PARA GESTIÓN DE ESTADO Y PAGOS ==========
+
+    @GetMapping("/{id}")
+public ResponseEntity<?> buscarPacientePorIdEspecifico(@PathVariable Long id) {
+            try {
+            var paciente = pacienteService.obtenerPacientePorId(id);
+            if (paciente.isEmpty()) {
+                return new ResponseEntity<>(Map.of("error", "Paciente no encontrado"), HttpStatus.NOT_FOUND);
+            }
+            return ResponseEntity.ok(paciente.get());
+        } catch (Exception e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/{id}/validar-ingreso")
+    public ResponseEntity<?> validarIngresoYGenerarClave(
+        @PathVariable Long id,
+        @RequestBody Map<String, Object> payload
+    ) {
+        try {
+            String clavePaciente = pacienteService.validarIngresoYGenerarClave(id, payload);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "clavePaciente", clavePaciente,
+                "estadoPaciente", "INGRESADO",
+                "mensaje", "Paciente validado e ingresado exitosamente"
+            ));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of(
+                "error", e.getMessage()
+            ), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             return new ResponseEntity<>(Map.of(
-                "error", "No se pudo cargar el PDF.",
-                "detalle", e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage())
+                "error", "Error al validar ingreso: " + e.getMessage()
             ), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    private ResponseEntity<byte[]> buildPdfResponse(EstudioSocioeconomicoPdf pdf, boolean inline) {
-        String nombreArchivo = pdf.getNombreArchivo() == null || pdf.getNombreArchivo().isBlank()
-            ? "estudio_socioeconomico.pdf"
-            : pdf.getNombreArchivo();
-
-        String disposition = inline ? "inline" : "attachment";
-
-        return ResponseEntity.ok()
-            .contentType(MediaType.APPLICATION_PDF)
-            .header(HttpHeaders.CONTENT_DISPOSITION, disposition + "; filename=\"" + nombreArchivo + "\"")
-            .body(pdf.getContenidoPdf());
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<?> cambiarEstadoPaciente(
+        @PathVariable Long id,
+        @RequestBody Map<String, String> payload
+    ) {
+        try {
+            String nuevoEstado = payload.get("estado");
+            if (nuevoEstado == null || nuevoEstado.isBlank()) {
+                return new ResponseEntity<>(Map.of("error", "Estado no puede estar vacío"), HttpStatus.BAD_REQUEST);
+            }
+            var paciente = pacienteService.cambiarEstadoPaciente(id, nuevoEstado);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "estadoPaciente", paciente.getEstadoPaciente(),
+                "mensaje", "Estado actualizado exitosamente"
+            ));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

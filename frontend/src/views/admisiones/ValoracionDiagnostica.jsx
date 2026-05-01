@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Save, X, User, Phone, Activity, HeartPulse, Clipboard, Search, ArrowRight } from 'lucide-react';
-import InstitutionalHeader from '../../components/layout/InstitutionalHeader';
+import { useNavigate } from 'react-router-dom';
+import { Save, X, User, Phone, Activity, HeartPulse, Clipboard, Search, ArrowRight, FileText, Briefcase, CheckCircle2 } from 'lucide-react';
+import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
 
 const structuredAddressDefaults = {
   solicitanteDireccionCalle: '',
@@ -191,11 +191,6 @@ const findFirstValidationIssue = (formData) => {
 
 const ValoracionDiagnostica = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const isInicioActive = location.pathname === '/admisiones';
-  const isExpedienteActive = location.pathname === '/admisiones/expediente';
-  const isEstudioActive = location.pathname === '/admisiones/estudio-socioeconomico';
-  const isValoracionActive = location.pathname === '/admisiones/valoracion-diagnostica';
   const [tab, setTab] = useState('solicitante');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -409,34 +404,13 @@ const ValoracionDiagnostica = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-[1600px] p-4 md:p-6">
-        <header className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <InstitutionalHeader
-            title="Sistema Integral Marakame"
-            moduleLabel="Módulo de Admisiones"
-            areaLabel="Área responsable: Admisiones"
-            sessionValue="Admisiones"
-            badge={<Phone size={16} className="text-[#7E1D3B]" />}
-          />
-        </header>
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
+        <AdminHeader submodule="Valoración Diagnóstica" />
 
         <main className="space-y-5">
           <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-            <aside className="rounded-3xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-              <button type="button" onClick={() => navigate('/admisiones')} className={`mb-3 w-full rounded-xl px-3 py-3 text-sm font-semibold shadow-md transition ${isInicioActive ? 'bg-[#7E1D3B] text-white hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
-                Inicio
-              </button>
-              <button type="button" onClick={() => navigate('/admisiones/expediente')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isExpedienteActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
-                Expediente
-              </button>
-              <button type="button" onClick={() => navigate('/admisiones/estudio-socioeconomico')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isEstudioActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
-                Estudio socioeconómico
-              </button>
-              <button type="button" onClick={() => navigate('/admisiones/valoracion-diagnostica')} className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${isValoracionActive ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
-                Llamada inicial
-              </button>
-            </aside>
+            <AdmisionesSidebar />
 
             <div className="space-y-5">
               
