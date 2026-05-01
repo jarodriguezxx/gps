@@ -48,7 +48,8 @@ const getTimelineTone = (seguimiento) => {
 	return 'slate';
 };
 
-const buildDocumentosProspecto = (prospecto, detalleExpediente) => {
+// --- MODIFICACIÓN 1: Agregamos tieneValoracionMedica como parámetro ---
+const buildDocumentosProspecto = (prospecto, detalleExpediente, tieneValoracionMedica) => {
 	if (!prospecto) {
 		return [];
 	}
@@ -66,7 +67,9 @@ const buildDocumentosProspecto = (prospecto, detalleExpediente) => {
 
 	const tieneSolicitante = !!prospecto.solicitante;
 	const tieneDatosBasicos = hasValue(prospecto.nombreCompleto) && (hasValue(prospecto.telefonoContacto) || hasValue(prospecto.telefonoCasa));
-	const tieneDatosClinicos = hasValue(prospecto.sustanciaConsumo) || hasValue(prospecto.edad) || hasValue(prospecto.estadoCivil);
+	
+	// --- MODIFICACIÓN 1: Dependemos del backend para saber si hay valoración clínica ---
+	const tieneDatosClinicos = tieneValoracionMedica;
 
 	const documentosBase = [
 		{
@@ -90,7 +93,7 @@ const buildDocumentosProspecto = (prospecto, detalleExpediente) => {
 			tipo: 'Registro clínico',
 			estado: tieneDatosClinicos ? 'Adjunto' : 'Pendiente',
 			detalle: tieneDatosClinicos
-				? `Sustancia: ${prospecto.sustanciaConsumo || 'No especificada'} • Estado civil: ${prospecto.estadoCivil || '--'}`
+				? `Valoración completada por el médico asignado.`
 				: 'Aún no hay datos clínicos suficientes para valoración.',
 		},
 	];
@@ -467,6 +470,10 @@ const ExpedienteAdmisiones = () => {
 	const [modalLlamadaInicialAbierto, setModalLlamadaInicialAbierto] = useState(false);
 	const [diagnosticoTab, setDiagnosticoTab] = useState('solicitante');
 	const [modalReciboAbierto, setModalReciboAbierto] = useState(false);
+	
+	// --- MODIFICACIÓN 2: Estado para controlar si el médico ya guardó la valoración ---
+	const [tieneValoracionMedica, setTieneValoracionMedica] = useState(false);
+	
 	const [datosRecibo, setDatosRecibo] = useState({
 		nombrePagador: '',
 		apellidoPaternoPagador: '',
@@ -697,6 +704,7 @@ const ExpedienteAdmisiones = () => {
 		return () => controller.abort();
 	}, [busquedaExpediente]);
 
+	// --- MODIFICACIÓN 3: Actualizamos el UseEffect que carga el detalle ---
 	useEffect(() => {
 		const pacienteId = prospectoSeleccionado?.id;
 		const controller = new AbortController();
@@ -705,6 +713,7 @@ const ExpedienteAdmisiones = () => {
 			setDetalleExpediente(null);
 			setErrorDetalleExpediente('');
 			setCargandoDetalleExpediente(false);
+			setTieneValoracionMedica(false); // Reseteamos la bandera
 			return () => controller.abort();
 		}
 
@@ -712,6 +721,8 @@ const ExpedienteAdmisiones = () => {
 			try {
 				setCargandoDetalleExpediente(true);
 				setErrorDetalleExpediente('');
+				
+				// 1. Cargar el expediente base
 				const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteId}/expediente`, {
 					signal: controller.signal,
 				});
@@ -723,6 +734,18 @@ const ExpedienteAdmisiones = () => {
 
 				const data = await response.json();
 				setDetalleExpediente(data);
+
+				// 2. PREGUNTAR AL BACKEND SI EL MÉDICO YA HIZO LA VALORACIÓN
+				const valoracionRes = await fetch(`http://localhost:4000/api/valoraciones/paciente/${pacienteId}`, {
+					signal: controller.signal,
+				});
+				
+				if (valoracionRes.ok) {
+					setTieneValoracionMedica(true); // Sí existe la valoración
+				} else {
+					setTieneValoracionMedica(false); // No existe
+				}
+
 			} catch (error) {
 				if (error.name !== 'AbortError') {
 					console.error('Error al cargar detalle de expediente:', error);
@@ -802,7 +825,8 @@ const ExpedienteAdmisiones = () => {
 		];
 	}, [prospectoSeleccionado]);
 
-	const documentosProspecto = useMemo(() => buildDocumentosProspecto(prospectoSeleccionado, detalleExpediente), [prospectoSeleccionado, detalleExpediente]);
+	// --- MODIFICACIÓN 4: Pasamos tieneValoracionMedica al useMemo ---
+	const documentosProspecto = useMemo(() => buildDocumentosProspecto(prospectoSeleccionado, detalleExpediente, tieneValoracionMedica), [prospectoSeleccionado, detalleExpediente, tieneValoracionMedica]);
 	const notasProspecto = useMemo(() => buildNotasProspecto(prospectoSeleccionado, detalleExpediente), [prospectoSeleccionado, detalleExpediente]);
 	const timelineProspecto = useMemo(() => buildTimeline(detalleExpediente), [detalleExpediente]);
 	const diagnosticoReadOnlyData = useMemo(
