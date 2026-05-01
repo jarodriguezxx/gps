@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ui, colors } from "../../config/theme";
+import { API_BASE } from "../../config/api.ts";
 import * as tipos from "../../types/requisicion.ts";
 import {
   Outlet,
@@ -170,61 +171,73 @@ const DetallesRequisicion = () => {
 
   // Esto es para guardar los archivos que se tienen
   const guardarTodo = async () => {
-    const formData = new FormData();
-
-    // Agregamos los archivos que no sean nulos al formData
-    Object.entries(archivosCotizaciones).forEach(([key, file]) => {
-      if (file) {
-        formData.append(`cotizacion_${key}`, file);
+    if (!id) return;
+    const archivoCotizacion = archivosCotizaciones["1"];
+    if (archivoCotizacion && rol === "rec-materiales") {
+      const formData = new FormData();
+      formData.append("archivo", archivoCotizacion);
+      try {
+        const res = await fetch(`${API_BASE}/requisiciones/${id}/cotizacion`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data: tipos.Requisicion = await res.json();
+        const parsed = {
+          ...data,
+          fecha: new Date(data.fecha as unknown as string),
+        };
+        setDatos(parsed);
+        setArchivosCotizacionesGuardadas({ ...archivosCotizaciones });
+        setModal(false);
+      } catch (e: any) {
+        console.log("error al subir cotización", e);
       }
-    });
+      return;
+    }
+
     Object.entries(archivosFacturas).forEach(([key, file]) => {
       if (file) {
-        formData.append(`factura_${key}`, file);
+        console.log(`factura_${key}`, file.name);
       }
     });
     setArchivosCotizacionesGuardadas({ ...archivosCotizaciones });
     setArchivosFacturasGuardadas({ ...archivosFacturas });
-    // TODO  enviar los datos al servidor, esto es u ejemplo solamente
-    try {
-      console.log("Enviando archivos...");
-      alert("Documentos listos para enviarse al servidor");
-    } catch (e: any) {
-      console.log("error al subir", e);
-    }
   };
 
   // Una vez que se tiene el id, consultar en la base de datos ese id
   useEffect(
     () => {
       if (id) {
-        // TODO línea de consulta a la base de datos
-        const datos = tipos.REQUISICIONES_COMPLETO.find(
-          (item) => item.id === id,
-        );
-        // Valida que realmente el id regrese algo
-        if (datos) {
-          setDatos(datos);
-          if (rol === "rec-materiales") {
-            setSubirCotizacion(
-              datos.estado === "PENDIENTE" && datos.tipo === "EXTRAORDINARIA",
-            );
-            return;
-          }
-
-          if (rol === "compras-inventario") {
-            setSubirCotizacion(
-              datos.estado === "PRE-AUTORIZADA" ||
-                (datos.estado === "AUTORIZADA" &&
-                  datos.tipo === "ORDINARIA" &&
-                  datos.tamanio === "MAYOR"),
-            );
-            return;
-          }
-        } else {
-          // TODO hacer la página de error 404
-          console.log("Página no encontrada");
-        }
+        fetch(`${API_BASE}/requisiciones/${id}`)
+          .then((res) => {
+            if (!res.ok) throw new Error();
+            return res.json();
+          })
+          .then((data: tipos.Requisicion) => {
+            const parsed = {
+              ...data,
+              fecha: new Date(data.fecha as unknown as string),
+            };
+            setDatos(parsed);
+            if (rol === "rec-materiales") {
+              setSubirCotizacion(
+                parsed.estado === "PENDIENTE" &&
+                  parsed.tipo === "EXTRAORDINARIA",
+              );
+              return;
+            }
+            if (rol === "compras-inventario") {
+              setSubirCotizacion(
+                parsed.estado === "PRE-AUTORIZADA" ||
+                  (parsed.estado === "AUTORIZADA" &&
+                    parsed.tipo === "ORDINARIA" &&
+                    parsed.tamanio === "MAYOR"),
+              );
+              return;
+            }
+          })
+          .catch(() => console.log("Página no encontrada"));
       }
     },
     [id, rol],
@@ -325,7 +338,7 @@ const DetallesRequisicion = () => {
             {/* Este boton solo debe de estar activo si tiene los archivos requeridos cargados */}
             <button
               className={`${ui.buttons.primary} py-2!`}
-              onClick={() => {
+              onClick={async () => {
                 if (mostrarEnviarFinanzas) {
                   irAOrdenCompra();
                   return;
@@ -340,18 +353,35 @@ const DetallesRequisicion = () => {
                   irAOrdenCompra();
                   return;
                 }
-                getNombresPdfs();
-                //TODO crear componente para confirmar el envío de esos pdfs.
-                alert(`Se enviarán los archivos ${nombresPdfs}`);
+
+                if (!id) return;
+                try {
+                  const res = await fetch(
+                    `${API_BASE}/requisiciones/${id}/enviar`,
+                    { method: "PATCH" },
+                  );
+                  if (!res.ok) throw new Error(await res.text());
+                  const data: tipos.Requisicion = await res.json();
+                  const parsed = {
+                    ...data,
+                    fecha: new Date(data.fecha as unknown as string),
+                  };
+                  setDatos(parsed);
+                } catch (e: any) {
+                  console.log("error al enviar requisición", e);
+                }
               }}
-              // Evalúa si TODOS los archivos son distintos de nulo
-              // TODO evaluar si hay alguna otra forma de activar mejor este boton sin el segundo caso
               disabled={
                 !mostrarOrdenDeCompra &&
                 !mostrarIntegrarExpediente &&
                 !mostrarEnviarFinanzas &&
                 (totalGuardados < totalNecesarios ||
-                  (requiereFacturas && totalFacturasGuardadas < 1))
+                  (requiereFacturas && totalFacturasGuardadas < 1) ||
+                  (rol === "rec-materiales" &&
+                    datos?.estado === "PENDIENTE" &&
+                    datos?.tipo === "EXTRAORDINARIA" &&
+                    datos?.cotizacionPath == null &&
+                    totalGuardados < 1))
               }
             >
               {mostrarEnviarFinanzas

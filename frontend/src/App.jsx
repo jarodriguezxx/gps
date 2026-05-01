@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { API_BASE } from './config/api.ts';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 // Autenticación
@@ -43,7 +44,6 @@ import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
 import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion';
 import OrdenCompra from './views/rec-materiales/OrdenCompra';
 import Historial from './views/rec-materiales/Historial';
-import { REQUISICIONES_COMPLETO } from './types/requisicion.ts';
 
 // Almacén
 import AlmacenDashboard from './views/almacen/AlmacenDashboard';
@@ -145,6 +145,15 @@ const QuickNavigator = () => {
 };
 
 function App() {
+  const [requisiciones, setRequisiciones] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/requisiciones`)
+      .then(res => res.json())
+      .then(data => setRequisiciones(data.map(r => ({ ...r, fecha: new Date(r.fecha) }))))
+      .catch(err => console.error('Error cargando requisiciones:', err));
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -185,11 +194,11 @@ function App() {
         <Route path="/financiero/gestionar-correcciones"       element={<PrivateRoute><GestionarCorreciones /></PrivateRoute>} />
         <Route path="/financiero/deposito-bancario"            element={<PrivateRoute><DepositoBancario /></PrivateRoute>} />
 
-        {/* Recursos Materiales */}
-        <Route path='/rec-materiales/:rol' element={<PrivateRoute><RecMaterialesDashboard /></PrivateRoute>}>
-          <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
-          <Route path='proveedores' element={<Proveedores/>}/>
-          <Route path='historial' element={<Historial/>}/>
+{/* Rutas para Recursos Materiales y Compras/Inventario */}
+        <Route path='/materiales/:rol' element={<RecMaterialesDashboard/>}>
+          <Route index element={<ListaRequisiciones requisiciones={requisiciones}/>}/>
+          <Route path='proveedores' element = {<Proveedores/>}/>
+          <Route path='historial' element = {<Historial/>}/>
           <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
           <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
         </Route>
