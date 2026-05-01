@@ -50,6 +50,16 @@ public class PacienteController {
         }
     }
 
+    @GetMapping("/dashboard/metricas")
+    public ResponseEntity<?> obtenerMetricasJefatura() {
+        try {
+            return ResponseEntity.ok(pacienteService.obtenerMetricasDashboard());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body(Map.of("error", "Error al calcular métricas: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/{id}/notas-evolucion")
     public ResponseEntity<?> agregarNotaEvolucion(@PathVariable Long id, @RequestBody NotaEvolucionDTO notaDTO) {
         try {

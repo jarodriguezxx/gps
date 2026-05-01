@@ -130,6 +130,34 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
     return respuesta;
 }
 
+// ==========================================
+    // MÉTRICAS PARA EL DASHBOARD DE JEFATURA
+    // ==========================================
+    public Map<String, Object> obtenerMetricasDashboard() {
+        // 1. Pacientes con expediente "ACTIVO"
+        long pacientesActivos = expedienteRepository.countByEstado("ACTIVO");
+
+        // 2. Total de pacientes históricos registrados
+        long totalPacientes = pacienteRepository.count();
+
+        // 3. Notas médicas creadas en las últimas 24 horas (Productividad)
+        LocalDateTime hace24Horas = LocalDateTime.now().minusDays(1);
+        long notasRecientes = notaEvolucionRepository.countByFechaRegistroAfter(hace24Horas);
+
+        // 4. Construimos la respuesta
+        Map<String, Object> metricas = new LinkedHashMap<>();
+        metricas.put("pacientesActivos", pacientesActivos);
+        metricas.put("totalPacientes", totalPacientes);
+        metricas.put("notasRecientes", notasRecientes);
+        
+        // Aquí puedes agregar lógica futura para alertas reales
+        // Por ahora lo calculamos dinámicamente si hay mucha discrepancia
+        long alertasCriticas = (pacientesActivos > notasRecientes) ? (pacientesActivos - notasRecientes) : 0;
+        metricas.put("alertasCriticas", alertasCriticas);
+
+        return metricas;
+    }
+
 // Método auxiliar para crear el expediente automáticamente si no existe
     private ExpedienteClinico crearExpedienteAutomatico(Long pacienteId) {
         Paciente paciente = pacienteRepository.findById(pacienteId)

@@ -9,4 +9,7 @@ import java.util.List;
 public interface NotaEvolucionRepository extends JpaRepository<NotaEvolucion, Long> {
     // Buscamos las notas a través de la relación: Nota -> Expediente -> Paciente
     List<NotaEvolucion> findByExpediente_Paciente_IdOrderByFechaRegistroDesc(Long pacienteId);
+
+    // Agrega este método para contar notas recientes
+    long countByFechaRegistroAfter(java.time.LocalDateTime fecha);
 }
