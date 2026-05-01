@@ -30,6 +30,13 @@ import OrdenCompra from './views/rec-materiales/OrdenCompra';
 import Historial from './views/rec-materiales/Historial';
 import { REQUISICIONES_COMPLETO } from '../src/types/requisicion.ts'
 
+// Importación para módulo médico
+import InicioJefeMedico from './views/medico/InicioJefeMedico'; 
+import PacientesActivos from './views/medico/PacientesActivos';
+import ExpedientesClinicos from './views/medico/ExpedientesClinicos';
+import DetalleExpediente from './views/medico/DetalleExpediente';
+import ValoracionMedica from './views/medico/ValoracionMedica';
+import Prospectos from './views/medico/Prospectos';
 
 
 const quickViews = [
@@ -38,7 +45,12 @@ const quickViews = [
   { label: 'Exp. Admisiones', path: '/admisiones/expediente' },
   { label: 'Estudio', path: '/admisiones/estudio-socioeconomico' },
   { label: 'Valoración', path: '/admisiones/valoracion-diagnostica' },
- 
+  { label: 'Médico - Inicio', path: '/medico/inicio-jefe-medico' },
+  { label: 'Médico - Pacientes', path: '/medico/pacientes' },
+  { label: 'Médico - Expedientes', path: '/medico/expedientes' },
+  { label: 'Médico - Detalles', path: '/medico/expedientes/:id' },
+  { label: 'Médico - Valoración', path: '/medico/valoracion/:id' },
+  { label: 'Médico - Prospectos', path: '/medico/prospectos' },
   { label: 'RH - Alta', path: '/rh/alta-personal' },
   { label: 'RH - Baja', path: '/rh/baja-personal' },
   { label: 'RH - Catálogo', path: '/rh/catalogo-roles' },
@@ -138,6 +150,13 @@ function App() {
         <Route path="/rh/baja-personal"                        element={<BajaPersonal />} />
         <Route path="/rh/catalogo-roles"                       element={<CatalogoRoles />} />
         <Route path="/rh/asignacion-roles"                     element={<AsignacionRoles />} />
+        
+        <Route path="/medico/inicio-jefe-medico"               element={<InicioJefeMedico />} />
+        <Route path="/medico/pacientes"                        element={<PacientesActivos />} />
+        <Route path="/medico/expedientes"                      element={<ExpedientesClinicos/>} />
+        <Route path="/medico/expedientes/:id"                  element={<DetalleExpediente />} />
+        <Route path="/medico/prospectos"                       element={<Prospectos />} />
+        <Route path="/medico/valoracion/:id"                   element={<ValoracionMedica />} />
 
 
         <Route path="/financiero/archivo-contable"             element={<ArchivoContable />} />
