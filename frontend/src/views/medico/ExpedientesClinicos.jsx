@@ -23,7 +23,7 @@ const ExpedientesClinicos = () => {
   const [pacientes, setPacientes] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Nuevo estado para controlar qué fila está expandida
+  // Estado para controlar qué fila está expandida
   const [expandidoId, setExpandidoId] = useState(null);
 
   const fetchPacientes = async () => {
@@ -53,11 +53,17 @@ const ExpedientesClinicos = () => {
   };
 
   const toggleExpandir = (id) => {
-    // Si das clic en el que ya está abierto, lo cierra. Si no, abre el nuevo.
     setExpandidoId(expandidoId === id ? null : id);
   };
 
-  const expedientesFiltrados = pacientes.filter(p => {
+  // 1. Primero filtramos para que SOLO aparezcan los que ya ingresaron o egresaron
+  const expedientesValidos = pacientes.filter(p => {
+    const estado = (p.estadoPaciente || p.estado || '').toUpperCase();
+    return estado === 'INGRESADO' || estado === 'EGRESO';
+  });
+
+  // 2. Luego aplicamos el buscador sobre esos válidos
+  const expedientesFiltrados = expedientesValidos.filter(p => {
     const termino = busqueda.toLowerCase();
     const idStr = p.id ? p.id.toString() : '';
     return (
@@ -164,7 +170,7 @@ const ExpedientesClinicos = () => {
                   ) : expedientesFiltrados.length === 0 ? (
                     <div className="py-12 text-center bg-white">
                       <ClipboardList size={32} className="mx-auto text-slate-300 mb-3" />
-                      <p className="text-slate-500 font-medium text-sm">No se encontraron expedientes.</p>
+                      <p className="text-slate-500 font-medium text-sm">No se encontraron expedientes oficiales.</p>
                     </div>
                   ) : (
                     expedientesFiltrados.map((p) => {
@@ -265,7 +271,7 @@ const ExpedientesClinicos = () => {
                 </div>
 
                 <div className="px-6 py-4 border-t border-slate-200 bg-white flex items-center justify-between">
-                  <p className="text-xs text-slate-500 font-medium">Resultados: <span className="font-bold text-slate-700">{expedientesFiltrados.length}</span> expedientes.</p>
+                  <p className="text-xs text-slate-500 font-medium">Resultados: <span className="font-bold text-slate-700">{expedientesFiltrados.length}</span> expedientes oficiales.</p>
                 </div>
 
               </section>

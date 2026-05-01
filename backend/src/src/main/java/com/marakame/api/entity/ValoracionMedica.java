@@ -1,8 +1,21 @@
 package com.marakame.api.entity;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.CascadeType; // <-- NUEVO IMPORT
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "valoraciones_medicas")
@@ -15,6 +28,7 @@ public class ValoracionMedica {
     // Vinculamos la valoración al Paciente (Prospecto)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "paciente_id", nullable = false)
+    @JsonIgnore // <--- AÑADIDO PARA EVITAR ERROR 500 DE SERIALIZACIÓN
     private Paciente paciente;
 
     private LocalDateTime fechaHora;
@@ -63,6 +77,7 @@ public class ValoracionMedica {
 
     // Relación con los seguimientos posteriores
     @OneToMany(mappedBy = "valoracion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore // <--- AÑADIDO PARA EVITAR ERROR 500 DE SERIALIZACIÓN
     private List<SeguimientoValoracion> seguimientos;
 
     public Long getId() {
@@ -256,6 +271,4 @@ public class ValoracionMedica {
     public void setSeguimientos(List<SeguimientoValoracion> seguimientos) {
         this.seguimientos = seguimientos;
     }
-
-
 }
