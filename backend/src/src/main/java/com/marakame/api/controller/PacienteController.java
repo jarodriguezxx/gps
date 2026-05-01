@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -91,19 +92,6 @@ public class PacienteController {
         return ResponseEntity.ok(pacienteService.obtenerTodosPacientes());
     }
 
-    @GetMapping("/activos")
-    public ResponseEntity<List<Paciente>> obtenerPacientesActivos() {
-        return ResponseEntity.ok(pacienteService.obtenerPacientesActivos());
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerPacienteById(@PathVariable Long id) {
-        Paciente paciente = pacienteService.obtenerPacienteById(id);
-        if (paciente != null) {
-            return ResponseEntity.ok(paciente);
-        }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Paciente no encontrado"));
-    }
 
     @GetMapping("/busqueda")
     public ResponseEntity<List<Paciente>> buscarPacientesParaEstudio(@RequestParam(required = false) String query) {
@@ -167,5 +155,67 @@ public class PacienteController {
         }
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "PDF no encontrado o no pertenece a este paciente"));
+    }
+
+    // ========== NUEVOS ENDPOINTS PARA GESTIÓN DE ESTADO Y PAGOS ==========
+
+    @GetMapping("/{id}")
+public ResponseEntity<?> buscarPacientePorIdEspecifico(@PathVariable Long id) {
+            try {
+            var paciente = pacienteService.obtenerPacientePorId(id);
+            if (paciente.isEmpty()) {
+                return new ResponseEntity<>(Map.of("error", "Paciente no encontrado"), HttpStatus.NOT_FOUND);
+            }
+            return ResponseEntity.ok(paciente.get());
+        } catch (Exception e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/{id}/validar-ingreso")
+    public ResponseEntity<?> validarIngresoYGenerarClave(
+        @PathVariable Long id,
+        @RequestBody Map<String, Object> payload
+    ) {
+        try {
+            String clavePaciente = pacienteService.validarIngresoYGenerarClave(id, payload);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "clavePaciente", clavePaciente,
+                "estadoPaciente", "INGRESADO",
+                "mensaje", "Paciente validado e ingresado exitosamente"
+            ));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of(
+                "error", e.getMessage()
+            ), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Map.of(
+                "error", "Error al validar ingreso: " + e.getMessage()
+            ), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<?> cambiarEstadoPaciente(
+        @PathVariable Long id,
+        @RequestBody Map<String, String> payload
+    ) {
+        try {
+            String nuevoEstado = payload.get("estado");
+            if (nuevoEstado == null || nuevoEstado.isBlank()) {
+                return new ResponseEntity<>(Map.of("error", "Estado no puede estar vacío"), HttpStatus.BAD_REQUEST);
+            }
+            var paciente = pacienteService.cambiarEstadoPaciente(id, nuevoEstado);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "estadoPaciente", paciente.getEstadoPaciente(),
+                "mensaje", "Estado actualizado exitosamente"
+            ));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

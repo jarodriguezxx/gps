@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Stethoscope, Users, ClipboardList, Activity, FileBarChart,
@@ -20,23 +20,50 @@ const DirectorioProspectos = () => {
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState('prospectos');
   const [busqueda, setBusqueda] = useState('');
+  const [prospectos, setProspectos] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Datos de ejemplo simulando lo que vendrá de tu base de datos
-  const [prospectos] = useState([
-    { id: 101, nombreCompleto: 'Manuel Uribe', edad: 22, sexo: 'Masculino', telefono: '311 555 1234', origen: 'Tepic, Nayarit', fechaRegistro: '2026-05-01' },
-    { id: 102, nombreCompleto: 'Sofía Castro', edad: 19, sexo: 'Femenino', telefono: '311 555 9876', origen: 'Xalisco, Nayarit', fechaRegistro: '2026-04-30' },
-    { id: 103, nombreCompleto: 'Roberto Gómez', edad: 35, sexo: 'Masculino', telefono: '311 555 4567', origen: 'Compostela, Nayarit', fechaRegistro: '2026-04-29' }
-  ]);
+  const fetchPacientes = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:4000/api/pacientes');
+      if (response.ok) {
+        const data = await response.json();
+        setProspectos(data);
+      } else {
+        console.error('Error al obtener prospectos');
+      }
+    } catch (error) {
+      console.error('Error de red:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPacientes();
+  }, []);
 
   const handleNavClick = (item) => { 
     setActiveNav(item.key); 
     navigate(item.path); 
   };
 
-  const prospectosFiltrados = prospectos.filter(p => 
-    p.nombreCompleto.toLowerCase().includes(busqueda.toLowerCase()) ||
-    p.origen.toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const esProspecto = (paciente) => {
+    const estado = (paciente.estadoPaciente || paciente.estado || 'PROSPECTO').toUpperCase();
+    return estado === 'PROSPECTO';
+  };
+
+  const prospectosPendientes = prospectos.filter(esProspecto);
+
+  const prospectosFiltrados = prospectosPendientes.filter((p) => {
+    const termino = busqueda.toLowerCase();
+    return (
+      (p.nombreCompleto && p.nombreCompleto.toLowerCase().includes(termino)) ||
+      (p.origen && p.origen.toLowerCase().includes(termino)) ||
+      (p.id && p.id.toString().includes(termino))
+    );
+  });
 
   const inputClass = `w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800
                       focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30 focus:border-[#7E1D3B]/50
@@ -98,7 +125,7 @@ const DirectorioProspectos = () => {
                     <div className="h-5 w-1 rounded-full bg-[#7E1D3B]" />
                     <div>
                       <h2 className="text-base font-black uppercase tracking-[0.2em] text-slate-700">Prospectos en Evaluación</h2>
-                      <p className="text-xs text-slate-500 mt-0.5">Personas pendientes de valoración médica inicial</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Personas con estado PROSPECTO en la base de datos</p>
                     </div>
                   </div>
 
@@ -126,10 +153,16 @@ const DirectorioProspectos = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {prospectosFiltrados.length === 0 ? (
+                      {loading ? (
                         <tr>
                           <td colSpan="4" className="px-5 py-12 text-center text-slate-500">
-                            No hay prospectos pendientes en este momento.
+                            Cargando prospectos desde el servidor...
+                          </td>
+                        </tr>
+                      ) : prospectosFiltrados.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="px-5 py-12 text-center text-slate-500">
+                            No hay pacientes con estado PROSPECTO en este momento.
                           </td>
                         </tr>
                       ) : (
@@ -138,19 +171,19 @@ const DirectorioProspectos = () => {
                             
                             {/* Datos Básicos */}
                             <td className="px-5 py-4">
-                              <p className="font-bold text-slate-800">{p.nombreCompleto}</p>
-                              <p className="text-xs text-slate-500 mt-0.5">{p.edad} años • {p.sexo}</p>
+                              <p className="font-bold text-slate-800">{p.nombreCompleto || 'Sin nombre registrado'}</p>
+                              <p className="text-xs text-slate-500 mt-0.5">{p.edad ? `${p.edad} años` : 'Edad N/D'} • {p.sexo || 'S/E'}</p>
                             </td>
                             
                             {/* Contacto */}
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-1.5 text-xs text-slate-600 mb-1">
                                 <Phone size={13} className="text-slate-400" />
-                                <span>{p.telefono}</span>
+                                <span>{p.telefonoContacto || p.telefonoCasa || 'Sin teléfono'}</span>
                               </div>
                               <div className="flex items-center gap-1.5 text-xs text-slate-500">
                                 <MapPin size={13} className="text-slate-400" />
-                                <span>{p.origen}</span>
+                                <span>{p.origen || p.domicilioParticular || 'Origen no registrado'}</span>
                               </div>
                             </td>
                             
@@ -158,7 +191,7 @@ const DirectorioProspectos = () => {
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
                                 <Calendar size={13} className="text-slate-400" />
-                                <span>{p.fechaRegistro}</span>
+                                <span>{p.fechaRegistro || p.createdAt || 'Sin fecha'}</span>
                               </div>
                             </td>
                             
@@ -182,7 +215,7 @@ const DirectorioProspectos = () => {
                 </div>
 
                 <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50">
-                  <p className="text-xs text-slate-500 font-medium">Mostrando <span className="font-bold text-slate-700">{prospectosFiltrados.length}</span> prospectos pendientes.</p>
+                  <p className="text-xs text-slate-500 font-medium">Mostrando <span className="font-bold text-slate-700">{prospectosFiltrados.length}</span> prospectos con estado PROSPECTO.</p>
                 </div>
               </section>
 

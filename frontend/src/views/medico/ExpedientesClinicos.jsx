@@ -29,7 +29,7 @@ const ExpedientesClinicos = () => {
   const fetchPacientes = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:4000/api/pacientes/activos');
+      const response = await fetch('http://localhost:4000/api/pacientes');
       if (response.ok) {
         const data = await response.json();
         setPacientes(data);

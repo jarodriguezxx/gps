@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import AdmisionesInicio from './views/admisiones/Admisiones-inicio';
+import BandejaOperativa from './views/admisiones/BandejaOperativa';
+import AgendaCitas from './views/admisiones/AgendaCitas';
+import SeguimientoTelefonico from './views/admisiones/SeguimientoTelefonico';
 import Login from './views/login';
-import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
 import AltaPersonal from './views/rh/AltaPersonal';
 import BajaPersonal from './views/rh/BajaPersonal';
@@ -135,10 +137,14 @@ function App() {
       <Routes>
         <Route path="/"                                        element={<Navigate to="/admisiones" replace />} />
         <Route path="/login"                                   element={<Login />} />
-        <Route path="/admisiones"                              element={<AdmisionesInicio />} />
-        <Route path="/admisiones/expediente"                   element={<ExpedienteAdmisiones />} />
-        <Route path="/admisiones/estudio-socioeconomico"       element={<EstudioSocioeconomico />} />
-        <Route path="/admisiones/valoracion-diagnostica"       element={<ValoracionDiagnostica />} />
+          <Route path="/admisiones"                              element={<AdmisionesInicio />} />
+          <Route path="/admisiones/bandeja-operativa"            element={<BandejaOperativa />} />
+          <Route path="/admisiones/agenda-citas"                 element={<AgendaCitas />} />
+          <Route path="/admisiones/seguimiento-telefonico"       element={<SeguimientoTelefonico />} />
+          <Route path="/admisiones/expediente"                   element={<ExpedienteAdmisiones />} />
+          <Route path="/admisiones/estudio-socioeconomico"       element={<EstudioSocioeconomico />} />
+          <Route path="/admisiones/valoracion-diagnostica"       element={<Navigate to="/admisiones/seguimiento-telefonico" replace />} />
+          <Route path="/admisiones/bandeja"                      element={<Navigate to="/admisiones/bandeja-operativa" replace />} />
 
         <Route path="/rh/alta-personal"                        element={<AltaPersonal />} />
         <Route path="/rh/baja-personal"                        element={<BajaPersonal />} />

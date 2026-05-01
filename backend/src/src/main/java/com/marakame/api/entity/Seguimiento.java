@@ -2,6 +2,8 @@ package com.marakame.api.entity;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -37,6 +39,14 @@ public class Seguimiento {
 
     private LocalDateTime fechaHoraProgramada;
     private String motivo;
+
+    // Campos formalizados para gestión de prioridades y seguimiento
+    @Enumerated(EnumType.STRING)
+    private Prioridad prioridad;
+
+    private String responsable;
+
+    private LocalDateTime fechaSiguienteAccion;
 
     // Conectamos el seguimiento al paciente
     @ManyToOne
@@ -122,6 +132,30 @@ public class Seguimiento {
 
     public void setPaciente(Paciente paciente) {
         this.paciente = paciente;
+    }
+
+    public Prioridad getPrioridad() {
+        return prioridad;
+    }
+
+    public void setPrioridad(Prioridad prioridad) {
+        this.prioridad = prioridad;
+    }
+
+    public String getResponsable() {
+        return responsable;
+    }
+
+    public void setResponsable(String responsable) {
+        this.responsable = responsable;
+    }
+
+    public LocalDateTime getFechaSiguienteAccion() {
+        return fechaSiguienteAccion;
+    }
+
+    public void setFechaSiguienteAccion(LocalDateTime fechaSiguienteAccion) {
+        this.fechaSiguienteAccion = fechaSiguienteAccion;
     }
     
 }
