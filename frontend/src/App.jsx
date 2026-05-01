@@ -26,6 +26,7 @@ import AltaPersonal from './views/rh/AltaPersonal';
 import BajaPersonal from './views/rh/BajaPersonal';
 import CatalogoRoles from './views/rh/CatalogoRoles';
 import AsignacionRoles from './views/rh/AsignacionRoles';
+import GestionAccesos from './views/rh/GestionAccesos';
 
 // Financiero
 import ArchivoContable from './views/financiero/ArchivoContable';
@@ -48,9 +49,30 @@ import { REQUISICIONES_COMPLETO } from './types/requisicion.ts';
 // Almacén
 import AlmacenDashboard from './views/almacen/AlmacenDashboard';
 
+const getUser = () => {
+  try { return JSON.parse(localStorage.getItem('marakame_user')); } catch { return null; }
+};
+
+// Cualquier usuario autenticado
 const PrivateRoute = ({ children }) => {
-  const user = localStorage.getItem('marakame_user');
+  const user = getUser();
   return user ? children : <Navigate to="/login" replace />;
+};
+
+// MÉDICO y ADMIN pueden entrar; los demás van a /admisiones
+const MedicoRoute = ({ children }) => {
+  const user = getUser();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.rol !== 'MÉDICO' && user.rol !== 'ADMIN') return <Navigate to="/admisiones" replace />;
+  return children;
+};
+
+// Bloquea al rol MÉDICO; lo manda de vuelta a su área
+const NoMedicoRoute = ({ children }) => {
+  const user = getUser();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.rol === 'MÉDICO') return <Navigate to="/medico/inicio-jefe-medico" replace />;
+  return children;
 };
 
 const quickViews = [
@@ -152,41 +174,42 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         {/* Admisiones */}
-        <Route path="/admisiones"                              element={<PrivateRoute><AdmisionesInicio /></PrivateRoute>} />
-        <Route path="/admisiones/bandeja-operativa"            element={<PrivateRoute><BandejaOperativa /></PrivateRoute>} />
-        <Route path="/admisiones/agenda-citas"                 element={<PrivateRoute><AgendaCitas /></PrivateRoute>} />
-        <Route path="/admisiones/seguimiento-telefonico"       element={<PrivateRoute><SeguimientoTelefonico /></PrivateRoute>} />
-        <Route path="/admisiones/expediente"                   element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
-        <Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
-        <Route path="/admisiones/valoracion-diagnostica"       element={<PrivateRoute><ValoracionDiagnostica /></PrivateRoute>} />
+        <Route path="/admisiones"                              element={<NoMedicoRoute><AdmisionesInicio /></NoMedicoRoute>} />
+        <Route path="/admisiones/bandeja-operativa"            element={<NoMedicoRoute><BandejaOperativa /></NoMedicoRoute>} />
+        <Route path="/admisiones/agenda-citas"                 element={<NoMedicoRoute><AgendaCitas /></NoMedicoRoute>} />
+        <Route path="/admisiones/seguimiento-telefonico"       element={<NoMedicoRoute><SeguimientoTelefonico /></NoMedicoRoute>} />
+        <Route path="/admisiones/expediente"                   element={<NoMedicoRoute><ExpedienteAdmisiones /></NoMedicoRoute>} />
+        <Route path="/admisiones/estudio-socioeconomico"       element={<NoMedicoRoute><EstudioSocioeconomico /></NoMedicoRoute>} />
+        <Route path="/admisiones/valoracion-diagnostica"       element={<NoMedicoRoute><ValoracionDiagnostica /></NoMedicoRoute>} />
         <Route path="/admisiones/bandeja"                      element={<Navigate to="/admisiones/bandeja-operativa" replace />} />
 
-        {/* Médico */}
+        {/* Médico — solo jefe-medico */}
         <Route path="/medico"                                  element={<Navigate to="/medico/inicio-jefe-medico" replace />} />
-        <Route path="/medico/inicio-jefe-medico"               element={<PrivateRoute><InicioJefeMedico /></PrivateRoute>} />
-        <Route path="/medico/pacientes"                        element={<PrivateRoute><PacientesActivos /></PrivateRoute>} />
-        <Route path="/medico/expedientes"                      element={<PrivateRoute><ExpedientesClinicos /></PrivateRoute>} />
-        <Route path="/medico/expedientes/:id"                  element={<PrivateRoute><DetalleExpediente /></PrivateRoute>} />
-        <Route path="/medico/prospectos"                       element={<PrivateRoute><Prospectos /></PrivateRoute>} />
-        <Route path="/medico/valoracion/:id"                   element={<PrivateRoute><ValoracionMedica /></PrivateRoute>} />
+        <Route path="/medico/inicio-jefe-medico"               element={<MedicoRoute><InicioJefeMedico /></MedicoRoute>} />
+        <Route path="/medico/pacientes"                        element={<MedicoRoute><PacientesActivos /></MedicoRoute>} />
+        <Route path="/medico/expedientes"                      element={<MedicoRoute><ExpedientesClinicos /></MedicoRoute>} />
+        <Route path="/medico/expedientes/:id"                  element={<MedicoRoute><DetalleExpediente /></MedicoRoute>} />
+        <Route path="/medico/prospectos"                       element={<MedicoRoute><Prospectos /></MedicoRoute>} />
+        <Route path="/medico/valoracion/:id"                   element={<MedicoRoute><ValoracionMedica /></MedicoRoute>} />
 
         {/* Recursos Humanos */}
-        <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
-        <Route path="/rh/baja-personal"                        element={<PrivateRoute><BajaPersonal /></PrivateRoute>} />
-        <Route path="/rh/catalogo-roles"                       element={<PrivateRoute><CatalogoRoles /></PrivateRoute>} />
-        <Route path="/rh/asignacion-roles"                     element={<PrivateRoute><AsignacionRoles /></PrivateRoute>} />
+        <Route path="/rh/alta-personal"                        element={<NoMedicoRoute><AltaPersonal /></NoMedicoRoute>} />
+        <Route path="/rh/baja-personal"                        element={<NoMedicoRoute><BajaPersonal /></NoMedicoRoute>} />
+        <Route path="/rh/catalogo-roles"                       element={<NoMedicoRoute><CatalogoRoles /></NoMedicoRoute>} />
+        <Route path="/rh/asignacion-roles"                     element={<NoMedicoRoute><AsignacionRoles /></NoMedicoRoute>} />
+        <Route path="/rh/gestion-accesos"                      element={<NoMedicoRoute><GestionAccesos /></NoMedicoRoute>} />
 
         {/* Financiero */}
-        <Route path="/financiero/archivo-contable"             element={<PrivateRoute><ArchivoContable /></PrivateRoute>} />
-        <Route path="/financiero/digitalizar-comprobantes"     element={<PrivateRoute><DigitalizarComprobantes /></PrivateRoute>} />
-        <Route path="/financiero/factura-electronica"          element={<PrivateRoute><FacturaElectronica /></PrivateRoute>} />
-        <Route path="/financiero/comprobantes-fiscales"        element={<PrivateRoute><ComprobantesFiscales /></PrivateRoute>} />
-        <Route path="/financiero/requisiciones-almacen"        element={<PrivateRoute><RequisicionesAlmacen /></PrivateRoute>} />
-        <Route path="/financiero/gestionar-correcciones"       element={<PrivateRoute><GestionarCorreciones /></PrivateRoute>} />
-        <Route path="/financiero/deposito-bancario"            element={<PrivateRoute><DepositoBancario /></PrivateRoute>} />
+        <Route path="/financiero/archivo-contable"             element={<NoMedicoRoute><ArchivoContable /></NoMedicoRoute>} />
+        <Route path="/financiero/digitalizar-comprobantes"     element={<NoMedicoRoute><DigitalizarComprobantes /></NoMedicoRoute>} />
+        <Route path="/financiero/factura-electronica"          element={<NoMedicoRoute><FacturaElectronica /></NoMedicoRoute>} />
+        <Route path="/financiero/comprobantes-fiscales"        element={<NoMedicoRoute><ComprobantesFiscales /></NoMedicoRoute>} />
+        <Route path="/financiero/requisiciones-almacen"        element={<NoMedicoRoute><RequisicionesAlmacen /></NoMedicoRoute>} />
+        <Route path="/financiero/gestionar-correcciones"       element={<NoMedicoRoute><GestionarCorreciones /></NoMedicoRoute>} />
+        <Route path="/financiero/deposito-bancario"            element={<NoMedicoRoute><DepositoBancario /></NoMedicoRoute>} />
 
         {/* Recursos Materiales */}
-        <Route path='/rec-materiales/:rol' element={<PrivateRoute><RecMaterialesDashboard /></PrivateRoute>}>
+        <Route path='/rec-materiales/:rol' element={<NoMedicoRoute><RecMaterialesDashboard /></NoMedicoRoute>}>
           <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
           <Route path='proveedores' element={<Proveedores/>}/>
           <Route path='historial' element={<Historial/>}/>
@@ -195,7 +218,7 @@ function App() {
         </Route>
 
         {/* Almacén */}
-        <Route path="/almacen" element={<PrivateRoute><AlmacenDashboard /></PrivateRoute>} />
+        <Route path="/almacen" element={<NoMedicoRoute><AlmacenDashboard /></NoMedicoRoute>} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

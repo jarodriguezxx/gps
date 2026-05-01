@@ -8,6 +8,7 @@ const navItems = [
   { label: 'Baja de Personal',    icon: UserMinus,   key: 'baja',       path: '/rh/baja-personal' },
   { label: 'Catálogo de Roles',   icon: Tag,         key: 'catalogo',   path: '/rh/catalogo-roles' },
   { label: 'Asignación de Roles', icon: ShieldCheck, key: 'asignacion', path: '/rh/asignacion-roles' },
+  { label: 'Gestión de Accesos',  icon: KeyRound,    key: 'accesos',    path: '/rh/gestion-accesos' },
 ];
 
 const PUESTOS_POR_DEPARTAMENTO = {
@@ -63,9 +64,41 @@ const ESCOLARIDADES = [
   'TÉCNICO / VOCACIONAL', 'LICENCIATURA', 'ESPECIALIDAD', 'MAESTRÍA', 'DOCTORADO',
 ];
 
-const ROLES_SISTEMA = [
-  'ADMIN', 'RH', 'MÉDICO', 'ADMISIONES', 'FINANCIERO', 'ALMACÉN', 'MATERIALES',
-];
+const ROL_POR_PUESTO = {
+  'DIRECTORA GENERAL':                              'ADMIN',
+  'JEFA (E) DEP. ADMINISTRACIÓN':                   'ADMIN',
+  'ASISTENTE CONTABLE':                             'FINANCIERO',
+  'ASISTENTE DE DIRECCIÓN':                         'ADMIN',
+  'CHOFER DE DIRECCIÓN':                            'ADMIN',
+  'ENCARGADA (O) DE RECURSOS FINANCIEROS':          'FINANCIERO',
+  'ENCARGADA (O) DE RECURSOS MATERIALES':           'MATERIALES',
+  'ENCARGADA (O) DE RECURSOS HUMANOS':              'RH',
+  'TITULAR DE UNIDAD JURÍDICA':                     'ADMIN',
+  'TITULAR DE LA UNIDAD DE TRANSPARENCIA':          'ADMIN',
+  'ENCARGADA (O) DE DIFUSIÓN Y MEDIOS':             'ADMIN',
+  'JEFA (E) DEP. CLÍNICO':                          'ADMIN',
+  'AUXILIAR ADMINISTRATIVO':                        'ADMIN',
+  'CONSEJERA (O) ASIGNADO':                         'ADMIN',
+  'COTERAPEUTA':                                    'ADMIN',
+  'TERAPEUTA DE POST-TRATAMIENTO':                  'ADMIN',
+  'ENCARGADA (O) DE FAMILIA':                       'ADMIN',
+  'ENCARGADA (O) DE CONSEJEROS ASIGNADOS':          'ADMIN',
+  'ENCARGADA (O) DE POST TRATAMIENTO':              'ADMIN',
+  'TERAPEUTA DE GRUPO':                             'ADMIN',
+  'TERAPEUTA FAMILIAR':                             'ADMIN',
+  'JEFA (E) DEP. ADMISIONES':                       'ADMISIONES',
+  'ASESOR (A)':                                     'ADMISIONES',
+  'ENCARGADA (O) DE PREVENCIÓN Y ESTADÍSTICA':      'ADMISIONES',
+  'RECEPCIÓN':                                      'ADMISIONES',
+  'ENCARGADA (O) DE MANTENIMIENTO E INTENDENCIA':   'ADMIN',
+  'AUXILIAR DE MANTENIMIENTO':                      'ADMIN',
+  'AUXILIAR DE INTENDENCIA':                        'ADMIN',
+  'JEFA (E) DEP. MÉDICO':                           'MÉDICO',
+  'MÉDICO':                                         'ADMIN',
+  'NUTRIÓLOGA (O)':                                 'ADMIN',
+  'ENFERMERA (O)':                                  'ADMIN',
+  'AUXILIAR DE COCINA':                             'ADMIN',
+};
 
 const CURP_REGEX = /^[A-Z][AEIOU][A-Z]{2}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[HM](AS|BC|BS|CC|CL|CM|CS|CH|DF|DG|GT|GR|HG|JC|MC|MN|MS|NT|NL|OC|PL|QT|QR|SP|SL|SR|TC|TS|TL|VZ|YN|ZS|NE)[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$/;
 const RFC_REGEX   = /^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/;
@@ -143,7 +176,7 @@ const FORM_INICIAL = {
   tipoContrato: '', escolaridad: '', anosExperiencia: '',
 };
 
-const CRED_INICIAL = { username: '', password: '', rol: '', mostrarPass: false };
+const CRED_INICIAL = { username: '', password: '', mostrarPass: false };
 
 const RHLayout = ({ navigate, children }) => (
   <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -271,7 +304,6 @@ const AltaPersonal = () => {
       setCredForm({
         username:    generarUsername(formData.nombre, formData.apellidoPaterno),
         password:    generarPassword(),
-        rol:         '',
         mostrarPass: false,
       });
       setErrors({});
@@ -287,7 +319,8 @@ const AltaPersonal = () => {
   const handleCrearAcceso = async () => {
     if (!credForm.username.trim()) { setCredError('El nombre de usuario es requerido.'); return; }
     if (credForm.password.length < 6) { setCredError('La contraseña debe tener al menos 6 caracteres.'); return; }
-    if (!credForm.rol) { setCredError('Selecciona el módulo de acceso.'); return; }
+
+    const rolInferido = ROL_POR_PUESTO[personalGuardado.puesto] || 'ADMIN';
 
     setCredLoading(true);
     setCredError('');
@@ -299,7 +332,7 @@ const AltaPersonal = () => {
           personalId: personalGuardado.id,
           username:   credForm.username.trim().toLowerCase(),
           password:   credForm.password,
-          rol:        credForm.rol,
+          rol:        rolInferido,
         }),
       });
       const body = await res.json();
@@ -450,23 +483,16 @@ const AltaPersonal = () => {
               </div>
             </div>
 
-            {/* Módulo / Rol */}
+            {/* Módulo inferido */}
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-[0.15em] mb-1.5 ml-0.5">
-                Módulo de acceso<span className="text-[#7E1D3B] ml-0.5">*</span>
+                Módulo de acceso
               </label>
-              <div className="flex flex-wrap gap-2">
-                {ROLES_SISTEMA.map(rol => (
-                  <button key={rol} type="button"
-                    onClick={() => setCredForm(p => ({ ...p, rol }))}
-                    className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${
-                      credForm.rol === rol
-                        ? 'bg-[#7E1D3B] text-white border-[#7E1D3B] shadow-sm'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}>
-                    {rol}
-                  </button>
-                ))}
+              <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50">
+                <span className="px-3 py-1 rounded-lg bg-[#7E1D3B]/10 text-[#7E1D3B] text-sm font-bold">
+                  {ROL_POR_PUESTO[personalGuardado.puesto] || 'ADMIN'}
+                </span>
+                <span className="text-xs text-slate-400">asignado automáticamente según el puesto</span>
               </div>
             </div>
           </div>

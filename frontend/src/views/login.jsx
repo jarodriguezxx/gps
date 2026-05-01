@@ -29,7 +29,8 @@ const Login = () => {
       }
 
       localStorage.setItem('marakame_user', JSON.stringify(data));
-      navigate('/admisiones', { replace: true });
+      const destino = data.rol === 'MÉDICO' ? '/medico/inicio-jefe-medico' : '/admisiones';
+      navigate(destino, { replace: true });
     } catch {
       setError('No se pudo conectar con el servidor.');
     } finally {
