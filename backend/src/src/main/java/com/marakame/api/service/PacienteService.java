@@ -93,9 +93,8 @@ public class PacienteService {
     }
 
 public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
-    // 1. Buscamos el expediente asociado al paciente
-    ExpedienteClinico expediente = expedienteRepository.findByPacienteId(pacienteId)
-        .orElseThrow(() -> new IllegalArgumentException("No existe expediente clínico para este paciente"));
+        ExpedienteClinico expediente = expedienteRepository.findByPacienteId(pacienteId)
+        .orElseGet(() -> crearExpedienteAutomatico(pacienteId));
 
     // 2. Metadatos de PDFs (Usando la lógica que ya tenías)
     List<Object[]> pdfsMetadata = estudioSocioeconomicoPdfRepository.findMetadataByPacienteIdOrderByGeneradoEnDesc(pacienteId);
@@ -130,6 +129,21 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 
     return respuesta;
 }
+
+// Método auxiliar para crear el expediente automáticamente si no existe
+    private ExpedienteClinico crearExpedienteAutomatico(Long pacienteId) {
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado en la base de datos"));
+            
+        ExpedienteClinico nuevoExpediente = new ExpedienteClinico();
+        nuevoExpediente.setPaciente(paciente);
+        // Genera un folio automático, ej: EXP-1-2026
+        nuevoExpediente.setNumeroExpediente("EXP-" + pacienteId + "-" + LocalDateTime.now().getYear());
+        nuevoExpediente.setFechaApertura(LocalDateTime.now());
+        nuevoExpediente.setEstado("ACTIVO");
+        
+        return expedienteRepository.save(nuevoExpediente);
+    }
 
 
 
