@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+
+const PrivateRoute = ({ children }) => {
+  const user = localStorage.getItem('marakame_user');
+  return user ? children : <Navigate to="/login" replace />;
+};
 import AdmisionesInicio from './views/admisiones/Admisiones-inicio';
 import Login from './views/login';
 import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
@@ -157,67 +162,62 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/"                                        element={<Navigate to="/admisiones" replace />} />
-        <Route path="/login"                                   element={<Login />} />
-        <Route path="/admisiones"                              element={<AdmisionesInicio />} />
-        <Route path="/admisiones/expediente"                   element={<ExpedienteAdmisiones />} />
-        <Route path="/admisiones/estudio-socioeconomico"       element={<EstudioSocioeconomico />} />
-        <Route path="/admisiones/valoracion-diagnostica"       element={<ValoracionDiagnostica />} />
+        <Route path="/"      element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
 
-        <Route path="/medico"                                  element={<MedicoInicio />} />
-        <Route path="/medico/expediente"                       element={<ExpedienteMedico />} />
-        <Route path="/medico/historia-medica"                  element={<HistoriaMedica />} />
-        <Route path="/medico/inventario-pertenencias"          element={<InventarioPertenencias />} />
-        <Route path="/rh/alta-personal"                        element={<AltaPersonal />} />
-        <Route path="/rh/baja-personal"                        element={<BajaPersonal />} />
-        <Route path="/rh/catalogo-roles"                       element={<CatalogoRoles />} />
-        <Route path="/rh/asignacion-roles"                     element={<AsignacionRoles />} />
+        <Route path="/admisiones"                              element={<PrivateRoute><AdmisionesInicio /></PrivateRoute>} />
+        <Route path="/admisiones/expediente"                   element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
+        <Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
+        <Route path="/admisiones/valoracion-diagnostica"       element={<PrivateRoute><ValoracionDiagnostica /></PrivateRoute>} />
 
-        <Route path="/medico/evaluacion-medica"                element={<EvaluacionEnfermeria />} />
-        <Route path="/medico/protocolo-desintoxicacion"        element={<ProtocoloDesintoxicacion />} />
-        <Route path="/medico/pacientes-activos"                element={<PacientesActivos />} />
-        <Route path="/medico/historial-paciente"               element={<HistorialMedicoPaciente />} />
-        <Route path="/medico/consulta-diaria"                  element={<ConsultaDiaria />} />
-        <Route path="/medico/pacientes/:pacienteId/consulta-diaria" element={<ConsultaDiaria />} />
-        <Route path="/medico/pacientes/:id/tension" element={<ControlTensionArterial />} />
-        <Route path="/medico/pacientes/:id/glicemia" element={<ControlGlicemia />} />
-        <Route path="/medico/pacientes/:pacienteId/expediente" element={<ExpedienteMedico />} />
-        <Route path="/medico/historial-pre-admision" element={<HistorialPreAdmision />} />
-        <Route path="/medico/historia-medica" element={<HistoriaMedica />} />
-        
+        <Route path="/medico"                                  element={<PrivateRoute><MedicoInicio /></PrivateRoute>} />
+        <Route path="/medico/expediente"                       element={<PrivateRoute><ExpedienteMedico /></PrivateRoute>} />
+        <Route path="/medico/historia-medica"                  element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
+        <Route path="/medico/inventario-pertenencias"          element={<PrivateRoute><InventarioPertenencias /></PrivateRoute>} />
+        <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
+        <Route path="/rh/baja-personal"                        element={<PrivateRoute><BajaPersonal /></PrivateRoute>} />
+        <Route path="/rh/catalogo-roles"                       element={<PrivateRoute><CatalogoRoles /></PrivateRoute>} />
+        <Route path="/rh/asignacion-roles"                     element={<PrivateRoute><AsignacionRoles /></PrivateRoute>} />
 
+        <Route path="/medico/evaluacion-medica"                element={<PrivateRoute><EvaluacionEnfermeria /></PrivateRoute>} />
+        <Route path="/medico/protocolo-desintoxicacion"        element={<PrivateRoute><ProtocoloDesintoxicacion /></PrivateRoute>} />
+        <Route path="/medico/pacientes-activos"                element={<PrivateRoute><PacientesActivos /></PrivateRoute>} />
+        <Route path="/medico/historial-paciente"               element={<PrivateRoute><HistorialMedicoPaciente /></PrivateRoute>} />
+        <Route path="/medico/consulta-diaria"                  element={<PrivateRoute><ConsultaDiaria /></PrivateRoute>} />
+        <Route path="/medico/pacientes/:pacienteId/consulta-diaria" element={<PrivateRoute><ConsultaDiaria /></PrivateRoute>} />
+        <Route path="/medico/pacientes/:id/tension"            element={<PrivateRoute><ControlTensionArterial /></PrivateRoute>} />
+        <Route path="/medico/pacientes/:id/glicemia"           element={<PrivateRoute><ControlGlicemia /></PrivateRoute>} />
+        <Route path="/medico/pacientes/:pacienteId/expediente" element={<PrivateRoute><ExpedienteMedico /></PrivateRoute>} />
+        <Route path="/medico/historial-pre-admision"           element={<PrivateRoute><HistorialPreAdmision /></PrivateRoute>} />
 
-        <Route path="/nutriologia"                             element={<NutriologiaInicio />} />
-        <Route path="/nutriologia/evaluacion-nutricional"      element={<EvaluacionNutricional />} />
-        <Route path="/medico/nutriologia/evaluacion-nutricional" element={<EvaluacionNutricional />} />
-        <Route path="/medico/cuestionario-salud"               element={<EvaluacionNutricional />} />
+        <Route path="/nutriologia"                             element={<PrivateRoute><NutriologiaInicio /></PrivateRoute>} />
+        <Route path="/nutriologia/evaluacion-nutricional"      element={<PrivateRoute><EvaluacionNutricional /></PrivateRoute>} />
+        <Route path="/medico/nutriologia/evaluacion-nutricional" element={<PrivateRoute><EvaluacionNutricional /></PrivateRoute>} />
+        <Route path="/medico/cuestionario-salud"               element={<PrivateRoute><EvaluacionNutricional /></PrivateRoute>} />
 
-        <Route path="/psicologia" element={<PsicologiaInicio />} />   
-        <Route path="/psicologia/paciente/:id/documentos" element={<GestionDocumentosPsicologia />} />
-        <Route path="/psicologia/paciente/:id/notas-evolucion" element={<NotasEvolucionPsicologia />} />
+        <Route path="/psicologia"                              element={<PrivateRoute><PsicologiaInicio /></PrivateRoute>} />
+        <Route path="/psicologia/paciente/:id/documentos"      element={<PrivateRoute><GestionDocumentosPsicologia /></PrivateRoute>} />
+        <Route path="/psicologia/paciente/:id/notas-evolucion" element={<PrivateRoute><NotasEvolucionPsicologia /></PrivateRoute>} />
 
-        <Route path="/financiero/archivo-contable"             element={<ArchivoContable />} />
-        <Route path="/financiero/digitalizar-comprobantes"     element={<DigitalizarComprobantes />} />
-        <Route path="/financiero/factura-electronica"          element={<FacturaElectronica />} />
-        <Route path="/financiero/comprobantes-fiscales"        element={<ComprobantesFiscales />} />
-        <Route path="/financiero/requisiciones-almacen"        element={<RequisicionesAlmacen />} />
-        <Route path="/financiero/gestionar-correcciones"       element={<GestionarCorreciones />} />
-        <Route path="/financiero/deposito-bancario"            element={<DepositoBancario />} />
+        <Route path="/financiero/archivo-contable"             element={<PrivateRoute><ArchivoContable /></PrivateRoute>} />
+        <Route path="/financiero/digitalizar-comprobantes"     element={<PrivateRoute><DigitalizarComprobantes /></PrivateRoute>} />
+        <Route path="/financiero/factura-electronica"          element={<PrivateRoute><FacturaElectronica /></PrivateRoute>} />
+        <Route path="/financiero/comprobantes-fiscales"        element={<PrivateRoute><ComprobantesFiscales /></PrivateRoute>} />
+        <Route path="/financiero/requisiciones-almacen"        element={<PrivateRoute><RequisicionesAlmacen /></PrivateRoute>} />
+        <Route path="/financiero/gestionar-correcciones"       element={<PrivateRoute><GestionarCorreciones /></PrivateRoute>} />
+        <Route path="/financiero/deposito-bancario"            element={<PrivateRoute><DepositoBancario /></PrivateRoute>} />
 
-{/* Rutas para Recursos Materiales y Compras/Inventario */}
-        <Route path='/rec-materiales/:rol' element={<RecMaterialesDashboard/>}>
+        <Route path='/rec-materiales/:rol' element={<PrivateRoute><RecMaterialesDashboard /></PrivateRoute>}>
           <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
-          <Route path='proveedores' element = {<Proveedores/>}/>
-          <Route path='historial' element = {<Historial/>}/>
+          <Route path='proveedores' element={<Proveedores/>}/>
+          <Route path='historial' element={<Historial/>}/>
           <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
           <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
         </Route>
 
-        {/* Rutas para Almacen */}
-        <Route path="/almacen" element={<AlmacenDashboard />} />
+        <Route path="/almacen" element={<PrivateRoute><AlmacenDashboard /></PrivateRoute>} />
 
-        {/* Ruta comodín para redirigir si no existe la URL */}
-        <Route path="*" element={<Navigate to="/admisiones" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       <QuickNavigator />
     </BrowserRouter>
