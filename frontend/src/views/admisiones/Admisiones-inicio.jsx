@@ -172,7 +172,7 @@ const AdmisionesInicio = () => {
 			try {
 				setCargandoPacientesAgenda(true);
 				setErrorPacientesAgenda('');
-				const response = await fetch(`http://localhost:4000/api/pacientes/estudio?query=${encodeURIComponent(nombre)}`, {
+				const response = await fetch(`http://localhost:4000/api/pacientes/busqueda?query=${encodeURIComponent(nombre)}`, {
 					signal: controller.signal,
 				});
 

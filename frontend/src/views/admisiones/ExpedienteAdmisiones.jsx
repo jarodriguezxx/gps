@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, FileText, Search, Sparkles, X, Download, Upload, CheckCircle2, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowRight, FileText, Search, Sparkles, X, Download, Upload, CheckCircle2, Paperclip, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
 import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
@@ -15,13 +15,32 @@ const formatDateValue = (value) => {
 const hasValue = (value) => String(value ?? '').trim().length > 0;
 
 const formatClave = (item) => {
-    // 'clavePaciente' es el nombre real en tu entidad Paciente.java
-    if (item?.clavePaciente) return String(item.clavePaciente); 
-    if (item?.id) return `ID-${String(item.id).padStart(4, '0')}`;
-    return '--';
+	if (item?.claveExpediente) return String(item.claveExpediente);
+	if (item?.folioExpediente) return String(item.folioExpediente);
+	if (item?.id) return String(item.id).padStart(5, '0');
+	return '--';
 };
 
 const getNombreProspecto = (item) => item?.nombreCompleto || item?.nombrePaciente || item?.nombre || '';
+
+const formatEstadoPacienteDisplay = (estado) => {
+	const normalized = String(estado || '').toUpperCase();
+	if (normalized === 'INGRESADO') return 'PACIENTE';
+	return normalized || 'Sin estado';
+};
+
+const getRecibosStorageKey = (pacienteId) => `admisiones-recibos-${pacienteId}`;
+
+const normalizarReciboApi = (recibo) => ({
+	id: recibo.id,
+	nombre: recibo.tokenGenerado || recibo.numeroRecibo || `Recibo ${recibo.id}`,
+	fecha: formatDateValue(recibo.fechaValidacion || recibo.fechaPago || recibo.createdAt),
+	tipo: 'Recibo de pago',
+	url: recibo.archivoReciboUrl || '',
+	estadoPago: recibo.estadoPago || '',
+	tokenGenerado: recibo.tokenGenerado || '',
+	_localOnly: false,
+});
 
 const formatTimeValue = (value) => {
 	if (!value) return '--:--';
@@ -101,17 +120,18 @@ const buildDocumentosProspecto = (prospecto, detalleExpediente, tieneValoracionM
 	return [...documentosPdf, ...documentosBase];
 };
 
-const buildNotasProspecto = (prospecto, detalleExpediente) => {
+const buildNotasProspecto = (prospecto, detalleExpediente, prospectoSeleccionado) => {
 	if (!prospecto) {
 		return [];
 	}
 
 	const notas = [];
 	const nombre = getNombreProspecto(prospecto) || 'Prospecto sin nombre';
+	const claveMostrar = prospectoSeleccionado?.clavePaciente || '--';
 
 	notas.push({
 		id: `sistema-expediente-${prospecto.id}`,
-		texto: `Admisiones: expediente activo para ${nombre}. Clave interna ${formatClave(prospecto)}.`,
+		texto: `Admisiones: expediente activo para ${nombre}. Clave interna ${claveMostrar}.`,
 		fecha: prospecto.fechaIngreso || prospecto.createdAt || null,
 		autor: 'Sistema de admisiones',
 		tipo: 'sistema',
@@ -190,7 +210,7 @@ const buildNotasProspecto = (prospecto, detalleExpediente) => {
 	return unificadas;
 };
 
-const buildTimeline = (detalleExpediente) => {
+const buildTimeline = (detalleExpediente, prospectoSeleccionado) => {
 	const seguimientos = Array.isArray(detalleExpediente?.seguimientos) ? detalleExpediente.seguimientos : [];
 	const notasAdmisiones = (Array.isArray(detalleExpediente?.notasEvolucion) ? detalleExpediente.notasEvolucion : [])
 		.filter((nota) => String(nota?.medicoAsignado || '').toUpperCase().includes('ADMISION'));
@@ -569,6 +589,7 @@ const ExpedienteAdmisiones = () => {
 		nombreRecibe: '',
 	});
 	const [recibosSubidos, setRecibosSubidos] = useState([]);
+	const [reciboPersistido, setReciboPersistido] = useState(null);
 	const [cargandoRecibo, setCargandoRecibo] = useState(false);
 	const [tokenGenerado, setTokenGenerado] = useState(null);
 	const [generandoToken, setGenerandoToken] = useState(false);
@@ -578,6 +599,44 @@ const ExpedienteAdmisiones = () => {
 	const [guardandoNotaAdmisiones, setGuardandoNotaAdmisiones] = useState(false);
 	const [errorNotaAdmisiones, setErrorNotaAdmisiones] = useState('');
 	const [mensajeNotaAdmisiones, setMensajeNotaAdmisiones] = useState('');
+
+	const cargarRecibosPersistidos = async (pacienteId) => {
+		if (!pacienteId) return [];
+		const storageKey = getRecibosStorageKey(pacienteId);
+		try {
+			const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteId}/recibos`);
+			if (response.ok) {
+				const recibosApi = await response.json();
+				const normalizados = Array.isArray(recibosApi) ? recibosApi.map(normalizarReciboApi) : [];
+				if (normalizados.length > 0) {
+					setRecibosSubidos(normalizados);
+					setReciboPersistido(normalizados.find((item) => String(item.estadoPago || '').toUpperCase() === 'VALIDADO') || normalizados[0]);
+					window.localStorage.setItem(storageKey, JSON.stringify(normalizados));
+					return normalizados;
+				}
+			}
+		} catch (error) {
+			console.error('Error al cargar recibos persistidos:', error);
+		}
+
+		const localGuardado = window.localStorage.getItem(storageKey);
+		if (localGuardado) {
+			try {
+				const localRecibos = JSON.parse(localGuardado);
+				if (Array.isArray(localRecibos) && localRecibos.length > 0) {
+					setRecibosSubidos(localRecibos);
+					setReciboPersistido(localRecibos.find((item) => item._localOnly) || localRecibos[0]);
+					return localRecibos;
+				}
+			} catch (error) {
+				console.error('Error al leer recibos locales:', error);
+			}
+		}
+
+		setRecibosSubidos([]);
+		setReciboPersistido(null);
+		return [];
+	};
 
 	const seleccionarProspecto = async (prospecto, opciones = {}) => {
 		const { abrirConsulta = false, tabConsulta = 'solicitante' } = opciones;
@@ -620,7 +679,7 @@ const ExpedienteAdmisiones = () => {
 			nombrePaciente: prospecto.nombres || '',
 			apellidoPaternoPaciente: prospecto.apellidoPaterno || '',
 			apellidoMaternoPaciente: prospecto.apellidoMaterno || '',
-			clavePaciente: prospecto.clavePaciente || formatClave(prospecto),
+			clavePaciente: prospecto.clavePaciente || '--',
 			direccionCalle: prospecto.direccionCalle || '',
 			direccionNoExt: prospecto.direccionNoExt || '',
 			direccionNoInt: prospecto.direccionNoInt || '',
@@ -647,23 +706,62 @@ const ExpedienteAdmisiones = () => {
 		html2pdf().set(opt).from(element).save();
 	};
 
-	const manejarCargaRecibo = (event) => {
+	const manejarCargaRecibo = async (event) => {
 		const archivos = event.target.files;
-		if (archivos && archivos.length > 0) {
-			setCargandoRecibo(true);
-			const archivo = archivos[0];
-			
-			// Simular carga (en producción enviarías al backend)
-			setTimeout(() => {
-				setRecibosSubidos(prev => [...prev, {
-					nombre: archivo.name,
-					fecha: new Date().toLocaleDateString('es-MX'),
-					tamaño: `${(archivo.size / 1024).toFixed(2)} KB`,
-					tipo: 'Recibo firmado',
-					url: URL.createObjectURL(archivo)
-				}]);
-				setCargandoRecibo(false);
-			}, 1000);
+		if (!archivos || archivos.length === 0 || !prospectoSeleccionado?.id || reciboBloqueado) return;
+		const archivo = archivos[0];
+		setCargandoRecibo(true);
+
+		try {
+			const archivoDataUrl = await new Promise((resolve, reject) => {
+				const lector = new FileReader();
+				lector.onload = () => resolve(String(lector.result || ''));
+				lector.onerror = () => reject(new Error('No se pudo leer el archivo del recibo'));
+				lector.readAsDataURL(archivo);
+			});
+
+			const res = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/recibos`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					numeroRecibo: datosRecibo.clavePaciente || `REC-${prospectoSeleccionado.id}`,
+					archivoReciboUrl: archivoDataUrl,
+					montoPago: datosRecibo.montoPago || 0,
+					montoPrograma: datosRecibo.montoPrograma || 0,
+					concepto: datosRecibo.concepto,
+					nombrePagador: datosRecibo.nombrePagador,
+					rfc: datosRecibo.rfc || '',
+				}),
+			});
+
+			if (!res.ok) {
+				const errorData = await res.json().catch(() => ({}));
+				throw new Error(errorData.error || 'No se pudo registrar el recibo');
+			}
+
+			const creado = await res.json();
+			const normalizado = normalizarReciboApi(creado);
+			setRecibosSubidos([normalizado]);
+			setReciboPersistido(normalizado);
+			window.localStorage.setItem(getRecibosStorageKey(prospectoSeleccionado.id), JSON.stringify([normalizado]));
+		} catch (error) {
+			console.error('Error al subir recibo:', error);
+			const localRecibo = {
+				id: `local-${Date.now()}`,
+				nombre: datosRecibo.clavePaciente || `INST-${new Date().getFullYear()}-${prospectoSeleccionado.id}`,
+				fecha: new Date().toLocaleDateString('es-MX'),
+				tamaño: `${(archivo.size / 1024).toFixed(2)} KB`,
+				tipo: 'Recibo firmado',
+				url: URL.createObjectURL(archivo),
+				_localOnly: true,
+			};
+			setRecibosSubidos([localRecibo]);
+			setReciboPersistido(localRecibo);
+			window.localStorage.setItem(getRecibosStorageKey(prospectoSeleccionado.id), JSON.stringify([localRecibo]));
+		} finally {
+			setCargandoRecibo(false);
 		}
 	};
 
@@ -714,12 +812,10 @@ const ExpedienteAdmisiones = () => {
 			setModalReciboAbierto(false);
 
 			setTimeout(() => {
-				alert(`✅ Token generado exitosamente:\n\n${tokenGenerado}\n\nEl prospecto ahora es PACIENTE INGRESADO`);
+				alert(`✅ Token generado exitosamente:\n\n${tokenGenerado}\n\nEl prospecto ahora es PACIENTE`);
 				setTokenGenerado(null);
-				setRecibosSubidos([]);
-				// Recargar detalles del paciente para obtener estado actualizado
 				if (prospectoSeleccionado?.id) {
-					// Aquí podrías volver a cargar el detalle si lo necesitas
+					cargarRecibosPersistidos(prospectoSeleccionado.id);
 				}
 			}, 500);
 		} catch (error) {
@@ -727,6 +823,37 @@ const ExpedienteAdmisiones = () => {
 			alert(`Error al generar el token: ${error.message}`);
 		} finally {
 			setGenerandoToken(false);
+		}
+	};
+
+	const eliminarRecibo = async (recibo) => {
+		if (!recibo) return;
+		if (!confirm('¿Eliminar este recibo? Esta acción puede revertir la prueba de pago.')) return;
+		const storageKey = getRecibosStorageKey(prospectoSeleccionado?.id);
+
+		try {
+			if (recibo._localOnly) {
+				setRecibosSubidos(prev => prev.filter(r => r.id !== recibo.id));
+				setReciboPersistido(null);
+				window.localStorage.removeItem(storageKey);
+				return;
+			}
+
+			const res = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/recibos/${recibo.id}`, {
+				method: 'DELETE',
+			});
+
+			if (res.ok) {
+				setRecibosSubidos(prev => prev.filter(r => r.id !== recibo.id));
+				setReciboPersistido(null);
+				window.localStorage.removeItem(storageKey);
+			} else {
+				const err = await res.json();
+				alert(err.message || 'No se pudo eliminar el recibo en el servidor');
+			}
+		} catch (error) {
+			console.error('Error al eliminar recibo:', error);
+			alert('Error al eliminar recibo');
 		}
 	};
 
@@ -926,6 +1053,11 @@ const ExpedienteAdmisiones = () => {
 		return () => controller.abort();
 	}, [prospectoSeleccionado?.id]);
 
+	useEffect(() => {
+		if (!prospectoSeleccionado?.id) return;
+		cargarRecibosPersistidos(prospectoSeleccionado.id);
+	}, [prospectoSeleccionado?.id]);
+
 	const limpiarBusqueda = () => {
 		setBusquedaExpediente('');
 		setResultadosBusqueda([]);
@@ -1002,16 +1134,26 @@ const ExpedienteAdmisiones = () => {
 
 		return [
 			{ label: 'Paciente', value: getNombreProspecto(prospectoSeleccionado) || 'Sin nombre' },
-			{ label: 'Clave', value: formatClave(prospectoSeleccionado) },
+			{ label: 'Clave', value: prospectoSeleccionado.clavePaciente || '--' },
 			{ label: 'Ingreso', value: formatDateValue(prospectoSeleccionado.fechaIngreso || prospectoSeleccionado.createdAt || prospectoSeleccionado.fechaAtencion || prospectoSeleccionado.fechaRegistro) },
-			{ label: 'Estado', value: prospectoSeleccionado.estadoPaciente || prospectoSeleccionado.estadoPaciente || 'PROSPECTO' },
+			{ label: 'Estado', value: formatEstadoPacienteDisplay(prospectoSeleccionado.estadoPaciente) },
 		];
 	}, [prospectoSeleccionado]);
 
+	const estadoPacienteActual = useMemo(() => String(prospectoSeleccionado?.estadoPaciente || '').toUpperCase(), [prospectoSeleccionado?.estadoPaciente]);
+	const tieneReciboAdjunto = useMemo(() => recibosSubidos.length > 0, [recibosSubidos]);
+	const reciboBloqueado = useMemo(() => estadoPacienteActual === 'INGRESADO' || tieneReciboAdjunto, [estadoPacienteActual, tieneReciboAdjunto]);
+	const puedeValidarIngresoOficial = useMemo(() => estadoPacienteActual === 'PROSPECTO' && tieneReciboAdjunto, [estadoPacienteActual, tieneReciboAdjunto]);
+	const badgeEstadoRecibo = useMemo(() => {
+		if (estadoPacienteActual === 'INGRESADO') return 'INGRESADO';
+		if (tieneReciboAdjunto) return 'VALIDADO';
+		return 'PENDIENTE';
+	}, [estadoPacienteActual, tieneReciboAdjunto]);
+
 	// --- MODIFICACIÓN 4: Pasamos tieneValoracionMedica al useMemo ---
 	const documentosProspecto = useMemo(() => buildDocumentosProspecto(prospectoSeleccionado, detalleExpediente, tieneValoracionMedica), [prospectoSeleccionado, detalleExpediente, tieneValoracionMedica]);
-	const notasProspecto = useMemo(() => buildNotasProspecto(prospectoSeleccionado, detalleExpediente), [prospectoSeleccionado, detalleExpediente]);
-	const timelineProspecto = useMemo(() => buildTimeline(detalleExpediente), [detalleExpediente]);
+	const notasProspecto = useMemo(() => buildNotasProspecto(prospectoSeleccionado, detalleExpediente, prospectoSeleccionado), [prospectoSeleccionado, detalleExpediente]);
+	const timelineProspecto = useMemo(() => buildTimeline(detalleExpediente, prospectoSeleccionado), [detalleExpediente, prospectoSeleccionado]);
 	const diagnosticoReadOnlyData = useMemo(
 		() => buildDiagnosticoReadOnlyData(prospectoSeleccionado, detalleExpediente),
 		[prospectoSeleccionado, detalleExpediente]
@@ -1125,90 +1267,90 @@ const ExpedienteAdmisiones = () => {
                 </div>
 
                 {/* SECCIÓN: RECIBO DE PAGO */}
-                <div className="flex flex-col gap-4 rounded-2xl border border-cyan-200 bg-cyan-50/80 p-5 transition-all hover:border-cyan-300 md:flex-row md:items-start md:justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 flex-shrink-0">
-                            <FileText size={24} />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <p className="text-base font-black text-slate-900">Recibo de Pago</p>
-                                {recibosSubidos.length === 0 ? (
-                                    <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">
-                                        <X size={10} /> Pendiente
-                                    </span>
-                                ) : (
-                                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">
-                                        {recibosSubidos.length} adjunto{recibosSubidos.length !== 1 ? 's' : ''}
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-xs text-slate-500">Generar y subir recibos firmados como evidencia de pago.</p>
-                            {recibosSubidos.length > 0 && (
-                                <div className="mt-3 space-y-2">
-                                    {recibosSubidos.map((recibo, idx) => (
-                                        <div key={idx} className="flex items-center justify-between rounded-lg bg-emerald-50 p-3 border border-emerald-100">
-                                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                <div className="text-lg">📎</div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-xs font-semibold text-slate-700 truncate">{recibo.nombre}</p>
-                                                    <p className="text-xs text-slate-400">{recibo.fecha}</p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={generarTokenIngreso}
-                                                disabled={generandoToken || tokenGenerado}
-                                                className={`ml-2 text-xs font-bold px-3 py-1.5 rounded-lg transition whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 ${
-                                                    tokenGenerado
-                                                        ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed border border-emerald-200'
-                                                        : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 border border-cyan-400'
-                                                }`}
-                                            >
-                                                {generandoToken ? (
-                                                    <>
-                                                        <span className="animate-spin inline-block">⏳</span>
-                                                        <span>Procesando...</span>
-                                                    </>
-                                                ) : tokenGenerado ? (
-                                                    <>
-                                                        <span>✅</span>
-                                                        <span className="hidden sm:inline text-xs">{tokenGenerado.substring(0, 6)}</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span>🔑</span>
-                                                        <span>Generar</span>
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
-                        <button
-                            type="button"
-                            onClick={() => setModalReciboAbierto(true)}
-                            className="rounded-xl border border-cyan-300 bg-white px-4 py-2 text-xs font-bold text-cyan-700 transition hover:bg-cyan-50 flex items-center gap-2 whitespace-nowrap"
-                        >
-                            <Download size={14} />
-                            Generar
-                        </button>
-                        <label className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-cyan-700 flex items-center gap-2 cursor-pointer whitespace-nowrap">
-                            <Upload size={14} />
-                            Subir firmado
-                            <input
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                onChange={manejarCargaRecibo}
-                                disabled={cargandoRecibo}
-                                className="hidden"
-                            />
-                        </label>
-                    </div>
-                </div>
+				<div className={`rounded-[28px] border p-5 transition-colors md:p-6 ${badgeEstadoRecibo === 'PENDIENTE' ? 'border-[#7E1D3B]/20 bg-[#7E1D3B]/5' : 'border-emerald-100 bg-emerald-50/50'}`}>
+					<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+						<div className="flex items-start gap-4 flex-1">
+							<div className={`flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0 ${badgeEstadoRecibo === 'PENDIENTE' ? 'bg-[#7E1D3B]/10 text-[#7E1D3B]' : 'bg-emerald-100 text-emerald-700'}`}>
+								<FileText size={24} />
+							</div>
+							<div>
+								<div className="flex items-center gap-2">
+									<p className="text-base font-black text-slate-900">Recibo de Pago</p>
+									<span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${badgeEstadoRecibo === 'PENDIENTE' ? 'bg-[#7E1D3B]/10 text-[#7E1D3B]' : badgeEstadoRecibo === 'INGRESADO' ? 'bg-[#7E1D3B]/10 text-[#7E1D3B]' : 'bg-emerald-100 text-emerald-700'}`}>
+										{badgeEstadoRecibo}
+									</span>
+								</div>
+								<p className="text-xs text-slate-500">Generar y subir recibos firmados como evidencia de pago.</p>
+
+								{tieneReciboAdjunto && (
+									<div className="mt-3 space-y-2">
+										{recibosSubidos.map((recibo, idx) => {
+											const claveOficial = recibo.tokenGenerado || recibo.nombre || prospectoSeleccionado?.clavePaciente || `INST-${new Date().getFullYear()}-${prospectoSeleccionado?.id || ''}`;
+											return (
+												<div key={idx} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+													<div className="flex min-w-0 items-center gap-3">
+														<div className="rounded-lg bg-slate-100 p-2 text-slate-600">
+															<Paperclip size={16} />
+														</div>
+														<div className="min-w-0">
+															<p className="truncate text-sm font-bold text-slate-900">{claveOficial}</p>
+															<p className="text-xs text-slate-500">{recibo.fecha}</p>
+														</div>
+													</div>
+													<div className="flex items-center gap-2">
+														<span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">
+															<CheckCircle2 size={12} />
+															✓ Validado
+														</span>
+														<button
+															onClick={() => eliminarRecibo(recibo)}
+															disabled={generandoToken}
+															className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+														>
+															<X size={14} />
+														</button>
+													</div>
+												</div>
+											);
+										})}
+									</div>
+								)}
+							</div>
+						</div>
+						<div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
+							<button
+								type="button"
+								onClick={() => setModalReciboAbierto(true)}
+								className="rounded-xl border border-[#7E1D3B]/30 bg-white px-4 py-2 text-xs font-bold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/5 flex items-center gap-2 whitespace-nowrap"
+							>
+								<Download size={14} />
+								Generar
+							</button>
+							<label className="rounded-xl bg-[#7E1D3B] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#63162e] flex items-center gap-2 cursor-pointer whitespace-nowrap">
+								<Upload size={14} />
+								Subir firmado
+								<input
+									type="file"
+									accept=".pdf,.jpg,.jpeg,.png"
+									onChange={manejarCargaRecibo}
+									disabled={cargandoRecibo || reciboBloqueado}
+									className="hidden"
+								/>
+							</label>
+						</div>
+					</div>
+
+					{puedeValidarIngresoOficial && (
+						<button
+							type="button"
+							onClick={generarTokenIngreso}
+							disabled={generandoToken}
+							className="mt-4 w-full rounded-2xl bg-[#7E1D3B] px-4 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-[#63162e] disabled:cursor-wait disabled:opacity-70"
+						>
+							{generandoToken ? 'Procesando validación...' : 'VALIDAR INGRESO OFICIAL'}
+						</button>
+					)}
+				</div>
 
                 {/* 2. LISTADO DE DOCUMENTOS PDF Y REGISTROS DINÁMICOS */}
                 <div className="grid gap-3">

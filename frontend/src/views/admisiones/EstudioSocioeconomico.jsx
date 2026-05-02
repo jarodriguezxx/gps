@@ -710,7 +710,7 @@ const EstudioSocioeconomico = () => {
         setCargandoPacientes(true);
         setErrorPacientes('');
         const response = await fetch(
-          `http://localhost:4000/api/pacientes/estudio?query=${encodeURIComponent(nombre)}`,
+          `http://localhost:4000/api/pacientes/busqueda?query=${encodeURIComponent(nombre)}`,
           { signal: controller.signal }
         );
 

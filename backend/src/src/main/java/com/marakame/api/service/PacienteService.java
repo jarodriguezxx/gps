@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.text.Normalizer;
+import java.util.Comparator;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1773,17 +1774,27 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         String aleatorio = String.format("%05d", (int)(Math.random() * 100000));
         String clavePaciente = String.format("INST-%s-%d-%s", año, pacienteId, aleatorio);
 
-        // Crear registro de recibo de pago
-        ReciboPago recibo = new ReciboPago();
+        ReciboPago recibo = obtenerUltimoReciboPaciente(pacienteId)
+            .orElseGet(() -> {
+                ReciboPago nuevo = new ReciboPago();
+                nuevo.setPaciente(paciente);
+                return nuevo;
+            });
+
         recibo.setPaciente(paciente);
         recibo.setNumeroRecibo(clavePaciente);
         recibo.setTokenGenerado(clavePaciente);
-        recibo.setMontoPago(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPago", 0))));
-        recibo.setMontoPrograma(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPrograma", 0))));
-        recibo.setConcepto((String) payload.getOrDefault("concepto", "Tratamiento de desintoxicación"));
-        recibo.setNombrePagador((String) payload.getOrDefault("nombrePagador", ""));
-        recibo.setRfcPagador((String) payload.getOrDefault("rfc", ""));
-        recibo.setFechaPago(LocalDateTime.now());
+        recibo.setMontoPago(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPago", recibo.getMontoPago() != null ? recibo.getMontoPago() : 0))));
+        recibo.setMontoPrograma(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPrograma", recibo.getMontoPrograma() != null ? recibo.getMontoPrograma() : 0))));
+        recibo.setConcepto((String) payload.getOrDefault("concepto", recibo.getConcepto() != null ? recibo.getConcepto() : "Tratamiento de desintoxicación"));
+        recibo.setNombrePagador((String) payload.getOrDefault("nombrePagador", recibo.getNombrePagador() != null ? recibo.getNombrePagador() : ""));
+        recibo.setRfcPagador((String) payload.getOrDefault("rfc", recibo.getRfcPagador() != null ? recibo.getRfcPagador() : ""));
+        if (payload.containsKey("archivoReciboUrl") && payload.get("archivoReciboUrl") != null) {
+            recibo.setArchivoReciboUrl(String.valueOf(payload.get("archivoReciboUrl")));
+        }
+        if (recibo.getFechaPago() == null) {
+            recibo.setFechaPago(LocalDateTime.now());
+        }
         recibo.setEstadoPago("VALIDADO");
         recibo.setFechaValidacion(LocalDateTime.now());
         reciboPagoRepository.save(recibo);
@@ -1818,5 +1829,36 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 
     public List<ReciboPago> obtenerRecibosPorPaciente(Long pacienteId) {
         return reciboPagoRepository.findByPaciente_Id(pacienteId);
+    }
+
+    @Transactional
+    public ReciboPago registrarReciboPendiente(Long pacienteId, Map<String, Object> payload) {
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
+
+        ReciboPago recibo = new ReciboPago();
+        recibo.setPaciente(paciente);
+        recibo.setNumeroRecibo((String) payload.getOrDefault("numeroRecibo", "REC-" + pacienteId + "-" + System.currentTimeMillis()));
+        recibo.setMontoPago(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPago", 0))));
+        recibo.setMontoPrograma(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPrograma", 0))));
+        recibo.setConcepto((String) payload.getOrDefault("concepto", "Tratamiento de desintoxicación"));
+        recibo.setNombrePagador((String) payload.getOrDefault("nombrePagador", ""));
+        recibo.setRfcPagador((String) payload.getOrDefault("rfc", ""));
+        recibo.setArchivoReciboUrl((String) payload.getOrDefault("archivoReciboUrl", ""));
+        recibo.setFechaPago(LocalDateTime.now());
+        recibo.setEstadoPago("PENDIENTE");
+        return reciboPagoRepository.save(recibo);
+    }
+
+    private Optional<ReciboPago> obtenerUltimoReciboPaciente(Long pacienteId) {
+        return reciboPagoRepository.findByPaciente_Id(pacienteId).stream()
+            .max(Comparator.comparing(ReciboPago::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())));
+    }
+
+    @Transactional
+    public void eliminarReciboDePaciente(Long pacienteId, Long reciboId) {
+        ReciboPago recibo = reciboPagoRepository.findByIdAndPaciente_Id(reciboId, pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("Recibo no encontrado para este paciente"));
+        reciboPagoRepository.delete(recibo);
     }
 }

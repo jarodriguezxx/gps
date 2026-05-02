@@ -21,6 +21,23 @@ const formatHora = (value) => {
 	return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
+const toLocalDateInputValue = (value) => {
+	if (!value) return '';
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return '';
+	const pad = (part) => String(part).padStart(2, '0');
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+const formatDia = (value) => {
+	if (!value) return '--';
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return '--';
+	return date.toLocaleDateString('es-MX', { weekday: 'long' });
+};
+
+const todayDateString = toLocalDateInputValue(new Date());
+
 const getCitaNombre = (cita) => cita?.pacienteNombre || cita?.nombreCompleto || cita?.nombre || 'Sin nombre';
 
 const AgendaCitas = () => {
@@ -39,7 +56,9 @@ const AgendaCitas = () => {
 	const [registroMensaje, setRegistroMensaje] = useState('');
 	const [registroMensajeTipo, setRegistroMensajeTipo] = useState('success');
 	const [tabActiva, setTabActiva] = useState('citas'); // 'citas' o 'llamadas'
-const [llamadas, setLlamadas] = useState([]);
+	const [llamadas, setLlamadas] = useState([]);
+	const [filtroVista, setFiltroVista] = useState('hoy');
+	const [filtroFechaPersonalizada, setFiltroFechaPersonalizada] = useState(todayDateString);
 	const [form, setForm] = useState({
 		pacienteNombre: '',
 		fecha: '',
@@ -84,10 +103,34 @@ const [llamadas, setLlamadas] = useState([]);
 	const citasFiltradas = useMemo(() => {
 		const query = searchQuery.trim().toLowerCase();
 		const ordenadas = [...citas].sort((a, b) => new Date(a.fechaHoraProgramada || 0) - new Date(b.fechaHoraProgramada || 0));
-		if (!query) return ordenadas;
+		return ordenadas.filter((cita) => {
+			const coincideNombre = !query || getCitaNombre(cita).toLowerCase().includes(query);
+			const fechaCita = toLocalDateInputValue(cita.fechaHoraProgramada);
+			const coincideVista =
+				filtroVista === 'todas'
+					? true
+					: filtroVista === 'custom'
+						? fechaCita === filtroFechaPersonalizada
+						: fechaCita === todayDateString;
+			return coincideNombre && coincideVista;
+		});
+	}, [citas, searchQuery, filtroVista, filtroFechaPersonalizada]);
 
-		return ordenadas.filter((cita) => getCitaNombre(cita).toLowerCase().includes(query));
-	}, [citas, searchQuery]);
+	const llamadasFiltradas = useMemo(() => {
+		const query = searchQuery.trim().toLowerCase();
+		const ordenadas = [...llamadas].sort((a, b) => new Date(a.fechaHoraProgramada || 0) - new Date(b.fechaHoraProgramada || 0));
+		return ordenadas.filter((item) => {
+			const coincideNombre = !query || getCitaNombre(item).toLowerCase().includes(query);
+			const fechaLlamada = toLocalDateInputValue(item.fechaHoraProgramada);
+			const coincideVista =
+				filtroVista === 'todas'
+					? true
+					: filtroVista === 'custom'
+						? fechaLlamada === filtroFechaPersonalizada
+						: fechaLlamada === todayDateString;
+			return coincideNombre && coincideVista;
+		});
+	}, [llamadas, searchQuery, filtroVista, filtroFechaPersonalizada]);
 
 	const abrirAgenda = () => {
 		setAgendaMensaje('');
@@ -99,6 +142,8 @@ const [llamadas, setLlamadas] = useState([]);
 		setAgendaOpen(false);
 		setAgendaMensaje('');
 		setAgendaMensajeTipo('success');
+		setFiltroVista('hoy');
+		setFiltroFechaPersonalizada(todayDateString);
 		setForm({
 			pacienteNombre: '',
 			fecha: '',
@@ -329,6 +374,57 @@ const [llamadas, setLlamadas] = useState([]);
 									</div>
 								</div>
 
+								<div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-4">
+									<div className="md:col-span-3 flex flex-wrap gap-2">
+										<button
+											type="button"
+											onClick={() => setFiltroVista('hoy')}
+											className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${filtroVista === 'hoy' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+										>
+											Citas de hoy
+										</button>
+										<button
+											type="button"
+											onClick={() => setFiltroVista('todas')}
+											className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${filtroVista === 'todas' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+										>
+											Todas
+										</button>
+										<button
+											type="button"
+											onClick={() => setFiltroVista('custom')}
+											className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${filtroVista === 'custom' ? 'bg-[#7E1D3B] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+										>
+											Elegir fecha
+										</button>
+									</div>
+									<div className="flex items-end">
+										<button
+											type="button"
+											onClick={() => {
+											setFiltroVista('hoy');
+											setFiltroFechaPersonalizada(todayDateString);
+										}}
+											className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+										>
+											Limpiar filtros
+										</button>
+									</div>
+									{filtroVista === 'custom' ? (
+										<div className="md:col-span-4">
+											<label className="block space-y-2">
+												<span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Fecha personalizada</span>
+												<input
+													type="date"
+													value={filtroFechaPersonalizada}
+													onChange={(event) => setFiltroFechaPersonalizada(event.target.value)}
+													className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+												/>
+											</label>
+										</div>
+									) : null}
+								</div>
+
 								<div>
 									{tabActiva === 'citas' && (
 										<div>
@@ -345,6 +441,8 @@ const [llamadas, setLlamadas] = useState([]);
 												<table className="min-w-full border-collapse text-left text-sm">
 													<thead>
 														<tr className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+															<th className="px-3 py-2 font-semibold">Día</th>
+															<th className="px-3 py-2 font-semibold">Fecha</th>
 															<th className="px-3 py-2 font-semibold">Hora</th>
 															<th className="px-3 py-2 font-semibold">Paciente</th>
 															<th className="px-3 py-2 font-semibold">Tipo</th>
@@ -356,7 +454,7 @@ const [llamadas, setLlamadas] = useState([]);
 													<tbody>
 														{citasFiltradas.length === 0 ? (
 															<tr>
-																<td className="px-3 py-3 text-slate-500" colSpan={6}>No hay citas para mostrar con ese filtro.</td>
+																<td className="px-3 py-3 text-slate-500" colSpan={8}>No hay citas para mostrar con ese filtro.</td>
 															</tr>
 														) : citasFiltradas.map((cita) => {
 															const estado = String(cita.estadoAsistencia || cita.estadoSeguimiento || 'Pendiente');
@@ -366,6 +464,8 @@ const [llamadas, setLlamadas] = useState([]);
 
 															return (
 																<tr key={cita.id} className="border-b border-slate-100 align-middle">
+																	<td className="px-3 py-3 font-medium text-slate-700 capitalize">{formatDia(cita.fechaHoraProgramada)}</td>
+																	<td className="px-3 py-3 font-medium text-slate-700">{formatFecha(cita.fechaHoraProgramada)}</td>
 																	<td className="px-3 py-3 font-medium text-slate-700">{formatHora(cita.fechaHoraProgramada)}</td>
 																	<td className="px-3 py-3 font-semibold text-slate-900">{getCitaNombre(cita)}</td>
 																	<td className="px-3 py-3 text-slate-700">{cita.tipoAccion || 'Entrevista'}</td>
@@ -425,7 +525,9 @@ const [llamadas, setLlamadas] = useState([]);
 														<tr className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
 															<th className="px-3 py-2 font-semibold">Paciente</th>
 															<th className="px-3 py-2 font-semibold">Teléfono</th>
-															<th className="px-3 py-2 font-semibold">Fecha/Hora</th>
+															<th className="px-3 py-2 font-semibold">Día</th>
+															<th className="px-3 py-2 font-semibold">Fecha</th>
+															<th className="px-3 py-2 font-semibold">Hora</th>
 															<th className="px-3 py-2 font-semibold">Motivo</th>
 															<th className="px-3 py-2 font-semibold">Estado</th>
 														</tr>
@@ -433,9 +535,9 @@ const [llamadas, setLlamadas] = useState([]);
 													<tbody>
 														{llamadas.length === 0 ? (
 															<tr>
-																<td className="px-3 py-3 text-slate-500" colSpan={5}>No hay llamadas de seguimiento registradas.</td>
+																<td className="px-3 py-3 text-slate-500" colSpan={7}>No hay llamadas de seguimiento registradas.</td>
 															</tr>
-														) : llamadas.map((item) => {
+														) : llamadasFiltradas.map((item) => {
 															const estado = String(item.estadoSeguimiento || 'Pendiente');
 															const estadoLower = estado.toLowerCase();
 															const estadoClass = estadoLower.includes('hecha') || estadoLower.includes('llamó') ? 'bg-emerald-100 text-emerald-800' : estadoLower.includes('no') ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
@@ -444,7 +546,9 @@ const [llamadas, setLlamadas] = useState([]);
 																<tr key={item.id} className="border-b border-slate-100 align-middle">
 																	<td className="px-3 py-3 font-semibold text-slate-900">{item.pacienteNombre || '--'}</td>
 																	<td className="px-3 py-3 text-slate-700">{item.pacienteTelefono || '--'}</td>
+																	<td className="px-3 py-3 text-slate-700 capitalize">{formatDia(item.fechaHoraProgramada)}</td>
 																	<td className="px-3 py-3 text-slate-700">{formatFecha(item.fechaHoraProgramada)}</td>
+																	<td className="px-3 py-3 text-slate-700">{formatHora(item.fechaHoraProgramada)}</td>
 																	<td className="px-3 py-3 text-slate-700">{item.motivo || '--'}</td>
 																	<td className="px-3 py-3">
 																		<span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${estadoClass}`}>

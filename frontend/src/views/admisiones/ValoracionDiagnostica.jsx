@@ -205,7 +205,7 @@ const ValoracionDiagnostica = () => {
     ...structuredAddressDefaults,
     fechaAtencion: getSystemDateValue(),
     diaSemanana: getSystemDayValue(),
-    nombreQuienAtiende: 'Pendiente de login',
+    nombreQuienAtiende: '',
     fuenteReferencia: '',
     fuenteReferenciaOtro: '',
     nombreSolicitante: '',
@@ -248,11 +248,14 @@ const ValoracionDiagnostica = () => {
   });
 
   useEffect(() => {
+    const userData = localStorage.getItem('marakame_user');
+    const nombreUsuario = userData ? JSON.parse(userData)?.nombreCompleto : null;
+
     setFormData((prev) => ({
       ...prev,
       fechaAtencion: getSystemDateValue(),
       diaSemanana: getSystemDayValue(),
-      nombreQuienAtiende: prev.nombreQuienAtiende || 'Pendiente de login',
+      nombreQuienAtiende: nombreUsuario || 'Pendiente de login',
     }));
   }, []);
 
@@ -380,7 +383,7 @@ const ValoracionDiagnostica = () => {
 
       const solicitanteGuardado = await solicitanteResponse.json();
 
-      const pacienteResponse = await fetch('http://localhost:4000/api/pacientes/guardar-expediente', {
+      const pacienteResponse = await fetch('http://localhost:4000/api/pacientes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -447,7 +450,7 @@ const ValoracionDiagnostica = () => {
               value={formData.nombreQuienAtiende}
               onChange={handleInputChange}
               readOnly
-              placeholder="Se completará con login"
+              placeholder="Nombre del usuario autenticado"
               className="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none transition-all"
             />
           </div>
@@ -492,6 +495,7 @@ const ValoracionDiagnostica = () => {
                     onChange={handleInputChange}
                     className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                   >
+                    <option >selecciona</option>
                     <option value="internet">Internet</option>
                     <option value="expaciente">Ex paciente</option>
                     <option value="familiar">Familiar</option>
