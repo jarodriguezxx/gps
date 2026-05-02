@@ -3,7 +3,8 @@ export type Estado =
   | "PENDIENTE"
   | "AUTORIZADA"
   | "FINALIZADA"
-  | "PRE-AUTORIZADA";
+  | "PRE-AUTORIZADA"
+  | "EN-REVISION";
 export type TamanioCompra = "MAYOR" | "MENOR";
 export type TipoCompra = "ORDINARIA" | "EXTRAORDINARIA";
 // TODO: Investigar bien todas las unidades que se manejan
@@ -35,6 +36,8 @@ export type RequisicionesContenido = {
   firmaDeResponsableArea: Boolean;
   firmaAdminsitradora: Boolean;
   firmaDirectoraGral: Boolean;
+  cotizacionPath?: string | null;
+  facturaPath?: string | null;
 };
 
 export type Requisicion = RequisicionesCamposTabla & RequisicionesContenido;
@@ -49,8 +52,8 @@ export const REQUISICIONES_COMPLETO: Requisicion[] = [
     area: "MÉDICA",
     solicitante: "Dr. Armando Paredes",
     estado: "PENDIENTE",
-    tamanio: "MAYOR",
-    tipo: "ORDINARIA",
+    tamanio: "MENOR",
+    tipo: "EXTRAORDINARIA",
     articulos: [
       {
         id: "ART-001",
