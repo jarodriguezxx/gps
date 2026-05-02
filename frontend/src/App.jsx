@@ -21,6 +21,7 @@ import ExpedientesClinicos from './views/medico/ExpedientesClinicos';
 import DetalleExpediente from './views/medico/DetalleExpediente';
 import ValoracionMedica from './views/medico/ValoracionMedica';
 import Prospectos from './views/medico/Prospectos';
+import HistoriaMedica from './views/medico/HistoriaMedica';
 
 // Recursos Humanos
 import AltaPersonal from './views/rh/AltaPersonal';
@@ -66,6 +67,7 @@ const quickViews = [
   { label: 'Médico - Pacientes',     path: '/medico/pacientes' },
   { label: 'Médico - Expedientes',   path: '/medico/expedientes' },
   { label: 'Médico - Prospectos',    path: '/medico/prospectos' },
+  { label: 'Medico - Historia '  ,   path: '/medico/historia-medica' },
   { label: 'RH - Alta',              path: '/rh/alta-personal' },
   { label: 'RH - Baja',              path: '/rh/baja-personal' },
   { label: 'RH - Catálogo',          path: '/rh/catalogo-roles' },
@@ -184,6 +186,7 @@ function App() {
         <Route path="/medico/expedientes/:id"                  element={<PrivateRoute><DetalleExpediente /></PrivateRoute>} />
         <Route path="/medico/prospectos"                       element={<PrivateRoute><Prospectos /></PrivateRoute>} />
         <Route path="/medico/valoracion/:id"                   element={<PrivateRoute><ValoracionMedica /></PrivateRoute>} />
+        <Route path="/medico/historia-medica"              element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
 
         {/* Recursos Humanos */}
         <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
