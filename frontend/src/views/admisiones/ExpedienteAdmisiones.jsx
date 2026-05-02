@@ -15,10 +15,10 @@ const formatDateValue = (value) => {
 const hasValue = (value) => String(value ?? '').trim().length > 0;
 
 const formatClave = (item) => {
-	if (item?.claveExpediente) return String(item.claveExpediente);
-	if (item?.folioExpediente) return String(item.folioExpediente);
-	if (item?.id) return String(item.id).padStart(5, '0');
-	return '--';
+    // 'clavePaciente' es el nombre real en tu entidad Paciente.java
+    if (item?.clavePaciente) return String(item.clavePaciente); 
+    if (item?.id) return `ID-${String(item.id).padStart(4, '0')}`;
+    return '--';
 };
 
 const getNombreProspecto = (item) => item?.nombreCompleto || item?.nombrePaciente || item?.nombre || '';
@@ -109,41 +109,93 @@ const buildNotasProspecto = (prospecto, detalleExpediente) => {
 	const notas = [];
 	const nombre = getNombreProspecto(prospecto) || 'Prospecto sin nombre';
 
-	notas.push(`Admisiones: expediente activo para ${nombre}. Clave interna ${formatClave(prospecto)}.`);
+	notas.push({
+		id: `sistema-expediente-${prospecto.id}`,
+		texto: `Admisiones: expediente activo para ${nombre}. Clave interna ${formatClave(prospecto)}.`,
+		fecha: prospecto.fechaIngreso || prospecto.createdAt || null,
+		autor: 'Sistema de admisiones',
+		tipo: 'sistema',
+	});
 
 	if (prospecto.solicitante?.nombre) {
-		notas.push(
-			`Seguimiento: solicitante ${prospecto.solicitante.nombre} (${prospecto.solicitante.parentescoPaciente || 'parentesco no definido'}) con contacto ${prospecto.solicitante.telefono || prospecto.solicitante.celular || '--'}.`
-		);
+		notas.push({
+			id: `sistema-solicitante-${prospecto.id}`,
+			texto: `Seguimiento: solicitante ${prospecto.solicitante.nombre} (${prospecto.solicitante.parentescoPaciente || 'parentesco no definido'}) con contacto ${prospecto.solicitante.telefono || prospecto.solicitante.celular || '--'}.`,
+			fecha: null,
+			autor: 'Sistema de admisiones',
+			tipo: 'sistema',
+		});
 	}
 
 	if (hasValue(prospecto.domicilioParticular) || hasValue(prospecto.origen)) {
-		notas.push(`Contexto: origen ${prospecto.origen || '--'} y domicilio ${prospecto.domicilioParticular || '--'}.`);
+		notas.push({
+			id: `sistema-contexto-${prospecto.id}`,
+			texto: `Contexto: origen ${prospecto.origen || '--'} y domicilio ${prospecto.domicilioParticular || '--'}.`,
+			fecha: null,
+			autor: 'Sistema de admisiones',
+			tipo: 'sistema',
+		});
 	}
 
 	if (hasValue(prospecto.sustanciaConsumo)) {
-		notas.push(`Clínico: sustancia de consumo reportada ${prospecto.sustanciaConsumo}.`);
+		notas.push({
+			id: `sistema-clinico-${prospecto.id}`,
+			texto: `Clínico: sustancia de consumo reportada ${prospecto.sustanciaConsumo}.`,
+			fecha: null,
+			autor: 'Sistema de admisiones',
+			tipo: 'sistema',
+		});
 	}
 
 	const seguimientos = Array.isArray(detalleExpediente?.seguimientos) ? detalleExpediente.seguimientos : [];
 	if (seguimientos.length > 0) {
 		const ultimo = seguimientos[0];
-		notas.push(
-			`Seguimiento actual: ${ultimo.estadoSeguimiento || '--'} (${ultimo.tipoAccion || '--'}) programado para ${formatDateValue(ultimo.fechaHoraProgramada)}.`
-		);
+		notas.push({
+			id: `sistema-seguimiento-${ultimo.id || prospecto.id}`,
+			texto: `Seguimiento actual: ${ultimo.estadoSeguimiento || '--'} (${ultimo.tipoAccion || '--'}) programado para ${formatDateValue(ultimo.fechaHoraProgramada)}.`,
+			fecha: ultimo.fechaHoraProgramada || null,
+			autor: 'Sistema de admisiones',
+			tipo: 'sistema',
+		});
 	}
 
-	if (notas.length === 0) {
-		notas.push('No hay notas disponibles para el prospecto seleccionado.');
+	const notasAdmisionesGuardadas = (Array.isArray(detalleExpediente?.notasEvolucion) ? detalleExpediente.notasEvolucion : [])
+		.filter((nota) => String(nota?.medicoAsignado || '').toUpperCase().includes('ADMISION'))
+		.map((nota) => ({
+			id: `adm-${nota.id}`,
+			texto: nota.observaciones || 'Nota de admisiones sin contenido.',
+			fecha: nota.fechaRegistro || null,
+			autor: nota.medicoAsignado || 'Admisiones',
+			tipo: 'admisiones',
+		}));
+
+	const unificadas = [...notasAdmisionesGuardadas, ...notas];
+
+	unificadas.sort((a, b) => {
+		const da = a.fecha ? new Date(a.fecha).getTime() : 0;
+		const db = b.fecha ? new Date(b.fecha).getTime() : 0;
+		return db - da;
+	});
+
+	if (unificadas.length === 0) {
+		return [{
+			id: `empty-${prospecto.id}`,
+			texto: 'No hay notas disponibles para el prospecto seleccionado.',
+			fecha: null,
+			autor: 'Sistema',
+			tipo: 'sistema',
+		}];
 	}
 
-	return notas;
+	return unificadas;
 };
 
 const buildTimeline = (detalleExpediente) => {
 	const seguimientos = Array.isArray(detalleExpediente?.seguimientos) ? detalleExpediente.seguimientos : [];
+	const notasAdmisiones = (Array.isArray(detalleExpediente?.notasEvolucion) ? detalleExpediente.notasEvolucion : [])
+		.filter((nota) => String(nota?.medicoAsignado || '').toUpperCase().includes('ADMISION'));
 
-	return seguimientos.map((item) => ({
+	const eventosSeguimiento = seguimientos.map((item) => ({
 		id: item.id,
 		fecha: item.fechaHoraProgramada,
 		titulo: item.tipoAccion || 'Seguimiento',
@@ -152,7 +204,26 @@ const buildTimeline = (detalleExpediente) => {
 		origen: item.origenLlamada,
 		tone: getTimelineTone(item),
 		diagnosticoVisual: item.diagnosticoVisual,
+		tipoEvento: 'seguimiento',
 	}));
+
+	const eventosNotas = notasAdmisiones.map((nota) => ({
+		id: `nota-${nota.id}`,
+		fecha: nota.fechaRegistro,
+		titulo: 'Nota de admisiones',
+		estado: 'Registrada',
+		detalle: nota.observaciones || 'Nota sin detalle',
+		origen: 'ADMISIONES',
+		tone: 'amber',
+		diagnosticoVisual: null,
+		tipoEvento: 'nota',
+	}));
+
+	return [...eventosSeguimiento, ...eventosNotas].sort((a, b) => {
+		const da = a.fecha ? new Date(a.fecha).getTime() : 0;
+		const db = b.fecha ? new Date(b.fecha).getTime() : 0;
+		return db - da;
+	});
 };
 
 const buildDiagnosticoReadOnlyData = (prospecto, detalleExpediente) => {
@@ -503,6 +574,10 @@ const ExpedienteAdmisiones = () => {
 	const [generandoToken, setGenerandoToken] = useState(false);
 	const [expedienteModo, setExpedienteModo] = useState('prospecto');
 	const [expedienteExpandidoId, setExpedienteExpandidoId] = useState(null);
+	const [notaAdmisiones, setNotaAdmisiones] = useState('');
+	const [guardandoNotaAdmisiones, setGuardandoNotaAdmisiones] = useState(false);
+	const [errorNotaAdmisiones, setErrorNotaAdmisiones] = useState('');
+	const [mensajeNotaAdmisiones, setMensajeNotaAdmisiones] = useState('');
 
 	const seleccionarProspecto = async (prospecto, opciones = {}) => {
 		const { abrirConsulta = false, tabConsulta = 'solicitante' } = opciones;
@@ -655,6 +730,68 @@ const ExpedienteAdmisiones = () => {
 		}
 	};
 
+	const guardarNotaAdmisiones = async () => {
+		if (!prospectoSeleccionado?.id) {
+			setErrorNotaAdmisiones('Selecciona un prospecto antes de guardar la nota.');
+			return;
+		}
+
+		const texto = notaAdmisiones.trim();
+		if (!texto) {
+			setErrorNotaAdmisiones('Escribe una nota para poder guardarla.');
+			return;
+		}
+
+		setGuardandoNotaAdmisiones(true);
+		setErrorNotaAdmisiones('');
+		setMensajeNotaAdmisiones('');
+
+		try {
+			const payload = {
+				ta: '',
+				temp: '',
+				fc: '',
+				fr: '',
+				peso: '',
+				talla: '',
+				evolucionCuadroClinico: '',
+				exploracionFisica: '',
+				resultadosEstudios: '',
+				diagnosticoProblemas: '',
+				pronosticos: '',
+				tratamientoIndicaciones: '',
+				observaciones: texto,
+				fechaProximaSesion: null,
+				medicoAsignado: 'ADMISIONES',
+			};
+
+			const response = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/notas-evolucion`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload),
+			});
+
+			if (!response.ok) {
+				const errorText = await response.text();
+				throw new Error(errorText || 'No se pudo guardar la nota de admisiones.');
+			}
+
+			const detalleResponse = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/expediente`);
+			if (detalleResponse.ok) {
+				const data = await detalleResponse.json();
+				setDetalleExpediente(data);
+			}
+
+			setNotaAdmisiones('');
+			setMensajeNotaAdmisiones('Nota de admisiones guardada correctamente.');
+		} catch (error) {
+			console.error('Error guardando nota de admisiones:', error);
+			setErrorNotaAdmisiones(error.message || 'No se pudo guardar la nota.');
+		} finally {
+			setGuardandoNotaAdmisiones(false);
+		}
+	};
+
 	useEffect(() => {
 		if (!expedienteIdParam) return;
 
@@ -800,6 +937,9 @@ const ExpedienteAdmisiones = () => {
 		setErrorDetalleExpediente('');
 		setModalLlamadaInicialAbierto(false);
 		setDiagnosticoTab('solicitante');
+		setNotaAdmisiones('');
+		setErrorNotaAdmisiones('');
+		setMensajeNotaAdmisiones('');
 	};
 
 	const toggleExpedienteExpandido = (id) => {
@@ -864,7 +1004,7 @@ const ExpedienteAdmisiones = () => {
 			{ label: 'Paciente', value: getNombreProspecto(prospectoSeleccionado) || 'Sin nombre' },
 			{ label: 'Clave', value: formatClave(prospectoSeleccionado) },
 			{ label: 'Ingreso', value: formatDateValue(prospectoSeleccionado.fechaIngreso || prospectoSeleccionado.createdAt || prospectoSeleccionado.fechaAtencion || prospectoSeleccionado.fechaRegistro) },
-			{ label: 'Estado', value: prospectoSeleccionado.estadoExpediente || prospectoSeleccionado.estadoSeguimiento || 'En valoración' },
+			{ label: 'Estado', value: prospectoSeleccionado.estadoPaciente || prospectoSeleccionado.estadoPaciente || 'PROSPECTO' },
 		];
 	}, [prospectoSeleccionado]);
 
@@ -1130,9 +1270,44 @@ const ExpedienteAdmisiones = () => {
 											Selecciona un prospecto para ver sus notas reales entre áreas.
 										</div>
 									) : null}
+										{prospectoSeleccionado ? (
+											<div className="mb-4 rounded-2xl border border-[#7E1D3B]/20 bg-rose-50/40 p-4">
+												<p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-[#7E1D3B]">Nueva nota de admisiones</p>
+												<textarea
+													value={notaAdmisiones}
+													onChange={(event) => {
+														setNotaAdmisiones(event.target.value);
+														if (errorNotaAdmisiones) setErrorNotaAdmisiones('');
+														if (mensajeNotaAdmisiones) setMensajeNotaAdmisiones('');
+													}}
+													placeholder="Escribe aquí una nota administrativa de admisiones..."
+													className="min-h-[92px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 outline-none transition focus:border-[#7E1D3B]/40 focus:ring-2 focus:ring-[#7E1D3B]/15"
+												/>
+												<div className="mt-3 flex items-center justify-between gap-3">
+													<div className="text-xs">
+														{errorNotaAdmisiones ? <span className="text-rose-700">{errorNotaAdmisiones}</span> : null}
+														{!errorNotaAdmisiones && mensajeNotaAdmisiones ? <span className="text-emerald-700">{mensajeNotaAdmisiones}</span> : null}
+													</div>
+													<button
+														type="button"
+														onClick={guardarNotaAdmisiones}
+														disabled={guardandoNotaAdmisiones}
+														className="rounded-xl bg-[#7E1D3B] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#63162e] disabled:cursor-not-allowed disabled:opacity-60"
+													>
+														{guardandoNotaAdmisiones ? 'Guardando...' : 'Guardar nota'}
+													</button>
+												</div>
+											</div>
+										) : null}
 									<div className="space-y-3">
-										{notasProspecto.map((nota) => (
-											<div key={nota} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 text-slate-700">{nota}</div>
+											{notasProspecto.map((nota) => (
+												<div key={nota.id} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 text-slate-700">
+													<div className="mb-1 flex items-center justify-between gap-2 text-[11px]">
+														<span className={`font-bold uppercase tracking-[0.16em] ${nota.tipo === 'admisiones' ? 'text-[#7E1D3B]' : 'text-slate-500'}`}>{nota.autor || 'Sistema'}</span>
+														<span className="text-slate-400">{nota.fecha ? `${formatDateValue(nota.fecha)} • ${formatTimeValue(nota.fecha)}` : ''}</span>
+													</div>
+													{nota.texto}
+												</div>
 										))}
 										{prospectoSeleccionado && notasProspecto.length === 0 ? (
 											<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
@@ -1148,7 +1323,7 @@ const ExpedienteAdmisiones = () => {
 							<div className="mb-4 flex items-center justify-between gap-3">
 								<div>
 									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Línea de tiempo</p>
-									<h3 className="text-2xl font-black text-slate-900">Seguimientos del expediente</h3>
+									<h3 className="text-2xl font-black text-slate-900">Seguimientos y notas del expediente</h3>
 								</div>
 								<Sparkles className="text-[#7E1D3B]" size={22} />
 							</div>
