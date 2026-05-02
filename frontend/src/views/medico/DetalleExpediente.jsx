@@ -2,29 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   HeartPulse, Clipboard, CheckCircle2, FileText, 
-  ArrowLeft, Clock, Activity, FilePlus, Phone, MapPin, 
-  History as HistoryIcon, UserCircle, Stethoscope
+  ArrowLeft, Activity, History as HistoryIcon, Stethoscope,
+  Download, AlertTriangle, Users, ClipboardList, FileBarChart, 
+  UserPlus, Calendar, Phone, Droplet
 } from 'lucide-react';
-import marakameLogo from '../../assets/marakame.jpeg'; // Asegúrate de que la ruta sea correcta
+import html2pdf from 'html2pdf.js';
+import marakameLogo from '../../assets/marakame.jpeg'; 
+
+// Menú de navegación lateral unificado
+const navItems = [
+  { label: 'Inicio Jefatura',       icon: Activity,       key: 'inicio',      path: '/medico/inicio-jefe-medico' },
+  { label: 'Prospectos',            icon: UserPlus,       key: 'prospectos',  path: '/medico/prospectos' },
+  { label: 'Pacientes Activos',     icon: Users,          key: 'pacientes',   path: '/medico/pacientes' },
+  { label: 'Historia Médica',       icon: FileText,       key: 'historia',    path: '/medico/historia-medica' },
+  { label: 'Expedientes Clínicos',  icon: ClipboardList,  key: 'expedientes', path: '/medico/expedientes' },
+  { label: 'Personal Médico',       icon: Stethoscope,    key: 'personal',    path: '/medico/personal' },
+  { label: 'Reportes y Estadísticas', icon: FileBarChart, key: 'reportes',    path: '/medico/reportes' },
+];
 
 const DetalleExpediente = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
   const [data, setData] = useState(null);
+  const [valoracion, setValoracion] = useState(null);
+  const [historiaMedica, setHistoriaMedica] = useState(null); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [pestañaActiva, setPestañaActiva] = useState('historial');
   
-  // Estados del Modal
-  const [showModal, setShowModal] = useState(false);
-  const [paso, setPaso] = useState(1);
-  const [nuevaNota, setNuevaNota] = useState({
-    ta: '', temp: '', fc: '', fr: '', peso: '', talla: '',
-    evolucionCuadroClinico: '', exploracionFisica: '', resultadosEstudios: '',
-    diagnosticoProblemas: '', pronosticos: '', tratamientoIndicaciones: '',
-    observaciones: '', fechaProximaSesion: '', medicoAsignado: 'Jefe Médico'
-  });
+  const [pestañaActiva, setPestañaActiva] = useState('historial');
+  const [activeNav, setActiveNav] = useState('expedientes'); 
 
   const fetchExpediente = async () => {
     try {
@@ -34,6 +41,19 @@ const DetalleExpediente = () => {
       const result = await response.json();
       setData(result);
       setError(null);
+
+      // Cargar Valoración
+      try {
+        const valRes = await fetch(`http://localhost:4000/api/valoraciones/paciente/${id}`);
+        if (valRes.ok) setValoracion(await valRes.json());
+      } catch (err) {}
+
+      // Cargar Historia Médica
+      try {
+        const histRes = await fetch(`http://localhost:4000/api/historia-medica/paciente/${id}`);
+        if (histRes.ok) setHistoriaMedica(await histRes.json());
+      } catch (err) {}
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -43,307 +63,294 @@ const DetalleExpediente = () => {
 
   useEffect(() => { if (id) fetchExpediente(); }, [id]);
 
-  const handleGuardarNota = async (e) => {
-    if (e) e.preventDefault();
-    const payload = { ...nuevaNota };
-    if (payload.fechaProximaSesion === '') payload.fechaProximaSesion = null;
-
-    try {
-      const response = await fetch(`http://localhost:4000/api/pacientes/${id}/notas-evolucion`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        setShowModal(false);
-        setPaso(1);
-        setNuevaNota({
-          ta: '', temp: '', fc: '', fr: '', peso: '', talla: '',
-          evolucionCuadroClinico: '', exploracionFisica: '', resultadosEstudios: '',
-          diagnosticoProblemas: '', pronosticos: '', tratamientoIndicaciones: '',
-          observaciones: '', fechaProximaSesion: '', medicoAsignado: 'Jefe Médico'
-        });
-        fetchExpediente();
-      } else {
-        alert("Error al guardar la nota. Verifica los datos.");
-      }
-    } catch (err) {
-      alert("Error de red al intentar guardar.");
-    }
+  const handleNavClick = (item) => { 
+    setActiveNav(item.key); 
+    navigate(item.path); 
   };
 
-  if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-[#7E1D3B] font-bold uppercase tracking-widest text-sm">Cargando datos...</div>;
-  if (error) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-red-500 font-bold uppercase tracking-widest text-sm">Error: {error}</div>;
+  const descargarHistoriaMedicaPDF = () => {
+    if (!historiaMedica || !historiaMedica.datosClinicosJson) return;
+    const formData = JSON.parse(historiaMedica.datosClinicosJson);
+    const html = `
+      <div style="font-family: Arial, sans-serif; padding: 30px; font-size: 11px; color: #333;">
+        <table style="width: 100%; border-bottom: 2px solid #7E1D3B; padding-bottom: 10px; margin-bottom: 20px;">
+          <tr>
+            <td style="width: 20%;"><h1 style="color: #7E1D3B; font-size: 18px; margin: 0;">MARAKAME</h1></td>
+            <td style="width: 60%; text-align: center;">
+              <h2 style="margin: 0; font-size: 16px;">HISTORIA MÉDICA INTEGRAL</h2>
+              <p style="margin: 3px 0 0 0; color: #666;">Sistema de Gestión Clínica</p>
+            </td>
+            <td style="width: 20%; text-align: right; font-weight: bold;">Fecha: ${formData.datosGenerales.fecha}<br>Expediente: ${formData.datosGenerales.expediente}</td>
+          </tr>
+        </table>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+          <table style="width: 100%; line-height: 1.8;">
+            <tr><td colspan="2"><strong>Nombre:</strong> ${formData.datosGenerales.nombre}</td></tr>
+            <tr>
+              <td style="width: 50%;"><strong>Edad:</strong> ${formData.datosGenerales.edad} años | <strong>Sexo:</strong> ${formData.datosGenerales.sexo}</td>
+              <td style="width: 50%;"><strong>Estado Civil:</strong> ${formData.datosGenerales.estadoCivil}</td>
+            </tr>
+          </table>
+        </div>
+        <h3 style="background-color: #7E1D3B; color: white; padding: 5px 10px; font-size: 12px; margin-bottom: 10px;">1. HISTORIA DE CONSUMO</h3>
+        <p style="border: 1px solid #e2e8f0; padding: 10px; min-height: 50px;">${formData.historiaConsumo || 'Sin datos registrados.'}</p>
+        <h3 style="background-color: #7E1D3B; color: white; padding: 5px 10px; font-size: 12px; margin-bottom: 10px; margin-top: 20px;">2. DIAGNÓSTICO Y PLAN</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="border: 1px solid #e2e8f0; padding: 8px; background-color: #fef2f2; color: #7E1D3B; font-weight: bold;">Diagnóstico Principal</td></tr>
+          <tr><td style="border: 1px solid #e2e8f0; padding: 10px; font-size: 13px;">${formData.diagnostico.dx1 || 'Sin diagnóstico capturado.'}</td></tr>
+          <tr><td style="border: 1px solid #e2e8f0; padding: 8px; font-weight: bold; background-color: #f8fafc;">Plan y Recomendaciones</td></tr>
+          <tr><td style="border: 1px solid #e2e8f0; padding: 10px;">${formData.diagnostico.plan1 || 'Sin recomendaciones.'}</td></tr>
+        </table>
+        <div style="margin-top: 60px; text-align: center; width: 100%;">
+          <div style="width: 250px; border-top: 1px solid #000; margin: 0 auto; padding-top: 5px;">
+            <strong>MÉDICO TRATANTE</strong><br>${formData.diagnostico.firmaMedico || 'Jefe Médico'}<br>Cédula: ${formData.diagnostico.cedula || 'N/D'}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    html2pdf().set({
+      margin: 10,
+      filename: `HistoriaMedica_MK_${id}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'letter' }
+    }).from(element).save();
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-12">
-      
-      {/* ========================================== */}
-      {/* NAVBAR SUPERIOR (ESTILO MARAKAME OFICIAL)  */}
-      {/* ========================================== */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm mb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-24">
-            
-            {/* Logo y Títulos */}
-            <div className="flex items-center gap-6">
-              <img src={marakameLogo} alt="Instituto Marakame" className="h-14 w-auto object-contain" />
-              <div className="hidden sm:block border-l border-slate-200 pl-6">
-                <p className="text-[10px] font-black text-[#7E1D3B] uppercase tracking-widest mb-0.5">Instituto Marakame</p>
-                <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none mb-1">Sistema de Gestión Clínica</h1>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Módulo Jefatura Médica</p>
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
+
+        {/* ── Header Principal ── */}
+        <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
+          <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+            <div className="flex items-center gap-3">
+              <img src={marakameLogo} alt="Logo Marakame" className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
+                <h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema de Gestión Clínica</h1>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo Jefatura Médica</p>
               </div>
             </div>
-
-            {/* Perfil de Usuario */}
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sesión activa</p>
-                <p className="text-sm font-black text-slate-800">Jefe Médico</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-[#7E1D3B]">
-                <Stethoscope size={24} />
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-
-      {/* ========================================== */}
-      {/* CONTENIDO DE LA PÁGINA                     */}
-      {/* ========================================== */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* HEADER DE LA SECCIÓN */}
-        <div className="flex justify-between items-end mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-1.5 h-6 bg-[#7E1D3B] rounded-sm"></div>
-              <h2 className="text-xl font-black text-slate-800 uppercase tracking-widest">Detalle de Expediente</h2>
-            </div>
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest ml-4">
-              Folio: <span className="text-[#7E1D3B]">{data?.expediente?.numero}</span>
-            </p>
-          </div>
-          <button onClick={() => navigate('/medico/expedientes')} className="text-slate-500 hover:text-[#7E1D3B] font-bold text-xs uppercase tracking-widest flex items-center gap-2 transition-colors">
-            <ArrowLeft size={16} /> Volver al Directorio
-          </button>
-        </div>
-
-        {/* TARJETA DE RESUMEN DEL PACIENTE */}
-        <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div className="flex items-center gap-5">
-              <div className="h-14 w-14 rounded-full bg-[#7E1D3B] flex items-center justify-center text-white font-black text-2xl shadow-sm">
-                {data?.paciente?.nombreCompleto?.charAt(0).toUpperCase() || 'P'}
+            <div className="flex items-center gap-3 self-end md:self-auto">
+              <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center">
+                <Stethoscope size={18} className="text-[#7E1D3B]" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-800 uppercase tracking-wide">{data?.paciente?.nombreCompleto}</h3>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
-                  {data?.paciente?.edad} AÑOS • {data?.paciente?.estadoCivil} • {data?.paciente?.sexo}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex gap-12">
-              <div>
-                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Sustancia Principal</p>
-                 <p className="text-sm font-bold text-slate-700 uppercase">{data?.paciente?.sustanciaConsumo || 'NO ESPECIFICADA'}</p>
-              </div>
-              <div>
-                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Contacto</p>
-                 <p className="text-sm font-bold text-slate-700 uppercase">{data?.paciente?.telefonoContacto || 'S/N'}</p>
+                <p className="text-xs text-slate-500">Sesión activa</p>
+                <p className="font-semibold text-slate-700">Jefe Médico</p>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* PESTAÑAS Y BOTÓN DE ACCIÓN */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-slate-200 pb-4">
-          <div className="flex gap-6">
-            <button 
-              onClick={() => setPestañaActiva('historial')} 
-              className={`pb-4 -mb-[17px] text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all ${pestañaActiva === 'historial' ? 'text-[#7E1D3B] border-b-2 border-[#7E1D3B]' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <HistoryIcon size={16} /> Historial Clínico
-            </button>
-            <button 
-              onClick={() => setPestañaActiva('docs')} 
-              className={`pb-4 -mb-[17px] text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all ${pestañaActiva === 'docs' ? 'text-[#7E1D3B] border-b-2 border-[#7E1D3B]' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <FileText size={16} /> Documentos y Estudios
-            </button>
-          </div>
-          
-          <button onClick={() => setShowModal(true)} className="bg-[#7E1D3B] hover:bg-[#63162e] text-white px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest flex items-center gap-2 transition-colors shadow-sm">
-            <FilePlus size={16} /> Crear Nota Médica
-          </button>
-        </div>
+          <div className="grid gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6">
+            {/* ── Sidebar ── */}
+            <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+              {navItems.map(({ label, icon, key, path }) => (
+                <button key={key} onClick={() => handleNavClick({ key, path })}
+                  className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition flex items-center gap-2.5 text-left ${
+                    activeNav === key ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
+                  }`}>
+                  {React.createElement(icon, { size: 16, className: 'shrink-0' })}
+                  <span>{label}</span>
+                </button>
+              ))}
+            </aside>
 
-        {/* CONTENIDO PRINCIPAL (TARJETAS DE NOTAS) */}
-        <div className="bg-transparent">
-          {pestañaActiva === 'historial' && (
-            <div className="space-y-6">
-              {data?.notasEvolucion && data.notasEvolucion.length > 0 ? (
-                data.notasEvolucion.map((nota) => (
-                  <div key={nota.id} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-                    
-                    {/* Cabecera de la Nota */}
-                    <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-4">
-                      <div className="flex items-center gap-4">
-                        <span className="bg-rose-50 text-[#7E1D3B] px-3 py-1 rounded text-xs font-black uppercase tracking-widest">
-                          {new Date(nota.fechaRegistro).toLocaleDateString()}
-                        </span>
-                        <span className="text-xs font-bold text-slate-400 flex items-center gap-1 uppercase">
-                          <Clock size={14} /> {new Date(nota.fechaRegistro).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </span>
-                      </div>
-                      <span className="text-xs font-black text-slate-500 uppercase tracking-widest border border-slate-200 px-3 py-1 rounded bg-slate-50">
-                        Médico: {nota.medicoAsignado}
-                      </span>
-                    </div>
-                    
-                    {/* Signos Vitales */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-100">
-                      <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">T.A</p><p className="text-sm font-bold text-slate-800">{nota.ta || '-'}</p></div>
-                      <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Temp</p><p className="text-sm font-bold text-slate-800">{nota.temp || '-'}°C</p></div>
-                      <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">F.C</p><p className="text-sm font-bold text-slate-800">{nota.fc || '-'}</p></div>
-                      <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">F.R</p><p className="text-sm font-bold text-slate-800">{nota.fr || '-'}</p></div>
-                      <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Peso/Talla</p><p className="text-sm font-bold text-slate-800">{nota.peso || '-'}kg / {nota.talla || '-'}cm</p></div>
-                    </div>
-
-                    {/* Textos Médicos */}
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="text-[10px] font-black text-[#7E1D3B] uppercase tracking-widest mb-1 flex items-center gap-1.5"><Clipboard size={12}/> Evolución y Cuadro Clínico</h4>
-                        <p className="text-sm text-slate-600 font-medium leading-relaxed">{nota.evolucionCuadroClinico}</p>
-                      </div>
-                      {nota.diagnosticoProblemas && (
-                        <div className="pt-2">
-                          <h4 className="text-[10px] font-black text-[#7E1D3B] uppercase tracking-widest mb-1 flex items-center gap-1.5"><CheckCircle2 size={12}/> Diagnóstico</h4>
-                          <p className="text-sm text-slate-800 font-bold">{nota.diagnosticoProblemas}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
+            {/* ── Main Content ── */}
+            <main className="space-y-5">
+              {loading ? (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-16 text-center text-slate-500 text-sm">
+                  <div className="animate-spin h-8 w-8 border-4 border-[#7E1D3B] border-t-transparent rounded-full mx-auto mb-4"></div>
+                  Accediendo al archivo clínico...
+                </div>
+              ) : error ? (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center text-red-500 font-bold">
+                  <AlertTriangle size={32} className="mx-auto mb-3" />
+                  {error}
+                </div>
               ) : (
-                <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
-                  <FileText size={32} className="mx-auto text-slate-300 mb-4" />
-                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Aún no hay notas médicas registradas</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {pestañaActiva === 'docs' && (
-            <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
-              <FileText size={32} className="mx-auto text-slate-300 mb-4" />
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Aún no hay documentos adjuntos</p>
-            </div>
-          )}
-        </div>
-
-      </div>
-
-      {/* ========================================== */}
-      {/* MODAL: NUEVA NOTA                          */}
-      {/* ========================================== */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="w-full max-w-4xl bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            
-            <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-white">
-              <div className="flex items-center gap-3">
-                <div className="w-1.5 h-6 bg-[#7E1D3B] rounded-sm"></div>
-                <div>
-                  <h2 className="text-lg font-black text-slate-800 uppercase tracking-widest">Nueva Nota de Evolución</h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Paciente: {data?.paciente?.nombreCompleto}</p>
-                </div>
-              </div>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">✕</button>
-            </div>
-
-            <div className="p-6 overflow-y-auto bg-slate-50 flex-1">
-              <div className="flex gap-4 mb-6 border-b border-slate-200 pb-2">
-                 {['Signos Vitales', 'Evaluación', 'Diagnóstico'].map((label, i) => (
-                    <button key={i} onClick={() => setPaso(i+1)} className={`text-[10px] font-black uppercase tracking-widest pb-2 -mb-[9px] ${paso === i+1 ? 'text-[#7E1D3B] border-b-2 border-[#7E1D3B]' : 'text-slate-400'}`}>
-                      {i+1}. {label}
-                    </button>
-                 ))}
-              </div>
-
-              {paso === 1 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 bg-white p-6 border border-slate-200 rounded-lg shadow-sm">
-                  {[{l:'Tensión Arterial', n:'ta', p:'120/80'}, {l:'Temp. (°C)', n:'temp', p:'36.5'}, {l:'F.C. (lpm)', n:'fc', p:'80'}, {l:'F.R. (rpm)', n:'fr', p:'18'}, {l:'Peso (kg)', n:'peso', p:'75.5'}, {l:'Talla (cm)', n:'talla', p:'170'}].map(f => (
-                    <div key={f.n}>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{f.l}</label>
-                      <input type="text" placeholder={f.p} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-[#7E1D3B] focus:ring-1 focus:ring-[#7E1D3B] outline-none transition-all"
-                        value={nuevaNota[f.n]} onChange={(e) => setNuevaNota({...nuevaNota, [f.n]: e.target.value})} />
+                <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  
+                  {/* Encabezado del Tablero de Expediente */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between p-5 border-b border-slate-200 bg-slate-50/50">
+                    <div className="flex items-center gap-3">
+                      <div className="h-6 w-1.5 rounded-full bg-[#7E1D3B]" />
+                      <div>
+                        <h2 className="text-base font-black uppercase tracking-[0.2em] text-slate-800">
+                          Expediente: <span className="text-[#7E1D3B]">MK-{id.toString().padStart(4, '0')}</span>
+                        </h2>
+                        <p className="text-xs text-slate-500 mt-0.5 font-medium">Modo de visualización y descarga de documentos</p>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <button onClick={() => navigate(-1)} className="px-4 py-2 mt-4 md:mt-0 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-[#7E1D3B] transition-colors flex items-center gap-2 shadow-sm">
+                      <ArrowLeft size={14} /> Volver
+                    </button>
+                  </div>
+
+                  {/* Ficha Principal del Paciente */}
+                  <div className="p-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 p-6 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white shadow-sm">
+                      <div className="flex items-center gap-5">
+                        <div className="h-16 w-16 rounded-2xl bg-[#7E1D3B] flex items-center justify-center text-white font-black text-3xl shadow-md border-2 border-rose-100">
+                          {data?.paciente?.nombreCompleto?.charAt(0).toUpperCase() || 'P'}
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black text-slate-800 tracking-tight">
+                            {data?.paciente?.nombreCompleto || 'Sin nombre registrado'}
+                          </h3>
+                          <div className="flex items-center gap-3 mt-1.5">
+                            <span className="flex items-center gap-1 text-[11px] font-bold text-slate-500 uppercase tracking-widest bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm">
+                              <Calendar size={12}/> {data?.paciente?.edad ? `${data?.paciente?.edad} AÑOS` : 'N/D'}
+                            </span>
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                              {data?.paciente?.estadoCivil || 'S/E'} • {data?.paciente?.sexo || 'S/E'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-4 w-full md:w-auto">
+                        <div className="flex-1 md:flex-none bg-amber-50 border border-amber-200 p-3 rounded-xl min-w-[140px]">
+                           <p className="text-[10px] text-amber-700/70 font-black uppercase tracking-widest mb-1 flex items-center gap-1"><Droplet size={12}/> Sustancia</p>
+                           <p className="text-sm font-bold text-amber-900 uppercase truncate">{data?.paciente?.sustanciaConsumo || 'NO ESPECIFICADA'}</p>
+                        </div>
+                        <div className="flex-1 md:flex-none bg-sky-50 border border-sky-200 p-3 rounded-xl min-w-[140px]">
+                           <p className="text-[10px] text-sky-700/70 font-black uppercase tracking-widest mb-1 flex items-center gap-1"><Phone size={12}/> Contacto</p>
+                           <p className="text-sm font-bold text-sky-900 uppercase">{data?.paciente?.telefonoContacto || 'S/N'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pestañas (Estilo "Monstruo") */}
+                  <div className="px-6 pb-6">
+                    <div className="flex bg-slate-50 rounded-xl shadow-sm border border-slate-200 p-1.5 overflow-x-auto">
+                      <button 
+                        onClick={() => setPestañaActiva('historial')} 
+                        className={`flex-1 min-w-[150px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${pestañaActiva === 'historial' ? 'bg-[#7E1D3B] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100'}`}
+                      >
+                        <HistoryIcon size={14} /> Historial y Notas
+                      </button>
+                      <button 
+                        onClick={() => setPestañaActiva('docs')} 
+                        className={`flex-1 min-w-[150px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${pestañaActiva === 'docs' ? 'bg-[#7E1D3B] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100'}`}
+                      >
+                        <FileText size={14} /> Visor de Documentos
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Contenedor Inferior */}
+                  <div className="bg-slate-50/50 border-t border-slate-200 p-6 min-h-[400px]">
+                    
+                    {/* TAB: HISTORIAL (Estilo Línea de Tiempo) */}
+                    {pestañaActiva === 'historial' && (
+                      <div className="max-w-4xl mx-auto space-y-6">
+                        {data?.notasEvolucion && data.notasEvolucion.length > 0 ? (
+                          <div className="relative border-l-2 border-slate-200 ml-4 space-y-8 pb-4">
+                            {data.notasEvolucion.map((nota, idx) => (
+                              <div key={nota.id} className="relative pl-8">
+                                {/* Punto del Timeline */}
+                                <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full bg-[#7E1D3B] border-4 border-slate-50"></div>
+                                
+                                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                                  <div className="flex flex-wrap justify-between items-center border-b border-slate-100 pb-3 mb-3 gap-2">
+                                    <span className="bg-[#7E1D3B]/10 text-[#7E1D3B] px-3 py-1 rounded-md text-[11px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                                      <Calendar size={12}/> {new Date(nota.fechaRegistro).toLocaleDateString()}
+                                    </span>
+                                    <span className="text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-3 py-1 rounded-md flex items-center gap-1.5">
+                                      <Stethoscope size={12}/> {nota.medicoAsignado}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Evolución Clínica</h4>
+                                    <p className="text-sm text-slate-700 font-medium leading-relaxed whitespace-pre-wrap">{nota.evolucionCuadroClinico}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center shadow-sm">
+                            <ClipboardList size={40} className="mx-auto text-slate-300 mb-4" />
+                            <h3 className="text-lg font-black text-slate-700 mb-1">Sin Notas Clínicas</h3>
+                            <p className="text-sm font-medium text-slate-500">Aún no se han registrado notas de evolución diaria para este paciente.</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* TAB: DOCUMENTOS (Estilo Tarjetas Modernas) */}
+                    {pestañaActiva === 'docs' && (
+                      <div className="max-w-4xl mx-auto space-y-4">
+                        
+                        {/* Historia Médica 24h */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-6 hover:border-indigo-200 transition-colors group">
+                          <div className="flex items-center gap-5">
+                            <div className="h-14 w-14 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                              <FileText size={24} />
+                            </div>
+                            <div>
+                              <h3 className="text-base font-black text-slate-800 uppercase tracking-wide">Historia Médica Integral</h3>
+                              <p className="text-xs text-slate-500 font-medium mb-1">Evaluación clínica de las primeras 24 hrs.</p>
+                              {historiaMedica ? (
+                                <p className="text-[11px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5">
+                                  <CheckCircle2 size={14}/> Completada y archivada
+                                </p>
+                              ) : (
+                                <p className="text-[11px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5">
+                                  <AlertTriangle size={14}/> Pendiente de captura
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {historiaMedica && (
+                            <button onClick={descargarHistoriaMedicaPDF} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 border border-indigo-200 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-100 transition-colors shadow-sm">
+                              <Download size={16} /> Descargar PDF
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Valoración Inicial */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-6 hover:border-[#7E1D3B]/30 transition-colors group">
+                          <div className="flex items-center gap-5">
+                            <div className="h-14 w-14 rounded-xl bg-[#7E1D3B]/10 text-[#7E1D3B] flex items-center justify-center border border-[#7E1D3B]/20 group-hover:bg-[#7E1D3B] group-hover:text-white transition-colors">
+                              <HeartPulse size={24} />
+                            </div>
+                            <div>
+                              <h3 className="text-base font-black text-slate-800 uppercase tracking-wide">Valoración Diagnóstica</h3>
+                              <p className="text-xs text-slate-500 font-medium mb-1">Evaluación del área de admisiones.</p>
+                              {valoracion ? (
+                                <p className="text-[11px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5">
+                                  <CheckCircle2 size={14}/> Completada
+                                </p>
+                              ) : (
+                                <p className="text-[11px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5">
+                                  <AlertTriangle size={14}/> Archivo no encontrado
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {valoracion && (
+                            <button onClick={() => alert("Generando PDF de Valoración...")} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-50 text-slate-700 border border-slate-200 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-100 transition-colors shadow-sm">
+                              <Download size={16} /> Descargar PDF
+                            </button>
+                          )}
+                        </div>
+
+                      </div>
+                    )}
+                  </div>
+                </section>
               )}
-
-              {paso === 2 && (
-                <div className="space-y-6 bg-white p-6 border border-slate-200 rounded-lg shadow-sm">
-                  <div>
-                    <label className="block text-[10px] font-black text-[#7E1D3B] uppercase tracking-widest mb-2">Evolución del Cuadro Clínico *</label>
-                    <textarea rows="4" className="w-full bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm font-medium text-slate-700 focus:border-[#7E1D3B] outline-none resize-none"
-                      value={nuevaNota.evolucionCuadroClinico} onChange={(e) => setNuevaNota({...nuevaNota, evolucionCuadroClinico: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Exploración Física</label>
-                    <textarea rows="3" className="w-full bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm font-medium text-slate-700 focus:border-[#7E1D3B] outline-none resize-none"
-                      value={nuevaNota.exploracionFisica} onChange={(e) => setNuevaNota({...nuevaNota, exploracionFisica: e.target.value})} />
-                  </div>
-                </div>
-              )}
-
-              {paso === 3 && (
-                <div className="space-y-6 bg-white p-6 border border-slate-200 rounded-lg shadow-sm">
-                  <div>
-                    <label className="block text-[10px] font-black text-[#7E1D3B] uppercase tracking-widest mb-2">Diagnóstico Final</label>
-                    <textarea rows="3" className="w-full bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm font-bold text-slate-800 focus:border-[#7E1D3B] outline-none resize-none"
-                      value={nuevaNota.diagnosticoProblemas} onChange={(e) => setNuevaNota({...nuevaNota, diagnosticoProblemas: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tratamiento e Indicaciones</label>
-                    <textarea rows="3" className="w-full bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm font-medium text-slate-700 focus:border-[#7E1D3B] outline-none resize-none"
-                      value={nuevaNota.tratamientoIndicaciones} onChange={(e) => setNuevaNota({...nuevaNota, tratamientoIndicaciones: e.target.value})} />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 border-t border-slate-200 bg-white flex justify-between items-center">
-              <button onClick={() => setShowModal(false)} className="text-[11px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest px-4 py-2">
-                Cancelar
-              </button>
-              <div className="flex gap-3">
-                {paso > 1 && (
-                  <button onClick={() => setPaso(paso - 1)} className="bg-slate-100 text-slate-600 px-5 py-2.5 rounded-lg font-bold text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-colors">
-                    Atrás
-                  </button>
-                )}
-                {paso < 3 ? (
-                  <button onClick={() => setPaso(paso + 1)} className="bg-slate-800 text-white px-5 py-2.5 rounded-lg font-bold text-[11px] uppercase tracking-widest hover:bg-slate-700 transition-colors">
-                    Siguiente
-                  </button>
-                ) : (
-                  <button onClick={handleGuardarNota} className="bg-[#7E1D3B] text-white px-6 py-2.5 rounded-lg font-bold text-[11px] uppercase tracking-widest hover:bg-[#63162e] transition-colors shadow-sm">
-                    Guardar Nota
-                  </button>
-                )}
-              </div>
-            </div>
-
+            </main>
           </div>
-        </div>
-      )}
+        </header>
+      </div>
     </div>
   );
 };
