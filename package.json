@@ -5,6 +5,7 @@
     "tailwindcss": "^4.2.2"
   },
   "dependencies": {
-    "cors": "^2.8.6"
+    "cors": "^2.8.6",
+    "html2pdf.js": "^0.14.0"
   }
 }
