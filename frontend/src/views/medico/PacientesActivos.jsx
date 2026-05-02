@@ -6,12 +6,11 @@ import {
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
-// Menú de navegación lateral actualizado
 const navItems = [
   { label: 'Inicio Jefatura',       icon: Activity,       key: 'inicio',      path: '/medico/inicio-jefe-medico' },
   { label: 'Prospectos',            icon: UserPlus,       key: 'prospectos',  path: '/medico/prospectos' },
   { label: 'Pacientes Activos',     icon: Users,          key: 'pacientes',   path: '/medico/pacientes' },
-  { label: 'Historia Médica',       icon: FileText,       key: 'historia',    path: '/medico/historia-medica' }, // <-- NUEVA SECCIÓN
+  { label: 'Historia Médica',       icon: FileText,       key: 'historia',    path: '/medico/historia-medica' },
   { label: 'Expedientes Clínicos',  icon: ClipboardList,  key: 'expedientes', path: '/medico/expedientes' },
   { label: 'Personal Médico',       icon: Stethoscope,    key: 'personal',    path: '/medico/personal' },
   { label: 'Reportes y Estadísticas', icon: FileBarChart, key: 'reportes',    path: '/medico/reportes' },
@@ -60,7 +59,7 @@ const PacientesActivos = () => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
+    <div className="min-h-screen bg-slate-100 text-slate-900 relative">
       <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
 
         <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
@@ -148,7 +147,8 @@ const PacientesActivos = () => {
                                 <button onClick={() => navigate(`/medico/expedientes/${p.id}`)} className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 text-xs font-bold transition-colors flex items-center gap-1.5">
                                   <ClipboardList size={14} /> Expediente
                                 </button>
-                                <button onClick={() => alert('Notas de Evolución (Pendiente de integrar)')} className="px-3 py-2 bg-[#7E1D3B] text-white rounded-lg hover:bg-[#63162e] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm">
+                                {/* Botón directo a la nueva pantalla */}
+                                <button onClick={() => navigate(`/medico/nueva-evolucion/${p.id}`)} className="px-3 py-2 bg-[#7E1D3B] text-white rounded-lg hover:bg-[#63162e] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm">
                                   <FilePlus size={14} /> Evolución
                                 </button>
                               </div>
