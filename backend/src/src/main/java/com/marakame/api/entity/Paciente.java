@@ -1,56 +1,108 @@
 package com.marakame.api.entity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "pacientes")
 public class Paciente {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "nombre_completo")
     private String nombreCompleto;
+
+    @Column(name = "nombres")
+    private String nombres;
+
+    @Column(name = "apellido_paterno")
+    private String apellidoPaterno;
+
+    @Column(name = "apellido_materno")
+    private String apellidoMaterno;
+
     @Column(name = "fecha_nacimiento")
     private String fechaNacimiento;
+
+    @Column(name = "sexo")
     private String sexo;
-    private Integer edad; // Tip: Es mejor guardar la Fecha de Nacimiento para calcular la edad exacta siempre.
+
+    @Column(name = "edad")
+    private Integer edad;
+
+    @Column(name = "estado_civil")
     private String estadoCivil;
+
+    @Column(name = "cantidad_hijos")
     private Integer cantidadHijos;
-    private String escolaridad; // Ej: Primaria, Secundaria, Licenciatura...
+
+    @Column(name = "escolaridad")
+    private String escolaridad;
+
+    @Column(name = "origen")
     private String origen;
+
     @Column(name = "direccion_calle")
     private String direccionCalle;
+
     @Column(name = "direccion_no_ext")
     private String direccionNoExt;
+
     @Column(name = "direccion_no_int")
     private String direccionNoInt;
+
     @Column(name = "direccion_colonia")
     private String direccionColonia;
+
     @Column(name = "direccion_municipio_delegacion")
     private String direccionMunicipioDelegacion;
+
     @Column(name = "direccion_cp")
     private String direccionCp;
+
     @Column(name = "direccion_ciudad_estado")
     private String direccionCiudadEstado;
+
+    @Column(name = "domicilio_particular")
     private String domicilioParticular;
+
     @Column(name = "telefono_casa")
     private String telefonoCasa;
+
+    @Column(name = "telefono_contacto")
     private String telefonoContacto;
+
+    @Column(name = "ocupacion")
     private String ocupacion;
+
+    @Column(name = "sustancia_consumo")
     private String sustanciaConsumo;
 
-    // Relación: Un paciente tiene un solicitante que hizo el trámite
+    @Column(name = "estado_paciente")
+    @Enumerated(EnumType.STRING)
+    private EstadoPaciente estadoPaciente = EstadoPaciente.PROSPECTO;
+
+    @Column(name = "clave_paciente", unique = true)
+    private String clavePaciente;
+
+    @Column(name = "fecha_ingreso")
+    private LocalDateTime fechaIngreso;
+
     @ManyToOne
     @JoinColumn(name = "solicitante_id")
     private Solicitante solicitante;
 
-    // Getters y Setters...
     public Long getId() {
         return id;
     }
@@ -65,6 +117,30 @@ public class Paciente {
 
     public void setNombreCompleto(String nombreCompleto) {
         this.nombreCompleto = nombreCompleto;
+    }
+
+    public String getNombres() {
+        return nombres;
+    }
+
+    public void setNombres(String nombres) {
+        this.nombres = nombres;
+    }
+
+    public String getApellidoPaterno() {
+        return apellidoPaterno;
+    }
+
+    public void setApellidoPaterno(String apellidoPaterno) {
+        this.apellidoPaterno = apellidoPaterno;
+    }
+
+    public String getApellidoMaterno() {
+        return apellidoMaterno;
+    }
+
+    public void setApellidoMaterno(String apellidoMaterno) {
+        this.apellidoMaterno = apellidoMaterno;
     }
 
     public String getFechaNacimiento() {
@@ -155,14 +231,6 @@ public class Paciente {
         this.direccionColonia = direccionColonia;
     }
 
-    public String getDireccionMunicipioDelegacion() {
-        return direccionMunicipioDelegacion;
-    }
-
-    public void setDireccionMunicipioDelegacion(String direccionMunicipioDelegacion) {
-        this.direccionMunicipioDelegacion = direccionMunicipioDelegacion;
-    }
-
     public String getDireccionCp() {
         return direccionCp;
     }
@@ -179,10 +247,18 @@ public class Paciente {
         this.direccionCiudadEstado = direccionCiudadEstado;
     }
 
+    public String getDireccionMunicipioDelegacion() {
+        return direccionMunicipioDelegacion;
+    }
+
+    public void setDireccionMunicipioDelegacion(String direccionMunicipioDelegacion) {
+        this.direccionMunicipioDelegacion = direccionMunicipioDelegacion;
+    }
+
     public String getDomicilioParticular() {
         return domicilioParticular;
     }
-    
+
     public void setDomicilioParticular(String domicilioParticular) {
         this.domicilioParticular = domicilioParticular;
     }
@@ -226,5 +302,28 @@ public class Paciente {
     public void setSolicitante(Solicitante solicitante) {
         this.solicitante = solicitante;
     }
-    
+
+    public EstadoPaciente getEstadoPaciente() {
+        return estadoPaciente;
+    }
+
+    public void setEstadoPaciente(EstadoPaciente estadoPaciente) {
+        this.estadoPaciente = estadoPaciente;
+    }
+
+    public String getClavePaciente() {
+        return clavePaciente;
+    }
+
+    public void setClavePaciente(String clavePaciente) {
+        this.clavePaciente = clavePaciente;
+    }
+
+    public LocalDateTime getFechaIngreso() {
+        return fechaIngreso;
+    }
+
+    public void setFechaIngreso(LocalDateTime fechaIngreso) {
+        this.fechaIngreso = fechaIngreso;
+    }
 }

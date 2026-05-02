@@ -17,4 +17,10 @@ public interface SeguimientoRepository extends JpaRepository<Seguimiento, Long> 
     
     // Para la tabla de "Citas del Día"
     List<Seguimiento> findByTipoAccion(String tipo);
+
+    List<Seguimiento> findByPaciente_IdOrderByFechaHoraProgramadaDesc(Long pacienteId);
+
+    List<Seguimiento> findByPaciente_IdAndFormatoLlamadaInicialJsonIsNotNullOrderByFechaHoraProgramadaAsc(Long pacienteId);
+
+    boolean existsByPaciente_IdAndTipoAccionContainingIgnoreCase(Long pacienteId, String tipoAccion);
 }

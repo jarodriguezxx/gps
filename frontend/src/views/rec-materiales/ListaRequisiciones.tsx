@@ -25,7 +25,7 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
       const extraordinarias = requisiciones.filter(
         (r) =>
           r.tipo === "EXTRAORDINARIA" &&
-          (r.estado === "AUTORIZADA" || r.estado === "FINALIZADA"),
+          (r.estado === "AUTORIZADA" || r.estado === "EN-REVISION" || r.estado === "FINALIZADA"),
       );
 
       return [...ordinarias, ...extraordinarias];
@@ -42,6 +42,8 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
         return "bg-green-100 text-green-800 border border-green-300";
       case "PRE-AUTORIZADA":
         return "bg-purple-100 text-purple-800 border border-purple-300";
+      case "EN-REVISION":
+        return "bg-orange-100 text-orange-800 border border-orange-300";
       default:
         return "bg-slate-100 text-slate-800 border border-slate-300";
     }

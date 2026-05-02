@@ -6,6 +6,9 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 
 public record PacienteDTO(
     String nombre,
+    String nombres,
+    String apellidoPaterno,
+    String apellidoMaterno,
     Integer edad,
     String estadocivil,
     Integer hijos,

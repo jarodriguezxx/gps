@@ -1,5 +1,6 @@
 package com.marakame.api.controller;
 
+import com.marakame.api.entity.AdjuntoRequisicion;
 import com.marakame.api.entity.Requisicion;
 import com.marakame.api.service.RequisicionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,6 +74,97 @@ public class RequisicionController {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-guardando-archivo");
+        }
+    }
+
+    @GetMapping("/{id}/adjuntos")
+    public ResponseEntity<?> getAdjuntos(@PathVariable UUID id) {
+        try {
+            return ResponseEntity.ok(service.listarAdjuntos(id));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-listando-adjuntos: " + e.getMessage());
+        }
+    }
+
+    @PostMapping(value = "/{id}/adjuntos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> subirAdjunto(
+            @PathVariable UUID id,
+            @RequestParam("archivo") MultipartFile archivo) {
+        try {
+            return ResponseEntity.ok(service.guardarAdjunto(id, archivo));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-guardando-archivo: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}/adjuntos/{adjuntoId}")
+    public ResponseEntity<?> eliminarAdjunto(@PathVariable UUID id, @PathVariable UUID adjuntoId) {
+        try {
+            service.eliminarAdjunto(id, adjuntoId);
+            return ResponseEntity.noContent().build();
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-eliminando-archivo");
+        }
+    }
+
+    @PostMapping(value = "/{id}/factura", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> subirFactura(
+            @PathVariable UUID id,
+            @RequestParam("archivo") MultipartFile archivo) {
+        try {
+            return ResponseEntity.ok(service.guardarFactura(id, archivo));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}/factura")
+    public ResponseEntity<?> eliminarFactura(@PathVariable UUID id) {
+        try {
+            return ResponseEntity.ok(service.eliminarFactura(id));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    @PostMapping(value = "/{id}/adjuntos-factura", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> subirAdjuntoFactura(
+            @PathVariable UUID id,
+            @RequestParam("archivo") MultipartFile archivo) {
+        try {
+            return ResponseEntity.ok(service.guardarAdjuntoFactura(id, archivo));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/adjuntos-factura")
+    public ResponseEntity<?> getAdjuntosFactura(@PathVariable UUID id) {
+        try {
+            return ResponseEntity.ok(service.listarAdjuntosPorTipo(id, "FACTURA"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-listando-facturas: " + e.getMessage());
         }
     }
 }

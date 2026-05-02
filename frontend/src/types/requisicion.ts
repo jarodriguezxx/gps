@@ -3,7 +3,8 @@ export type Estado =
   | "PENDIENTE"
   | "AUTORIZADA"
   | "FINALIZADA"
-  | "PRE-AUTORIZADA";
+  | "PRE-AUTORIZADA"
+  | "EN-REVISION";
 export type TamanioCompra = "MAYOR" | "MENOR";
 export type TipoCompra = "ORDINARIA" | "EXTRAORDINARIA";
 // TODO: Investigar bien todas las unidades que se manejan
@@ -36,6 +37,7 @@ export type RequisicionesContenido = {
   firmaAdminsitradora: Boolean;
   firmaDirectoraGral: Boolean;
   cotizacionPath?: string | null;
+  facturaPath?: string | null;
 };
 
 export type Requisicion = RequisicionesCamposTabla & RequisicionesContenido;

@@ -15,3 +15,7 @@ dist/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Uploads generados
+backend/src/uploads/
+backend/src/src/uploads/

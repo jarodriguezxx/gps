@@ -2,15 +2,26 @@ package com.marakame.api.controller;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.marakame.api.dto.SeguimientoTablaDTO;
+import com.marakame.api.entity.Paciente;
+import com.marakame.api.entity.Prioridad;
 import com.marakame.api.entity.Seguimiento;
+import com.marakame.api.repository.PacienteRepository;
 import com.marakame.api.repository.SeguimientoRepository;
 
 @RestController
@@ -20,6 +31,9 @@ public class SeguimientoController {
 
     @Autowired
     private SeguimientoRepository seguimientoRepository;
+
+    @Autowired
+    private PacienteRepository pacienteRepository;
 
     @GetMapping("/tablas")
     public SeguimientoTablasResponse obtenerTablasAdmisiones() {
@@ -39,18 +53,141 @@ public class SeguimientoController {
         return new SeguimientoTablasResponse(citas, llamadas);
     }
 
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Map<String, Object>> actualizarEstadoSeguimiento(
+        @PathVariable Long id,
+        @RequestBody ActualizarEstadoRequest request
+    ) {
+        if (request == null || request.estadoSeguimiento() == null || request.estadoSeguimiento().isBlank()) {
+            return new ResponseEntity<>(Map.of(
+                "error", "El estadoSeguimiento es obligatorio."
+            ), HttpStatus.BAD_REQUEST);
+        }
+
+        Seguimiento seguimiento = seguimientoRepository.findById(id)
+            .orElse(null);
+
+        if (seguimiento == null) {
+            return new ResponseEntity<>(Map.of(
+                "error", "No existe el seguimiento indicado."
+            ), HttpStatus.NOT_FOUND);
+        }
+
+        seguimiento.setEstadoSeguimiento(request.estadoSeguimiento().trim());
+        seguimientoRepository.save(seguimiento);
+
+        return ResponseEntity.ok(Map.of(
+            "id", seguimiento.getId(),
+            "estadoSeguimiento", seguimiento.getEstadoSeguimiento()
+        ));
+    }
+
+    @PostMapping("/citas")
+    public ResponseEntity<Map<String, Object>> crearCita(@RequestBody CrearCitaRequest request) {
+        if (request == null || request.pacienteId() == null || request.fechaHoraProgramada() == null || request.tipoCita() == null || request.tipoCita().isBlank()) {
+            return new ResponseEntity<>(Map.of(
+                "error", "pacienteId, fechaHoraProgramada y tipoCita son obligatorios."
+            ), HttpStatus.BAD_REQUEST);
+        }
+
+        Paciente paciente = pacienteRepository.findById(request.pacienteId()).orElse(null);
+        if (paciente == null) {
+            return new ResponseEntity<>(Map.of(
+                "error", "No existe el paciente indicado."
+            ), HttpStatus.NOT_FOUND);
+        }
+
+        boolean tieneLlamadaInicial = seguimientoRepository.existsByPaciente_IdAndTipoAccionContainingIgnoreCase(request.pacienteId(), "llamada");
+        if (!tieneLlamadaInicial) {
+            return new ResponseEntity<>(Map.of(
+                "error", "El paciente no tiene llamada inicial registrada."
+            ), HttpStatus.CONFLICT);
+        }
+
+        Seguimiento cita = new Seguimiento();
+        cita.setPaciente(paciente);
+        cita.setTipoAccion(request.tipoCita().trim());
+        cita.setEstadoSeguimiento("Pendiente");
+        cita.setEstadoAsistencia("Pendiente");
+        cita.setDiagnosticoVisual("");
+        cita.setFechaHoraProgramada(request.fechaHoraProgramada());
+        cita.setMotivo(request.motivo() == null ? "" : request.motivo().trim());
+        cita.setOrigenLlamada(null);
+        cita.setPrioridad(Prioridad.MEDIA);
+        cita.setResponsable("Admisiones");
+        cita.setFechaSiguienteAccion(request.fechaHoraProgramada());
+
+        Seguimiento guardado = seguimientoRepository.save(cita);
+        return new ResponseEntity<>(Map.of(
+            "id", guardado.getId(),
+            "pacienteId", paciente.getId(),
+            "estadoSeguimiento", guardado.getEstadoSeguimiento()
+        ), HttpStatus.CREATED);
+    }
+
+    @PatchMapping("/{id}/asistencia")
+    public ResponseEntity<Map<String, Object>> actualizarAsistenciaCita(
+        @PathVariable Long id,
+        @RequestBody ActualizarAsistenciaRequest request
+    ) {
+        if (request == null || request.estadoAsistencia() == null || request.estadoAsistencia().isBlank()) {
+            return new ResponseEntity<>(Map.of(
+                "error", "estadoAsistencia es obligatorio."
+            ), HttpStatus.BAD_REQUEST);
+        }
+
+        Seguimiento seguimiento = seguimientoRepository.findById(id).orElse(null);
+        if (seguimiento == null) {
+            return new ResponseEntity<>(Map.of(
+                "error", "No existe el seguimiento indicado."
+            ), HttpStatus.NOT_FOUND);
+        }
+
+        String estadoAsistencia = request.estadoAsistencia().trim();
+        if (!estadoAsistencia.equalsIgnoreCase("Llegó") && !estadoAsistencia.equalsIgnoreCase("No se presentó") && !estadoAsistencia.equalsIgnoreCase("Pendiente")) {
+            return new ResponseEntity<>(Map.of(
+                "error", "estadoAsistencia no válido. Usa Llegó, No se presentó o Pendiente."
+            ), HttpStatus.BAD_REQUEST);
+        }
+
+        if (estadoAsistencia.equalsIgnoreCase("Llegó") && (request.diagnosticoVisual() == null || request.diagnosticoVisual().isBlank())) {
+            return new ResponseEntity<>(Map.of(
+                "error", "diagnosticoVisual es obligatorio cuando el estado es Llegó."
+            ), HttpStatus.BAD_REQUEST);
+        }
+
+        seguimiento.setEstadoAsistencia(estadoAsistencia);
+        seguimiento.setEstadoSeguimiento(estadoAsistencia);
+        seguimiento.setDiagnosticoVisual(request.diagnosticoVisual() == null ? "" : request.diagnosticoVisual().trim());
+        seguimientoRepository.save(seguimiento);
+
+        return ResponseEntity.ok(Map.of(
+            "id", seguimiento.getId(),
+            "estadoAsistencia", seguimiento.getEstadoAsistencia(),
+            "diagnosticoVisual", seguimiento.getDiagnosticoVisual()
+        ));
+    }
+
     private SeguimientoTablaDTO toTablaDTO(Seguimiento seguimiento) {
+        Long pacienteId = seguimiento.getPaciente() != null ? seguimiento.getPaciente().getId() : null;
         String nombre = seguimiento.getPaciente() != null ? seguimiento.getPaciente().getNombreCompleto() : "Sin nombre";
         String telefono = seguimiento.getPaciente() != null ? seguimiento.getPaciente().getTelefonoContacto() : "";
 
         return new SeguimientoTablaDTO(
             seguimiento.getId(),
+            pacienteId,
             seguimiento.getTipoAccion(),
             seguimiento.getEstadoSeguimiento(),
+            seguimiento.getOrigenLlamada(),
+            seguimiento.getEstadoAsistencia(),
+            seguimiento.getDiagnosticoVisual(),
             seguimiento.getFechaHoraProgramada(),
             seguimiento.getMotivo(),
             nombre,
-            telefono
+            telefono,
+            seguimiento.getPrioridad(),
+            seguimiento.getResponsable(),
+            seguimiento.getFechaSiguienteAccion()
         );
     }
 
@@ -61,5 +198,21 @@ public class SeguimientoController {
     public record SeguimientoTablasResponse(
         List<SeguimientoTablaDTO> citas,
         List<SeguimientoTablaDTO> llamadas
+    ) {}
+
+    public record ActualizarEstadoRequest(
+        String estadoSeguimiento
+    ) {}
+
+    public record CrearCitaRequest(
+        Long pacienteId,
+        LocalDateTime fechaHoraProgramada,
+        String tipoCita,
+        String motivo
+    ) {}
+
+    public record ActualizarAsistenciaRequest(
+        String estadoAsistencia,
+        String diagnosticoVisual
     ) {}
 }

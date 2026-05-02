@@ -2,9 +2,12 @@ package com.marakame.api.entity;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -22,8 +25,28 @@ public class Seguimiento {
     // Aquí guardas: "En espera de llamada", "Confirmada", "No contestó"
     private String estadoSeguimiento; 
 
+    // Origen del flujo de llamada: "NOSOTROS" o "PROSPECTO"
+    private String origenLlamada;
+
+    // Estado de asistencia para citas: "Pendiente", "Llegó", "No se presentó"
+    private String estadoAsistencia;
+
+    // Captura clínica al confirmar llegada
+    private String diagnosticoVisual;
+
+    @Lob
+    private String formatoLlamadaInicialJson;
+
     private LocalDateTime fechaHoraProgramada;
     private String motivo;
+
+    // Campos formalizados para gestión de prioridades y seguimiento
+    @Enumerated(EnumType.STRING)
+    private Prioridad prioridad;
+
+    private String responsable;
+
+    private LocalDateTime fechaSiguienteAccion;
 
     // Conectamos el seguimiento al paciente
     @ManyToOne
@@ -55,6 +78,38 @@ public class Seguimiento {
         this.estadoSeguimiento = estadoSeguimiento;
     }
 
+    public String getOrigenLlamada() {
+        return origenLlamada;
+    }
+
+    public void setOrigenLlamada(String origenLlamada) {
+        this.origenLlamada = origenLlamada;
+    }
+
+    public String getEstadoAsistencia() {
+        return estadoAsistencia;
+    }
+
+    public void setEstadoAsistencia(String estadoAsistencia) {
+        this.estadoAsistencia = estadoAsistencia;
+    }
+
+    public String getDiagnosticoVisual() {
+        return diagnosticoVisual;
+    }
+
+    public void setDiagnosticoVisual(String diagnosticoVisual) {
+        this.diagnosticoVisual = diagnosticoVisual;
+    }
+
+    public String getFormatoLlamadaInicialJson() {
+        return formatoLlamadaInicialJson;
+    }
+
+    public void setFormatoLlamadaInicialJson(String formatoLlamadaInicialJson) {
+        this.formatoLlamadaInicialJson = formatoLlamadaInicialJson;
+    }
+
     public LocalDateTime getFechaHoraProgramada() {
         return fechaHoraProgramada;
     }
@@ -77,6 +132,30 @@ public class Seguimiento {
 
     public void setPaciente(Paciente paciente) {
         this.paciente = paciente;
+    }
+
+    public Prioridad getPrioridad() {
+        return prioridad;
+    }
+
+    public void setPrioridad(Prioridad prioridad) {
+        this.prioridad = prioridad;
+    }
+
+    public String getResponsable() {
+        return responsable;
+    }
+
+    public void setResponsable(String responsable) {
+        this.responsable = responsable;
+    }
+
+    public LocalDateTime getFechaSiguienteAccion() {
+        return fechaSiguienteAccion;
+    }
+
+    public void setFechaSiguienteAccion(LocalDateTime fechaSiguienteAccion) {
+        this.fechaSiguienteAccion = fechaSiguienteAccion;
     }
     
 }

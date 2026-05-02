@@ -119,6 +119,9 @@ Table pacientes {
 Table solicitantes {
   id int [pk, increment]
   nombre varchar(150) [not null]
+  nombres varchar(150)
+  apellido_paterno varchar(150)
+  apellido_materno varchar(150)
   lugar varchar(150)
   ocupacion varchar(150)
   direccion_calle varchar(150)

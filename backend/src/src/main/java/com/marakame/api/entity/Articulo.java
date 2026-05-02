@@ -1,15 +1,9 @@
 package com.marakame.api.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
 import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Data
-@ToString(exclude = "requisicion")
-@EqualsAndHashCode(exclude = "requisicion")
 @Entity
 @Table(name = "articulos_requisicion")
 public class Articulo {
@@ -43,4 +37,25 @@ public class Articulo {
     @Column(name = "articulos_pendientes")
     @JsonProperty("articulosPendientes")
     private Integer articulosPendientes;
+
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
+
+    public Requisicion getRequisicion() { return requisicion; }
+    public void setRequisicion(Requisicion requisicion) { this.requisicion = requisicion; }
+
+    public String getArticuloRequisitado() { return articuloRequisitado; }
+    public void setArticuloRequisitado(String articuloRequisitado) { this.articuloRequisitado = articuloRequisitado; }
+
+    public UnidadesArticulos getUnidad() { return unidad; }
+    public void setUnidad(UnidadesArticulos unidad) { this.unidad = unidad; }
+
+    public Integer getArticulosSolicitados() { return articulosSolicitados; }
+    public void setArticulosSolicitados(Integer articulosSolicitados) { this.articulosSolicitados = articulosSolicitados; }
+
+    public Integer getArticulosEntregados() { return articulosEntregados; }
+    public void setArticulosEntregados(Integer articulosEntregados) { this.articulosEntregados = articulosEntregados; }
+
+    public Integer getArticulosPendientes() { return articulosPendientes; }
+    public void setArticulosPendientes(Integer articulosPendientes) { this.articulosPendientes = articulosPendientes; }
 }
