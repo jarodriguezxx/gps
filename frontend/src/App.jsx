@@ -1,37 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { API_BASE } from './config/api.ts';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+
+// Autenticación
+import Login from './views/login';
+
+// Admisiones
 import AdmisionesInicio from './views/admisiones/Admisiones-inicio';
 import BandejaOperativa from './views/admisiones/BandejaOperativa';
 import AgendaCitas from './views/admisiones/AgendaCitas';
 import SeguimientoTelefonico from './views/admisiones/SeguimientoTelefonico';
-import Login from './views/login';
-import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
-import AltaPersonal from './views/rh/AltaPersonal';
-import BajaPersonal from './views/rh/BajaPersonal';
-import CatalogoRoles from './views/rh/CatalogoRoles';
-import AsignacionRoles from './views/rh/AsignacionRoles';
-import ArchivoContable from './views/financiero/ArchivoContable';
-import DigitalizarComprobantes from './views/financiero/DigitalizarComprobantes';
-import GestionarCorreciones from './views/financiero/GestionarCorrecciones';
-import FacturaElectronica from './views/financiero/FacturaElectronica';
-import ComprobantesFiscales from './views/financiero/ComprobantesFiscales';
-import RequisicionesAlmacen from './views/financiero/RequisicionesAlmacen';
-import DepositoBancario from './views/financiero/DepositoBancario';
-import AlmacenDashboard from './views/almacen/AlmacenDashboard';
 import ExpedienteAdmisiones from './views/admisiones/ExpedienteAdmisiones';
+import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
+import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 
-
-// Importaciones para Recursos Materiales
-import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
-import Proveedores from './views/rec-materiales/Proveedores';
-import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
-import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion';
-import OrdenCompra from './views/rec-materiales/OrdenCompra';
-import Historial from './views/rec-materiales/Historial';
-import { REQUISICIONES_COMPLETO } from '../src/types/requisicion.ts'
-
-// Importación para módulo médico
-import InicioJefeMedico from './views/medico/InicioJefeMedico'; 
+// Médico
+import InicioJefeMedico from './views/medico/InicioJefeMedico';
 import PacientesActivos from './views/medico/PacientesActivos';
 import ExpedientesClinicos from './views/medico/ExpedientesClinicos';
 import DetalleExpediente from './views/medico/DetalleExpediente';
@@ -39,6 +23,36 @@ import ValoracionMedica from './views/medico/ValoracionMedica';
 import Prospectos from './views/medico/Prospectos';
 import HistoriaMedica from './views/medico/HistoriaMedica';
 
+// Recursos Humanos
+import AltaPersonal from './views/rh/AltaPersonal';
+import BajaPersonal from './views/rh/BajaPersonal';
+import CatalogoRoles from './views/rh/CatalogoRoles';
+import AsignacionRoles from './views/rh/AsignacionRoles';
+
+// Financiero
+import ArchivoContable from './views/financiero/ArchivoContable';
+import DigitalizarComprobantes from './views/financiero/DigitalizarComprobantes';
+import GestionarCorreciones from './views/financiero/GestionarCorrecciones';
+import FacturaElectronica from './views/financiero/FacturaElectronica';
+import ComprobantesFiscales from './views/financiero/ComprobantesFiscales';
+import RequisicionesAlmacen from './views/financiero/RequisicionesAlmacen';
+import DepositoBancario from './views/financiero/DepositoBancario';
+
+// Recursos Materiales
+import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
+import Proveedores from './views/rec-materiales/Proveedores';
+import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
+import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion';
+import OrdenCompra from './views/rec-materiales/OrdenCompra';
+import Historial from './views/rec-materiales/Historial';
+
+// Almacén
+import AlmacenDashboard from './views/almacen/Dashboard'; // Asegúrate de que esta ruta sea correcta
+
+const PrivateRoute = ({ children }) => {
+  const user = localStorage.getItem('marakame_user');
+  return user ? children : <Navigate to="/login" replace />;
+};
 
 const quickViews = [
   { label: 'Login', path: '/login' },
@@ -64,28 +78,23 @@ const quickViews = [
   { label: 'Fin - Comprobantes', path: '/financiero/comprobantes-fiscales' },
   { label: 'Fin - Requisiciones', path: '/financiero/requisiciones-almacen' },
   { label: 'Fin - Depósito', path: '/financiero/deposito-bancario' },
-  { label: 'Rec. Materiales', path: '/rec-materiales/rec-materiales' },
-  { label: 'Rec. Proveedores', path: '/rec-materiales/rec-materiales/proveedores' },
-  { label: 'Rec. Historial', path: '/rec-materiales/rec-materiales/historial' },
+  { label: 'Rec. Materiales', path: '/materiales/admin' },
+  { label: 'Rec. Proveedores', path: '/materiales/admin/proveedores' },
+  { label: 'Rec. Historial', path: '/materiales/admin/historial' },
   { label: 'Almacén', path: '/almacen' },
 ];
 
 const QuickNavigator = () => {
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [abierto, setAbierto] = useState(false);
-  const uniqueQuickViews = Array.from(new Map(quickViews.map((view) => [view.path, view])).values());
+  const uniqueQuickViews = Array.from(new Map(quickViews.map((v) => [v.path, v])).values());
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      {/* Panel desplegable */}
       {abierto && (
-        <div className="mb-2 w-[220px] rounded-2xl border border-slate-200 bg-white/95 p-3
-                        shadow-[0_12px_30px_rgba(15,23,42,0.14)] backdrop-blur
-                        max-h-[70vh] overflow-y-auto">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">
-            Vistas rápidas
-          </p>
+        <div className="mb-2 w-[220px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-[0_12px_30px_rgba(15,23,42,0.14)] backdrop-blur max-h-[70vh] overflow-y-auto">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Vistas rápidas</p>
           <div className="grid gap-1.5">
             {uniqueQuickViews.map((view) => {
               const active = location.pathname === view.path;
@@ -93,11 +102,7 @@ const QuickNavigator = () => {
                 <button
                   key={`${view.label}-${view.path}`}
                   onClick={() => { navigate(view.path); setAbierto(false); }}
-                  className={`w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${
-                    active
-                      ? 'bg-[#7E1D3B] text-white shadow-sm'
-                      : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
+                  className={`w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${active ? 'bg-[#7E1D3B] text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
                 >
                   {view.label}
                 </button>
@@ -106,88 +111,76 @@ const QuickNavigator = () => {
           </div>
         </div>
       )}
-
-      {/* Botón flotante toggle */}
-      <button
-        onClick={() => setAbierto(prev => !prev)}
-        className="ml-auto flex items-center gap-2 px-4 py-2.5 bg-[#7E1D3B] text-white
-                   rounded-2xl font-semibold text-xs shadow-lg hover:bg-[#63162e] transition-all"
-      >
-        {abierto ? (
-          <>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-            Cerrar
-          </>
-        ) : (
-          <>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-            Vistas
-          </>
-        )}
+      <button onClick={() => setAbierto(prev => !prev)} className="ml-auto flex items-center gap-2 px-4 py-2.5 bg-[#7E1D3B] text-white rounded-2xl font-semibold text-xs shadow-lg hover:bg-[#63162e] transition-all">
+        {abierto ? "Cerrar" : "Vistas"}
       </button>
     </div>
   );
 };
 
 function App() {
+  const [requisiciones, setRequisiciones] = useState([]);
+
+  const cargarRequisiciones = () => {
+    return fetch(`${API_BASE}/requisiciones`)
+      .then(res => res.json())
+      .then(data => setRequisiciones(data.map(r => ({ ...r, fecha: new Date(r.fecha) }))))
+      .catch(err => console.error('Error cargando requisiciones:', err));
+  };
+
+  useEffect(() => {
+    cargarRequisiciones();
+    const intervalo = setInterval(cargarRequisiciones, 30000);
+    return () => clearInterval(intervalo);
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/"                                        element={<Navigate to="/admisiones" replace />} />
-        <Route path="/login"                                   element={<Login />} />
-          <Route path="/admisiones"                              element={<AdmisionesInicio />} />
-          <Route path="/admisiones/bandeja-operativa"            element={<BandejaOperativa />} />
-          <Route path="/admisiones/agenda-citas"                 element={<AgendaCitas />} />
-          <Route path="/admisiones/seguimiento-telefonico"       element={<SeguimientoTelefonico />} />
-          <Route path="/admisiones/expediente"                   element={<ExpedienteAdmisiones />} />
-          <Route path="/admisiones/estudio-socioeconomico"       element={<EstudioSocioeconomico />} />
-          <Route path="/admisiones/valoracion-diagnostica"       element={<Navigate to="/admisiones/seguimiento-telefonico" replace />} />
-          <Route path="/admisiones/bandeja"                      element={<Navigate to="/admisiones/bandeja-operativa" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
 
-        <Route path="/rh/alta-personal"                        element={<AltaPersonal />} />
-        <Route path="/rh/baja-personal"                        element={<BajaPersonal />} />
-        <Route path="/rh/catalogo-roles"                       element={<CatalogoRoles />} />
-        <Route path="/rh/asignacion-roles"                     element={<AsignacionRoles />} />
-        
-        <Route path="/medico/inicio-jefe-medico"               element={<InicioJefeMedico />} />
-        <Route path="/medico/pacientes"                        element={<PacientesActivos />} />
-        <Route path="/medico/expedientes"                      element={<ExpedientesClinicos/>} />
-        <Route path="/medico/expedientes/:id"                  element={<DetalleExpediente />} />
-        <Route path="/medico/prospectos"                       element={<Prospectos />} />
-        <Route path="/medico/valoracion/:id"                   element={<ValoracionMedica />} />
-        <Route path="/medico/historia-medica"                  element={<HistoriaMedica />} />
+        {/* Módulo Médico */}
+        <Route path="/medico/inicio-jefe-medico" element={<PrivateRoute><InicioJefeMedico /></PrivateRoute>} />
+        <Route path="/medico/pacientes" element={<PrivateRoute><PacientesActivos /></PrivateRoute>} />
+        <Route path="/medico/expedientes" element={<PrivateRoute><ExpedientesClinicos /></PrivateRoute>} />
+        <Route path="/medico/expedientes/:id" element={<PrivateRoute><DetalleExpediente /></PrivateRoute>} />
+        <Route path="/medico/prospectos" element={<PrivateRoute><Prospectos /></PrivateRoute>} />
+        <Route path="/medico/valoracion/:id" element={<PrivateRoute><ValoracionMedica /></PrivateRoute>} />
+        <Route path="/medico/historia-medica" element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
 
-        <Route path="/financiero/archivo-contable"             element={<ArchivoContable />} />
-        <Route path="/financiero/digitalizar-comprobantes"     element={<DigitalizarComprobantes />} />
-        <Route path="/financiero/factura-electronica"          element={<FacturaElectronica />} />
-        <Route path="/financiero/comprobantes-fiscales"        element={<ComprobantesFiscales />} />
-        <Route path="/financiero/requisiciones-almacen"        element={<RequisicionesAlmacen />} />
-        <Route path="/financiero/gestionar-correcciones"       element={<GestionarCorreciones />} />
-        <Route path="/financiero/deposito-bancario"            element={<DepositoBancario />} />
+        {/* Recursos Humanos */}
+        <Route path="/rh/alta-personal" element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
+        <Route path="/rh/baja-personal" element={<PrivateRoute><BajaPersonal /></PrivateRoute>} />
+        <Route path="/rh/catalogo-roles" element={<PrivateRoute><CatalogoRoles /></PrivateRoute>} />
+        <Route path="/rh/asignacion-roles" element={<PrivateRoute><AsignacionRoles /></PrivateRoute>} />
 
-{/* Rutas para Recursos Materiales y Compras/Inventario */}
-        <Route path='/rec-materiales/:rol' element={<RecMaterialesDashboard/>}>
-          <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
-          <Route path='proveedores' element = {<Proveedores/>}/>
-          <Route path='historial' element = {<Historial/>}/>
-          <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
-          <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
+        {/* Financiero */}
+        <Route path="/financiero/archivo-contable" element={<PrivateRoute><ArchivoContable /></PrivateRoute>} />
+        <Route path="/financiero/digitalizar-comprobantes" element={<PrivateRoute><DigitalizarComprobantes /></PrivateRoute>} />
+        <Route path="/financiero/factura-electronica" element={<PrivateRoute><FacturaElectronica /></PrivateRoute>} />
+        <Route path="/financiero/comprobantes-fiscales" element={<PrivateRoute><ComprobantesFiscales /></PrivateRoute>} />
+        <Route path="/financiero/requisiciones-almacen" element={<PrivateRoute><RequisicionesAlmacen /></PrivateRoute>} />
+        <Route path="/financiero/gestionar-correcciones" element={<PrivateRoute><GestionarCorreciones /></PrivateRoute>} />
+        <Route path="/financiero/deposito-bancario" element={<PrivateRoute><DepositoBancario /></PrivateRoute>} />
+
+        {/* Recursos Materiales */}
+        <Route path='/materiales/:rol' element={<RecMaterialesDashboard />}>
+          <Route index element={<ListaRequisiciones requisiciones={requisiciones} />} />
+          <Route path='proveedores' element={<Proveedores />} />
+          <Route path='historial' element={<Historial requisiciones={requisiciones} />} />
+          <Route path='requisicion/:id' element={<DetallesRequisicion requisiciones={requisiciones} refrescar={cargarRequisiciones} />} />
+          <Route path='orden-compra/:id' element={<OrdenCompra requisiciones={requisiciones} refrescar={cargarRequisiciones} />} />
         </Route>
 
-        {/* Rutas para Almacen */}
-        <Route path="/almacen" element={<AlmacenDashboard />} />
+        {/* Almacén */}
+        <Route path="/almacen" element={<PrivateRoute><AlmacenDashboard /></PrivateRoute>} />
 
-        {/* Ruta comodín para redirigir si no existe la URL */}
-        <Route path="*" element={<Navigate to="/admisiones" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       <QuickNavigator />
     </BrowserRouter>
   );
 }
-
 
 export default App;
