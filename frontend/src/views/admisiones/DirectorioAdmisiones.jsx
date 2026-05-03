@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
 	ArrowRight,
+	AlertTriangle,
 	Briefcase,
 	ChevronDown,
 	ChevronUp,
@@ -92,7 +93,10 @@ const DirectorioAdmisiones = () => {
 			if (tabActiva === 'activos') {
 				return estado === 'INGRESADO' || estado === 'EGRESO';
 			}
-			return estado === 'PROSPECTO';
+			if (tabActiva === 'prospectos') {
+				return estado === 'PROSPECTO';
+			}
+			return estado === 'DENEGADO';
 		});
 
 		if (!termino) return base;
@@ -116,7 +120,8 @@ const DirectorioAdmisiones = () => {
 		});
 	}, [pacientes, tabActiva, busqueda]);
 
-	const labelTabActiva = tabActiva === 'activos' ? 'Pacientes Activos' : 'Prospectos';
+	const labelTabActiva =
+		tabActiva === 'activos' ? 'Pacientes Activos' : tabActiva === 'prospectos' ? 'Prospectos' : 'Rechazados';
 
 	return (
 		<div className="min-h-screen bg-slate-100 text-slate-900">
@@ -169,6 +174,16 @@ const DirectorioAdmisiones = () => {
 										<UserPlus size={16} />
 										Prospectos
 									</button>
+									<button
+										type="button"
+										onClick={() => setTabActiva('rechazados')}
+										className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+											tabActiva === 'rechazados' ? 'bg-[#7E1D3B] text-white' : 'text-slate-600 hover:bg-slate-100'
+										}`}
+									>
+										<AlertTriangle size={16} />
+										Rechazados
+									</button>
 								</div>
 							</div>
 
@@ -213,13 +228,17 @@ const DirectorioAdmisiones = () => {
 														<p className="mt-0.5 text-[11px] font-medium text-slate-500">{paciente.sexo || 'S/E'} • {paciente.edad ? `${paciente.edad} años` : 'Edad N/D'}</p>
 													</div>
 														<div className="md:col-span-2">
-															{paciente.estadoSeguimiento ? (
-																<span className="inline-flex max-w-full items-center gap-1.5 truncate rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700">
-																	{paciente.estadoSeguimiento}
-																</span>
-															) : (
-																<span className="text-xs italic text-slate-400">Sin estado</span>
-															)}
+											{getEstadoPaciente(paciente) === 'DENEGADO' ? (
+												<span className="inline-flex max-w-full items-center gap-1.5 truncate rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700">
+													DENEGADO
+												</span>
+											) : paciente.estadoSeguimiento ? (
+												<span className="inline-flex max-w-full items-center gap-1.5 truncate rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700">
+													{paciente.estadoSeguimiento}
+												</span>
+											) : (
+												<span className="text-xs italic text-slate-400">Sin estado</span>
+											)}
 														</div>
 
 														<div className="md:col-span-2">
@@ -262,12 +281,20 @@ const DirectorioAdmisiones = () => {
 															<h4 className="mb-2 border-b border-slate-200 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Estado Administrativo</h4>
 																<div className="flex items-center gap-2 text-sm">
 																	<span className="text-xs mr-2 text-slate-500">Estado del trámite:</span>
-																	<span className="font-medium text-slate-700">{paciente.estadoSeguimiento || paciente.estado || 'Sin información'}</span>
+																	<span className={`font-medium ${getEstadoPaciente(paciente) === 'DENEGADO' ? 'text-rose-700' : 'text-slate-700'}`}>
+																		{getEstadoPaciente(paciente) === 'DENEGADO' ? 'DENEGADO' : (paciente.estadoSeguimiento || paciente.estado || 'Sin información')}
+																	</span>
 																</div>
 																<div className="flex items-center gap-2 text-sm">
 																	<span className="text-xs mr-2 text-slate-500">Responsable:</span>
 																	<span className="font-medium text-slate-700">{getResponsableName(paciente)}</span>
 																</div>
+																{getEstadoPaciente(paciente) === 'DENEGADO' ? (
+																	<div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
+																		<p className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-700">Motivo de rechazo</p>
+																		<p className="mt-1 leading-6">El paciente fue denegado por insuficiencia económica. Revisa el expediente digital para ver las notas administrativas.</p>
+																	</div>
+																) : null}
 																{paciente.clavePaciente && (
 																	<div className="mt-2 text-sm">
 																		<span className="mr-2 text-slate-500">Clave paciente:</span>

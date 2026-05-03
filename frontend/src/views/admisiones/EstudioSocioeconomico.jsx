@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight, AlertTriangle, FileText, Phone, Calculator, DollarSign } from 'lucide-react';
+import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight, AlertTriangle, FileText, FileX, Phone, Calculator, DollarSign } from 'lucide-react';
 import { AdminHeader, AdminMainTitle, AdminErrorAlert, AdminSuccessAlert } from '../../components/layout/AdminLayout';
 
 const EstudioSocioeconomico = () => {
@@ -540,6 +540,10 @@ const EstudioSocioeconomico = () => {
       'laboralHorario',
     ];
 
+    if (rechazoRegistrado && name === 'diagnosticoEconomico.diasTratamiento') {
+      return '';
+    }
+
     if (name === 'diagnosticoEconomico.diasTratamiento') {
       if (!String(value || '').trim()) {
         return 'Este campo es obligatorio.';
@@ -705,6 +709,10 @@ const EstudioSocioeconomico = () => {
 
   const getActiveRequiredFields = (tabId) => {
     const fields = [...(sectionRequiredFields[tabId] || [])];
+
+    if (tabId === 'familiar' && rechazoRegistrado) {
+      return fields.filter((name) => name !== 'diagnosticoEconomico.diasTratamiento');
+    }
 
     if (tabId === 'laboral' && formData.laboralCuentaConEmpleo === 'no') {
       return fields.filter((name) => !['laboralLugarTrabajo', 'laboralPuesto'].includes(name));
@@ -1987,6 +1995,7 @@ const EstudioSocioeconomico = () => {
         type: 'success',
         message: `Se actualizó Solicitante y Paciente y se generó el PDF ${pdfData?.nombreArchivo || ''}.`,
       });
+      navigate('/admisiones');
     } catch (error) {
       console.error('Error guardando estudio basico:', error);
       setGuardandoEstudio(false);

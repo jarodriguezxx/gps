@@ -1162,9 +1162,13 @@ const ExpedienteAdmisiones = () => {
 
 	const estadoPacienteActual = useMemo(() => String(prospectoSeleccionado?.estadoPaciente || '').toUpperCase(), [prospectoSeleccionado?.estadoPaciente]);
 	const tieneReciboAdjunto = useMemo(() => recibosSubidos.length > 0, [recibosSubidos]);
-	const reciboBloqueado = useMemo(() => estadoPacienteActual === 'INGRESADO' || tieneReciboAdjunto, [estadoPacienteActual, tieneReciboAdjunto]);
+	const reciboBloqueado = useMemo(
+		() => estadoPacienteActual === 'INGRESADO' || estadoPacienteActual === 'DENEGADO' || tieneReciboAdjunto,
+		[estadoPacienteActual, tieneReciboAdjunto]
+	);
 	const puedeValidarIngresoOficial = useMemo(() => estadoPacienteActual === 'PROSPECTO' && tieneReciboAdjunto, [estadoPacienteActual, tieneReciboAdjunto]);
 	const badgeEstadoRecibo = useMemo(() => {
+		if (estadoPacienteActual === 'DENEGADO') return 'DENEGADO';
 		if (estadoPacienteActual === 'INGRESADO') return 'INGRESADO';
 		if (tieneReciboAdjunto) return 'VALIDADO';
 		return 'PENDIENTE';
@@ -1288,6 +1292,11 @@ const ExpedienteAdmisiones = () => {
 
                 {/* SECCIÓN: RECIBO DE PAGO */}
 				<div className={`rounded-[28px] border p-5 transition-colors md:p-6 ${badgeEstadoRecibo === 'PENDIENTE' ? 'border-[#7E1D3B]/20 bg-[#7E1D3B]/5' : 'border-emerald-100 bg-emerald-50/50'}`}>
+							{estadoPacienteActual === 'DENEGADO' ? (
+								<div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
+									Este expediente fue denegado. No se permite subir ni generar recibos de pago.
+								</div>
+							) : null}
 					<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 						<div className="flex items-start gap-4 flex-1">
 							<div className={`flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0 ${badgeEstadoRecibo === 'PENDIENTE' ? 'bg-[#7E1D3B]/10 text-[#7E1D3B]' : 'bg-emerald-100 text-emerald-700'}`}>
@@ -1340,8 +1349,11 @@ const ExpedienteAdmisiones = () => {
 						<div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
 							<button
 								type="button"
-								onClick={() => setModalReciboAbierto(true)}
-								className="rounded-xl border border-[#7E1D3B]/30 bg-white px-4 py-2 text-xs font-bold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/5 flex items-center gap-2 whitespace-nowrap"
+								onClick={() => {
+									if (!reciboBloqueado) setModalReciboAbierto(true);
+								}}
+								disabled={reciboBloqueado}
+								className="rounded-xl border border-[#7E1D3B]/30 bg-white px-4 py-2 text-xs font-bold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/5 flex items-center gap-2 whitespace-nowrap disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 disabled:hover:bg-white"
 							>
 								<Download size={14} />
 								Generar

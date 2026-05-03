@@ -526,6 +526,13 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         paciente.setSustanciaConsumo(dto.sustancia());
         // ... agrega los setters restantes que ya tenías
 
+        // 1.5 Vincular el solicitante si viene en el DTO
+        if (dto.solicitanteId() != null && dto.solicitanteId() > 0) {
+            Solicitante solicitante = solicitanteRepository.findById(dto.solicitanteId())
+                .orElseThrow(() -> new IllegalArgumentException("Solicitante no encontrado con ID: " + dto.solicitanteId()));
+            paciente.setSolicitante(solicitante);
+        }
+
         // 2. Guardar paciente para generar su ID
         Paciente pacienteGuardado = pacienteRepository.save(paciente);
 
@@ -1903,6 +1910,10 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
     public ReciboPago registrarReciboPendiente(Long pacienteId, Map<String, Object> payload) {
         Paciente paciente = pacienteRepository.findById(pacienteId)
             .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
+
+		if (paciente.getEstadoPaciente() == EstadoPaciente.DENEGADO) {
+			throw new IllegalArgumentException("No se pueden registrar recibos para pacientes denegados");
+		}
 
         ReciboPago recibo = new ReciboPago();
         recibo.setPaciente(paciente);
