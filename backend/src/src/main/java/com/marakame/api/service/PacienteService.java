@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.text.Normalizer;
+import java.util.Comparator;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,6 +35,7 @@ import com.marakame.api.dto.NotaEvolucionDTO;
 import com.marakame.api.dto.PacienteDTO;
 import com.marakame.api.entity.EstudioSocioeconomicoPdf;
 import com.marakame.api.entity.ExpedienteClinico;
+import com.marakame.api.entity.NotaAdministrativa;
 import com.marakame.api.entity.NotaEvolucion;
 import com.marakame.api.entity.Paciente;
 import com.marakame.api.entity.ReciboPago;
@@ -42,6 +44,7 @@ import com.marakame.api.entity.Seguimiento;
 import com.marakame.api.entity.Solicitante;
 import com.marakame.api.repository.EstudioSocioeconomicoPdfRepository;
 import com.marakame.api.repository.ExpedienteClinicoRepository;
+import com.marakame.api.repository.NotaAdministrativaRepository;
 import com.marakame.api.repository.NotaEvolucionRepository;
 import com.marakame.api.repository.PacienteRepository;
 import com.marakame.api.repository.ReciboPagoRepository;
@@ -68,6 +71,9 @@ public class PacienteService {
  
     @Autowired
     private ReciboPagoRepository reciboPagoRepository;
+
+    @Autowired
+    private NotaAdministrativaRepository notaAdministrativaRepository;
     public List<Paciente> obtenerPacientesParaEstudio(String query) {
         String filtro = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
 
@@ -118,6 +124,20 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
     // 4. Obtener las notas a través de la relación de expediente (Esto corrige el error de arranque)
     // Usamos el repositorio de notas para asegurar que traemos la información actualizada de la nueva tabla
     List<NotaEvolucion> notas = notaEvolucionRepository.findByExpediente_Paciente_IdOrderByFechaRegistroDesc(pacienteId);
+    List<NotaAdministrativa> notasAdministrativas = notaAdministrativaRepository.findByExpediente_Paciente_IdOrderByFechaRegistroDesc(pacienteId);
+
+    List<Map<String, Object>> notasAdministrativasMap = notasAdministrativas.stream()
+        .map(nota -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", nota.getId());
+            item.put("autor", nota.getAutor());
+            item.put("estadoAnterior", nota.getEstadoAnterior());
+            item.put("estadoNuevo", nota.getEstadoNuevo());
+            item.put("observaciones", nota.getObservaciones());
+            item.put("fechaRegistro", nota.getFechaRegistro());
+            return item;
+        })
+        .collect(Collectors.toList());
 
     // 5. Respuesta unificada para React
     Map<String, Object> respuesta = new LinkedHashMap<>();
@@ -130,6 +150,7 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
     ));
     // CAMBIO: Enviamos la lista 'notas' que consultamos explícitamente
     respuesta.put("notasEvolucion", notas); 
+    respuesta.put("notasAdministrativas", notasAdministrativasMap);
     respuesta.put("documentos", documentos);
 
     return respuesta;
@@ -213,6 +234,54 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         nota.setFechaProximaSesion(dto.fechaProximaSesion());
 
         notaEvolucionRepository.save(nota);
+    }
+
+    @Transactional
+    public Map<String, Object> registrarRechazoAdministrativo(Long pacienteId, String estado, String observaciones) {
+        if (estado == null || !"RECHAZADO_ECONOMICO".equalsIgnoreCase(estado.trim())) {
+            throw new IllegalArgumentException("Estado administrativo inválido");
+        }
+
+        if (observaciones == null || observaciones.trim().isBlank()) {
+            throw new IllegalArgumentException("Las observaciones son obligatorias");
+        }
+
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
+
+        ExpedienteClinico expediente = expedienteRepository.findByPacienteId(pacienteId)
+            .orElseGet(() -> crearExpedienteAutomatico(pacienteId));
+
+        String estadoAnterior = paciente.getEstadoPaciente() != null ? paciente.getEstadoPaciente().name() : EstadoPaciente.PROSPECTO.name();
+
+        paciente.setEstadoPaciente(EstadoPaciente.DENEGADO);
+        pacienteRepository.save(paciente);
+
+        expediente.setEstado(EstadoPaciente.DENEGADO.name());
+        expedienteRepository.save(expediente);
+
+        NotaAdministrativa nota = new NotaAdministrativa();
+        nota.setExpediente(expediente);
+        nota.setFechaRegistro(LocalDateTime.now());
+        nota.setAutor("TRABAJO SOCIAL - RECHAZO");
+        nota.setEstadoAnterior(estadoAnterior);
+        nota.setEstadoNuevo(EstadoPaciente.DENEGADO.name());
+        nota.setObservaciones(observaciones.trim());
+        notaAdministrativaRepository.save(nota);
+
+        Map<String, Object> respuesta = new LinkedHashMap<>();
+        respuesta.put("success", true);
+        respuesta.put("estadoPaciente", paciente.getEstadoPaciente());
+        respuesta.put("estadoExpediente", expediente.getEstado());
+        respuesta.put("notaAdministrativa", Map.of(
+            "id", nota.getId(),
+            "autor", nota.getAutor(),
+            "estadoAnterior", nota.getEstadoAnterior(),
+            "estadoNuevo", nota.getEstadoNuevo(),
+            "observaciones", nota.getObservaciones(),
+            "fechaRegistro", nota.getFechaRegistro()
+        ));
+        return respuesta;
     }
 
 
@@ -456,6 +525,13 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         paciente.setTelefonoContacto(dto.telefono());
         paciente.setSustanciaConsumo(dto.sustancia());
         // ... agrega los setters restantes que ya tenías
+
+        // 1.5 Vincular el solicitante si viene en el DTO
+        if (dto.solicitanteId() != null && dto.solicitanteId() > 0) {
+            Solicitante solicitante = solicitanteRepository.findById(dto.solicitanteId())
+                .orElseThrow(() -> new IllegalArgumentException("Solicitante no encontrado con ID: " + dto.solicitanteId()));
+            paciente.setSolicitante(solicitante);
+        }
 
         // 2. Guardar paciente para generar su ID
         Paciente pacienteGuardado = pacienteRepository.save(paciente);
@@ -1773,17 +1849,27 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         String aleatorio = String.format("%05d", (int)(Math.random() * 100000));
         String clavePaciente = String.format("INST-%s-%d-%s", año, pacienteId, aleatorio);
 
-        // Crear registro de recibo de pago
-        ReciboPago recibo = new ReciboPago();
+        ReciboPago recibo = obtenerUltimoReciboPaciente(pacienteId)
+            .orElseGet(() -> {
+                ReciboPago nuevo = new ReciboPago();
+                nuevo.setPaciente(paciente);
+                return nuevo;
+            });
+
         recibo.setPaciente(paciente);
         recibo.setNumeroRecibo(clavePaciente);
         recibo.setTokenGenerado(clavePaciente);
-        recibo.setMontoPago(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPago", 0))));
-        recibo.setMontoPrograma(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPrograma", 0))));
-        recibo.setConcepto((String) payload.getOrDefault("concepto", "Tratamiento de desintoxicación"));
-        recibo.setNombrePagador((String) payload.getOrDefault("nombrePagador", ""));
-        recibo.setRfcPagador((String) payload.getOrDefault("rfc", ""));
-        recibo.setFechaPago(LocalDateTime.now());
+        recibo.setMontoPago(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPago", recibo.getMontoPago() != null ? recibo.getMontoPago() : 0))));
+        recibo.setMontoPrograma(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPrograma", recibo.getMontoPrograma() != null ? recibo.getMontoPrograma() : 0))));
+        recibo.setConcepto((String) payload.getOrDefault("concepto", recibo.getConcepto() != null ? recibo.getConcepto() : "Tratamiento de desintoxicación"));
+        recibo.setNombrePagador((String) payload.getOrDefault("nombrePagador", recibo.getNombrePagador() != null ? recibo.getNombrePagador() : ""));
+        recibo.setRfcPagador((String) payload.getOrDefault("rfc", recibo.getRfcPagador() != null ? recibo.getRfcPagador() : ""));
+        if (payload.containsKey("archivoReciboUrl") && payload.get("archivoReciboUrl") != null) {
+            recibo.setArchivoReciboUrl(String.valueOf(payload.get("archivoReciboUrl")));
+        }
+        if (recibo.getFechaPago() == null) {
+            recibo.setFechaPago(LocalDateTime.now());
+        }
         recibo.setEstadoPago("VALIDADO");
         recibo.setFechaValidacion(LocalDateTime.now());
         reciboPagoRepository.save(recibo);
@@ -1818,5 +1904,40 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 
     public List<ReciboPago> obtenerRecibosPorPaciente(Long pacienteId) {
         return reciboPagoRepository.findByPaciente_Id(pacienteId);
+    }
+
+    @Transactional
+    public ReciboPago registrarReciboPendiente(Long pacienteId, Map<String, Object> payload) {
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
+
+		if (paciente.getEstadoPaciente() == EstadoPaciente.DENEGADO) {
+			throw new IllegalArgumentException("No se pueden registrar recibos para pacientes denegados");
+		}
+
+        ReciboPago recibo = new ReciboPago();
+        recibo.setPaciente(paciente);
+        recibo.setNumeroRecibo((String) payload.getOrDefault("numeroRecibo", "REC-" + pacienteId + "-" + System.currentTimeMillis()));
+        recibo.setMontoPago(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPago", 0))));
+        recibo.setMontoPrograma(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPrograma", 0))));
+        recibo.setConcepto((String) payload.getOrDefault("concepto", "Tratamiento de desintoxicación"));
+        recibo.setNombrePagador((String) payload.getOrDefault("nombrePagador", ""));
+        recibo.setRfcPagador((String) payload.getOrDefault("rfc", ""));
+        recibo.setArchivoReciboUrl((String) payload.getOrDefault("archivoReciboUrl", ""));
+        recibo.setFechaPago(LocalDateTime.now());
+        recibo.setEstadoPago("PENDIENTE");
+        return reciboPagoRepository.save(recibo);
+    }
+
+    private Optional<ReciboPago> obtenerUltimoReciboPaciente(Long pacienteId) {
+        return reciboPagoRepository.findByPaciente_Id(pacienteId).stream()
+            .max(Comparator.comparing(ReciboPago::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())));
+    }
+
+    @Transactional
+    public void eliminarReciboDePaciente(Long pacienteId, Long reciboId) {
+        ReciboPago recibo = reciboPagoRepository.findByIdAndPaciente_Id(reciboId, pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("Recibo no encontrado para este paciente"));
+        reciboPagoRepository.delete(recibo);
     }
 }

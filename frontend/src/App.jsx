@@ -11,6 +11,7 @@ import BandejaOperativa from './views/admisiones/BandejaOperativa';
 import AgendaCitas from './views/admisiones/AgendaCitas';
 import SeguimientoTelefonico from './views/admisiones/SeguimientoTelefonico';
 import ExpedienteAdmisiones from './views/admisiones/ExpedienteAdmisiones';
+import DirectorioAdmisiones from './views/admisiones/DirectorioAdmisiones';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
 import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 
@@ -21,6 +22,7 @@ import ExpedientesClinicos from './views/medico/ExpedientesClinicos';
 import DetalleExpediente from './views/medico/DetalleExpediente';
 import ValoracionMedica from './views/medico/ValoracionMedica';
 import Prospectos from './views/medico/Prospectos';
+import HistoriaMedica from './views/medico/HistoriaMedica';
 
 // Recursos Humanos
 import AltaPersonal from './views/rh/AltaPersonal';
@@ -66,6 +68,7 @@ const quickViews = [
   { label: 'Médico - Pacientes',     path: '/medico/pacientes' },
   { label: 'Médico - Expedientes',   path: '/medico/expedientes' },
   { label: 'Médico - Prospectos',    path: '/medico/prospectos' },
+  { label: 'Medico - Historia '  ,   path: '/medico/historia-medica' },
   { label: 'RH - Alta',              path: '/rh/alta-personal' },
   { label: 'RH - Baja',              path: '/rh/baja-personal' },
   { label: 'RH - Catálogo',          path: '/rh/catalogo-roles' },
@@ -171,7 +174,8 @@ function App() {
         <Route path="/admisiones/bandeja-operativa"            element={<PrivateRoute><BandejaOperativa /></PrivateRoute>} />
         <Route path="/admisiones/agenda-citas"                 element={<PrivateRoute><AgendaCitas /></PrivateRoute>} />
         <Route path="/admisiones/seguimiento-telefonico"       element={<PrivateRoute><SeguimientoTelefonico /></PrivateRoute>} />
-        <Route path="/admisiones/expediente"                   element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
+        <Route path="/admisiones/expediente"                   element={<PrivateRoute><DirectorioAdmisiones /></PrivateRoute>} />
+        <Route path="/admisiones/expediente-digital/:id"       element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
         <Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
         <Route path="/admisiones/valoracion-diagnostica"       element={<PrivateRoute><ValoracionDiagnostica /></PrivateRoute>} />
         <Route path="/admisiones/bandeja"                      element={<Navigate to="/admisiones/bandeja-operativa" replace />} />
@@ -184,6 +188,7 @@ function App() {
         <Route path="/medico/expedientes/:id"                  element={<PrivateRoute><DetalleExpediente /></PrivateRoute>} />
         <Route path="/medico/prospectos"                       element={<PrivateRoute><Prospectos /></PrivateRoute>} />
         <Route path="/medico/valoracion/:id"                   element={<PrivateRoute><ValoracionMedica /></PrivateRoute>} />
+        <Route path="/medico/historia-medica"              element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
 
         {/* Recursos Humanos */}
         <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />

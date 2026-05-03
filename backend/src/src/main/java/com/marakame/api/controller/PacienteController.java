@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -51,6 +52,38 @@ public class PacienteController {
         }
     }
 
+    @GetMapping("/{id}/recibos")
+    public ResponseEntity<?> obtenerRecibosPorPaciente(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(pacienteService.obtenerRecibosPorPaciente(id));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al obtener recibos: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/recibos")
+    public ResponseEntity<?> registrarReciboPendiente(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(pacienteService.registrarReciboPendiente(id, payload));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al registrar recibo: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{id}/recibos/{reciboId}")
+    public ResponseEntity<?> eliminarReciboPorPaciente(@PathVariable Long id, @PathVariable Long reciboId) {
+        try {
+            pacienteService.eliminarReciboDePaciente(id, reciboId);
+            return ResponseEntity.ok(Map.of("success", true, "mensaje", "Recibo eliminado correctamente"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al eliminar recibo: " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/dashboard/metricas")
     public ResponseEntity<?> obtenerMetricasJefatura() {
         try {
@@ -70,6 +103,20 @@ public class PacienteController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Error al guardar la nota: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/rechazo-administrativo")
+    public ResponseEntity<?> registrarRechazoAdministrativo(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        try {
+            String estado = payload.get("estado");
+            String observaciones = payload.get("observaciones");
+            Map<String, Object> resultado = pacienteService.registrarRechazoAdministrativo(id, estado, observaciones);
+            return ResponseEntity.ok(resultado);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al registrar el rechazo: " + e.getMessage()));
         }
     }
 

@@ -10,6 +10,7 @@ import java.util.Optional;
 @Repository
 public interface ReciboPagoRepository extends JpaRepository<ReciboPago, Long> {
     List<ReciboPago> findByPaciente_Id(Long pacienteId);
+    Optional<ReciboPago> findByIdAndPaciente_Id(Long id, Long pacienteId);
     Optional<ReciboPago> findByTokenGenerado(String token);
     Optional<ReciboPago> findByNumeroRecibo(String numeroRecibo);
     List<ReciboPago> findByEstadoPago(String estadoPago);

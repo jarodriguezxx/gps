@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Search, Sparkles, X, Download, Upload, CheckCircle2, Briefcase, Phone, User, HeartPulse } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowRight, FileText, FileX, AlertTriangle, Search, Sparkles, X, Download, Upload, CheckCircle2, Paperclip, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
 import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
@@ -22,6 +22,25 @@ const formatClave = (item) => {
 };
 
 const getNombreProspecto = (item) => item?.nombreCompleto || item?.nombrePaciente || item?.nombre || '';
+
+const formatEstadoPacienteDisplay = (estado) => {
+	const normalized = String(estado || '').toUpperCase();
+	if (normalized === 'INGRESADO') return 'PACIENTE';
+	return normalized || 'Sin estado';
+};
+
+const getRecibosStorageKey = (pacienteId) => `admisiones-recibos-${pacienteId}`;
+
+const normalizarReciboApi = (recibo) => ({
+	id: recibo.id,
+	nombre: recibo.tokenGenerado || recibo.numeroRecibo || `Recibo ${recibo.id}`,
+	fecha: formatDateValue(recibo.fechaValidacion || recibo.fechaPago || recibo.createdAt),
+	tipo: 'Recibo de pago',
+	url: recibo.archivoReciboUrl || '',
+	estadoPago: recibo.estadoPago || '',
+	tokenGenerado: recibo.tokenGenerado || '',
+	_localOnly: false,
+});
 
 const formatTimeValue = (value) => {
 	if (!value) return '--:--';
@@ -55,15 +74,24 @@ const buildDocumentosProspecto = (prospecto, detalleExpediente, tieneValoracionM
 	}
 
 	const documentosBackend = Array.isArray(detalleExpediente?.documentos) ? detalleExpediente.documentos : [];
-	const documentosPdf = documentosBackend.map((doc) => ({
-		nombre: doc.nombreArchivo || 'PDF socioeconomico',
-		tipo: doc.tipo || 'PDF',
-		estado: 'Adjunto',
-		detalle: `Generado: ${formatDateValue(doc.generadoEn)}${doc.descargaUrl ? ' • Disponible para descarga' : ''}`,
-		descargaUrl: doc.descargaUrl ? `http://localhost:4000${doc.descargaUrl}` : '',
-		verUrl: doc.descargaUrl ? buildPdfActionUrl(doc.descargaUrl.replace('/descargar', '/ver')) : '',
-		imprimirUrl: doc.descargaUrl ? buildPdfActionUrl(doc.descargaUrl.replace('/descargar', '/imprimir')) : '',
-	}));
+	const estadoPaciente = String(prospecto?.estadoPaciente || '').toUpperCase();
+	const documentosPdf = documentosBackend.map((doc) => {
+		const esSocioeconomico = /socioeconomico/i.test(String(doc.nombreArchivo || '')) || /socioeconomico/i.test(String(doc.tipo || ''));
+		const documentoDenegado = esSocioeconomico && estadoPaciente === 'DENEGADO';
+
+		return {
+			nombre: doc.nombreArchivo || 'PDF socioeconomico',
+			tipo: doc.tipo || 'PDF',
+			estado: documentoDenegado ? 'DENEGADO' : 'Adjunto',
+			esSocioeconomico,
+			detalle: documentoDenegado
+				? `Generado: ${formatDateValue(doc.generadoEn)} • Denegado por insuficiencia económica.`
+				: `Generado: ${formatDateValue(doc.generadoEn)}${doc.descargaUrl ? ' • Disponible para descarga' : ''}`,
+			descargaUrl: doc.descargaUrl ? `http://localhost:4000${doc.descargaUrl}` : '',
+			verUrl: doc.descargaUrl ? buildPdfActionUrl(doc.descargaUrl.replace('/descargar', '/ver')) : '',
+			imprimirUrl: doc.descargaUrl ? buildPdfActionUrl(doc.descargaUrl.replace('/descargar', '/imprimir')) : '',
+		};
+	});
 
 	const tieneSolicitante = !!prospecto.solicitante;
 	const tieneDatosBasicos = hasValue(prospecto.nombreCompleto) && (hasValue(prospecto.telefonoContacto) || hasValue(prospecto.telefonoCasa));
@@ -101,49 +129,113 @@ const buildDocumentosProspecto = (prospecto, detalleExpediente, tieneValoracionM
 	return [...documentosPdf, ...documentosBase];
 };
 
-const buildNotasProspecto = (prospecto, detalleExpediente) => {
+const buildNotasProspecto = (prospecto, detalleExpediente, prospectoSeleccionado) => {
 	if (!prospecto) {
 		return [];
 	}
 
 	const notas = [];
 	const nombre = getNombreProspecto(prospecto) || 'Prospecto sin nombre';
+	const claveMostrar = prospectoSeleccionado?.clavePaciente || '--';
 
-	notas.push(`Admisiones: expediente activo para ${nombre}. Clave interna ${formatClave(prospecto)}.`);
+	notas.push({
+		id: `sistema-expediente-${prospecto.id}`,
+		texto: `Admisiones: expediente activo para ${nombre}. Clave interna ${claveMostrar}.`,
+		fecha: prospecto.fechaIngreso || prospecto.createdAt || null,
+		autor: 'Sistema de admisiones',
+		tipo: 'sistema',
+	});
 
 	if (prospecto.solicitante?.nombre) {
-		notas.push(
-			`Seguimiento: solicitante ${prospecto.solicitante.nombre} (${prospecto.solicitante.parentescoPaciente || 'parentesco no definido'}) con contacto ${prospecto.solicitante.telefono || prospecto.solicitante.celular || '--'}.`
-		);
+		notas.push({
+			id: `sistema-solicitante-${prospecto.id}`,
+			texto: `Seguimiento: solicitante ${prospecto.solicitante.nombre} (${prospecto.solicitante.parentescoPaciente || 'parentesco no definido'}) con contacto ${prospecto.solicitante.telefono || prospecto.solicitante.celular || '--'}.`,
+			fecha: null,
+			autor: 'Sistema de admisiones',
+			tipo: 'sistema',
+		});
 	}
 
 	if (hasValue(prospecto.domicilioParticular) || hasValue(prospecto.origen)) {
-		notas.push(`Contexto: origen ${prospecto.origen || '--'} y domicilio ${prospecto.domicilioParticular || '--'}.`);
+		notas.push({
+			id: `sistema-contexto-${prospecto.id}`,
+			texto: `Contexto: origen ${prospecto.origen || '--'} y domicilio ${prospecto.domicilioParticular || '--'}.`,
+			fecha: null,
+			autor: 'Sistema de admisiones',
+			tipo: 'sistema',
+		});
 	}
 
 	if (hasValue(prospecto.sustanciaConsumo)) {
-		notas.push(`Clínico: sustancia de consumo reportada ${prospecto.sustanciaConsumo}.`);
+		notas.push({
+			id: `sistema-clinico-${prospecto.id}`,
+			texto: `Clínico: sustancia de consumo reportada ${prospecto.sustanciaConsumo}.`,
+			fecha: null,
+			autor: 'Sistema de admisiones',
+			tipo: 'sistema',
+		});
 	}
 
 	const seguimientos = Array.isArray(detalleExpediente?.seguimientos) ? detalleExpediente.seguimientos : [];
 	if (seguimientos.length > 0) {
 		const ultimo = seguimientos[0];
-		notas.push(
-			`Seguimiento actual: ${ultimo.estadoSeguimiento || '--'} (${ultimo.tipoAccion || '--'}) programado para ${formatDateValue(ultimo.fechaHoraProgramada)}.`
-		);
+		notas.push({
+			id: `sistema-seguimiento-${ultimo.id || prospecto.id}`,
+			texto: `Seguimiento actual: ${ultimo.estadoSeguimiento || '--'} (${ultimo.tipoAccion || '--'}) programado para ${formatDateValue(ultimo.fechaHoraProgramada)}.`,
+			fecha: ultimo.fechaHoraProgramada || null,
+			autor: 'Sistema de admisiones',
+			tipo: 'sistema',
+		});
 	}
 
-	if (notas.length === 0) {
-		notas.push('No hay notas disponibles para el prospecto seleccionado.');
+	const notasAdministrativasGuardadas = (Array.isArray(detalleExpediente?.notasAdministrativas) ? detalleExpediente.notasAdministrativas : [])
+		.map((nota) => ({
+			id: `adm-admin-${nota.id}`,
+			texto: nota.observaciones || 'Nota administrativa sin contenido.',
+			fecha: nota.fechaRegistro || null,
+			autor: nota.autor || 'TRABAJO SOCIAL - RECHAZO',
+			tipo: 'sistema',
+			categoria: 'rechazo',
+			estadoNuevo: nota.estadoNuevo || '',
+		}));
+
+	const notasAdmisionesGuardadas = (Array.isArray(detalleExpediente?.notasEvolucion) ? detalleExpediente.notasEvolucion : [])
+		.filter((nota) => String(nota?.medicoAsignado || '').toUpperCase().includes('ADMISION'))
+		.map((nota) => ({
+			id: `adm-${nota.id}`,
+			texto: nota.observaciones || 'Nota de admisiones sin contenido.',
+			fecha: nota.fechaRegistro || null,
+			autor: nota.medicoAsignado || 'Admisiones',
+			tipo: 'admisiones',
+		}));
+
+	const unificadas = [...notasAdministrativasGuardadas, ...notasAdmisionesGuardadas, ...notas];
+
+	unificadas.sort((a, b) => {
+		const da = a.fecha ? new Date(a.fecha).getTime() : 0;
+		const db = b.fecha ? new Date(b.fecha).getTime() : 0;
+		return db - da;
+	});
+
+	if (unificadas.length === 0) {
+		return [{
+			id: `empty-${prospecto.id}`,
+			texto: 'No hay notas disponibles para el prospecto seleccionado.',
+			fecha: null,
+			autor: 'Sistema',
+			tipo: 'sistema',
+		}];
 	}
 
-	return notas;
+	return unificadas;
 };
 
-const buildTimeline = (detalleExpediente) => {
+const buildTimeline = (detalleExpediente, prospectoSeleccionado) => {
 	const seguimientos = Array.isArray(detalleExpediente?.seguimientos) ? detalleExpediente.seguimientos : [];
+	const notasAdmisiones = (Array.isArray(detalleExpediente?.notasEvolucion) ? detalleExpediente.notasEvolucion : [])
+		.filter((nota) => String(nota?.medicoAsignado || '').toUpperCase().includes('ADMISION'));
 
-	return seguimientos.map((item) => ({
+	const eventosSeguimiento = seguimientos.map((item) => ({
 		id: item.id,
 		fecha: item.fechaHoraProgramada,
 		titulo: item.tipoAccion || 'Seguimiento',
@@ -152,7 +244,26 @@ const buildTimeline = (detalleExpediente) => {
 		origen: item.origenLlamada,
 		tone: getTimelineTone(item),
 		diagnosticoVisual: item.diagnosticoVisual,
+		tipoEvento: 'seguimiento',
 	}));
+
+	const eventosNotas = notasAdmisiones.map((nota) => ({
+		id: `nota-${nota.id}`,
+		fecha: nota.fechaRegistro,
+		titulo: 'Nota de admisiones',
+		estado: 'Registrada',
+		detalle: nota.observaciones || 'Nota sin detalle',
+		origen: 'ADMISIONES',
+		tone: 'amber',
+		diagnosticoVisual: null,
+		tipoEvento: 'nota',
+	}));
+
+	return [...eventosSeguimiento, ...eventosNotas].sort((a, b) => {
+		const da = a.fecha ? new Date(a.fecha).getTime() : 0;
+		const db = b.fecha ? new Date(b.fecha).getTime() : 0;
+		return db - da;
+	});
 };
 
 const buildDiagnosticoReadOnlyData = (prospecto, detalleExpediente) => {
@@ -456,12 +567,12 @@ const generarReciboHTML = (datos) => {
 
 const ExpedienteAdmisiones = () => {
 	const navigate = useNavigate();
+	const { id: expedienteIdParam } = useParams();
 	const [tab, setTab] = useState('general');
 	const [busquedaExpediente, setBusquedaExpediente] = useState('');
 	const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
 	const [cargandoBusqueda, setCargandoBusqueda] = useState(false);
 	const [errorBusqueda, setErrorBusqueda] = useState('');
-	const [mostrarResultados, setMostrarResultados] = useState(false);
 	const [indiceResaltado, setIndiceResaltado] = useState(-1);
 	const [prospectoSeleccionado, setProspectoSeleccionado] = useState(null);
 	const [detalleExpediente, setDetalleExpediente] = useState(null);
@@ -498,16 +609,62 @@ const ExpedienteAdmisiones = () => {
 		nombreRecibe: '',
 	});
 	const [recibosSubidos, setRecibosSubidos] = useState([]);
+	const [reciboPersistido, setReciboPersistido] = useState(null);
 	const [cargandoRecibo, setCargandoRecibo] = useState(false);
 	const [tokenGenerado, setTokenGenerado] = useState(null);
 	const [generandoToken, setGenerandoToken] = useState(false);
 	const [expedienteModo, setExpedienteModo] = useState('prospecto');
-	const seleccionarProspecto = async (prospecto) => {
+	const [expedienteExpandidoId, setExpedienteExpandidoId] = useState(null);
+	const [notaAdmisiones, setNotaAdmisiones] = useState('');
+	const [guardandoNotaAdmisiones, setGuardandoNotaAdmisiones] = useState(false);
+	const [errorNotaAdmisiones, setErrorNotaAdmisiones] = useState('');
+	const [mensajeNotaAdmisiones, setMensajeNotaAdmisiones] = useState('');
+
+	const cargarRecibosPersistidos = async (pacienteId) => {
+		if (!pacienteId) return [];
+		const storageKey = getRecibosStorageKey(pacienteId);
+		try {
+			const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteId}/recibos`);
+			if (response.ok) {
+				const recibosApi = await response.json();
+				const normalizados = Array.isArray(recibosApi) ? recibosApi.map(normalizarReciboApi) : [];
+				if (normalizados.length > 0) {
+					setRecibosSubidos(normalizados);
+					setReciboPersistido(normalizados.find((item) => String(item.estadoPago || '').toUpperCase() === 'VALIDADO') || normalizados[0]);
+					window.localStorage.setItem(storageKey, JSON.stringify(normalizados));
+					return normalizados;
+				}
+			}
+		} catch (error) {
+			console.error('Error al cargar recibos persistidos:', error);
+		}
+
+		const localGuardado = window.localStorage.getItem(storageKey);
+		if (localGuardado) {
+			try {
+				const localRecibos = JSON.parse(localGuardado);
+				if (Array.isArray(localRecibos) && localRecibos.length > 0) {
+					setRecibosSubidos(localRecibos);
+					setReciboPersistido(localRecibos.find((item) => item._localOnly) || localRecibos[0]);
+					return localRecibos;
+				}
+			} catch (error) {
+				console.error('Error al leer recibos locales:', error);
+			}
+		}
+
+		setRecibosSubidos([]);
+		setReciboPersistido(null);
+		return [];
+	};
+
+	const seleccionarProspecto = async (prospecto, opciones = {}) => {
+		const { abrirConsulta = false, tabConsulta = 'solicitante' } = opciones;
 		setProspectoSeleccionado(prospecto);
 		setBusquedaExpediente(getNombreProspecto(prospecto));
-		setMostrarResultados(false);
-		setModalLlamadaInicialAbierto(false);
-		setDiagnosticoTab('solicitante');
+		setModalLlamadaInicialAbierto(abrirConsulta);
+		setDiagnosticoTab(tabConsulta);
+		setExpedienteExpandidoId(prospecto?.id || null);
 
 		// Consultar el estado real del paciente desde el backend
 		try {
@@ -542,7 +699,7 @@ const ExpedienteAdmisiones = () => {
 			nombrePaciente: prospecto.nombres || '',
 			apellidoPaternoPaciente: prospecto.apellidoPaterno || '',
 			apellidoMaternoPaciente: prospecto.apellidoMaterno || '',
-			clavePaciente: prospecto.clavePaciente || formatClave(prospecto),
+			clavePaciente: prospecto.clavePaciente || '--',
 			direccionCalle: prospecto.direccionCalle || '',
 			direccionNoExt: prospecto.direccionNoExt || '',
 			direccionNoInt: prospecto.direccionNoInt || '',
@@ -569,23 +726,62 @@ const ExpedienteAdmisiones = () => {
 		html2pdf().set(opt).from(element).save();
 	};
 
-	const manejarCargaRecibo = (event) => {
+	const manejarCargaRecibo = async (event) => {
 		const archivos = event.target.files;
-		if (archivos && archivos.length > 0) {
-			setCargandoRecibo(true);
-			const archivo = archivos[0];
-			
-			// Simular carga (en producción enviarías al backend)
-			setTimeout(() => {
-				setRecibosSubidos(prev => [...prev, {
-					nombre: archivo.name,
-					fecha: new Date().toLocaleDateString('es-MX'),
-					tamaño: `${(archivo.size / 1024).toFixed(2)} KB`,
-					tipo: 'Recibo firmado',
-					url: URL.createObjectURL(archivo)
-				}]);
-				setCargandoRecibo(false);
-			}, 1000);
+		if (!archivos || archivos.length === 0 || !prospectoSeleccionado?.id || reciboBloqueado) return;
+		const archivo = archivos[0];
+		setCargandoRecibo(true);
+
+		try {
+			const archivoDataUrl = await new Promise((resolve, reject) => {
+				const lector = new FileReader();
+				lector.onload = () => resolve(String(lector.result || ''));
+				lector.onerror = () => reject(new Error('No se pudo leer el archivo del recibo'));
+				lector.readAsDataURL(archivo);
+			});
+
+			const res = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/recibos`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					numeroRecibo: datosRecibo.clavePaciente || `REC-${prospectoSeleccionado.id}`,
+					archivoReciboUrl: archivoDataUrl,
+					montoPago: datosRecibo.montoPago || 0,
+					montoPrograma: datosRecibo.montoPrograma || 0,
+					concepto: datosRecibo.concepto,
+					nombrePagador: datosRecibo.nombrePagador,
+					rfc: datosRecibo.rfc || '',
+				}),
+			});
+
+			if (!res.ok) {
+				const errorData = await res.json().catch(() => ({}));
+				throw new Error(errorData.error || 'No se pudo registrar el recibo');
+			}
+
+			const creado = await res.json();
+			const normalizado = normalizarReciboApi(creado);
+			setRecibosSubidos([normalizado]);
+			setReciboPersistido(normalizado);
+			window.localStorage.setItem(getRecibosStorageKey(prospectoSeleccionado.id), JSON.stringify([normalizado]));
+		} catch (error) {
+			console.error('Error al subir recibo:', error);
+			const localRecibo = {
+				id: `local-${Date.now()}`,
+				nombre: datosRecibo.clavePaciente || `INST-${new Date().getFullYear()}-${prospectoSeleccionado.id}`,
+				fecha: new Date().toLocaleDateString('es-MX'),
+				tamaño: `${(archivo.size / 1024).toFixed(2)} KB`,
+				tipo: 'Recibo firmado',
+				url: URL.createObjectURL(archivo),
+				_localOnly: true,
+			};
+			setRecibosSubidos([localRecibo]);
+			setReciboPersistido(localRecibo);
+			window.localStorage.setItem(getRecibosStorageKey(prospectoSeleccionado.id), JSON.stringify([localRecibo]));
+		} finally {
+			setCargandoRecibo(false);
 		}
 	};
 
@@ -636,12 +832,10 @@ const ExpedienteAdmisiones = () => {
 			setModalReciboAbierto(false);
 
 			setTimeout(() => {
-				alert(`✅ Token generado exitosamente:\n\n${tokenGenerado}\n\nEl prospecto ahora es PACIENTE INGRESADO`);
+				alert(`✅ Token generado exitosamente:\n\n${tokenGenerado}\n\nEl prospecto ahora es PACIENTE`);
 				setTokenGenerado(null);
-				setRecibosSubidos([]);
-				// Recargar detalles del paciente para obtener estado actualizado
 				if (prospectoSeleccionado?.id) {
-					// Aquí podrías volver a cargar el detalle si lo necesitas
+					cargarRecibosPersistidos(prospectoSeleccionado.id);
 				}
 			}, 500);
 		} catch (error) {
@@ -652,6 +846,127 @@ const ExpedienteAdmisiones = () => {
 		}
 	};
 
+	const eliminarRecibo = async (recibo) => {
+		if (!recibo) return;
+		if (!confirm('¿Eliminar este recibo? Esta acción puede revertir la prueba de pago.')) return;
+		const storageKey = getRecibosStorageKey(prospectoSeleccionado?.id);
+
+		try {
+			if (recibo._localOnly) {
+				setRecibosSubidos(prev => prev.filter(r => r.id !== recibo.id));
+				setReciboPersistido(null);
+				window.localStorage.removeItem(storageKey);
+				return;
+			}
+
+			const res = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/recibos/${recibo.id}`, {
+				method: 'DELETE',
+			});
+
+			if (res.ok) {
+				setRecibosSubidos(prev => prev.filter(r => r.id !== recibo.id));
+				setReciboPersistido(null);
+				window.localStorage.removeItem(storageKey);
+			} else {
+				const err = await res.json();
+				alert(err.message || 'No se pudo eliminar el recibo en el servidor');
+			}
+		} catch (error) {
+			console.error('Error al eliminar recibo:', error);
+			alert('Error al eliminar recibo');
+		}
+	};
+
+	const guardarNotaAdmisiones = async () => {
+		if (!prospectoSeleccionado?.id) {
+			setErrorNotaAdmisiones('Selecciona un prospecto antes de guardar la nota.');
+			return;
+		}
+
+		const texto = notaAdmisiones.trim();
+		if (!texto) {
+			setErrorNotaAdmisiones('Escribe una nota para poder guardarla.');
+			return;
+		}
+
+		setGuardandoNotaAdmisiones(true);
+		setErrorNotaAdmisiones('');
+		setMensajeNotaAdmisiones('');
+
+		try {
+			const payload = {
+				ta: '',
+				temp: '',
+				fc: '',
+				fr: '',
+				peso: '',
+				talla: '',
+				evolucionCuadroClinico: '',
+				exploracionFisica: '',
+				resultadosEstudios: '',
+				diagnosticoProblemas: '',
+				pronosticos: '',
+				tratamientoIndicaciones: '',
+				observaciones: texto,
+				fechaProximaSesion: null,
+				medicoAsignado: 'ADMISIONES',
+			};
+
+			const response = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/notas-evolucion`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload),
+			});
+
+			if (!response.ok) {
+				const errorText = await response.text();
+				throw new Error(errorText || 'No se pudo guardar la nota de admisiones.');
+			}
+
+			const detalleResponse = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/expediente`);
+			if (detalleResponse.ok) {
+				const data = await detalleResponse.json();
+				setDetalleExpediente(data);
+			}
+
+			setNotaAdmisiones('');
+			setMensajeNotaAdmisiones('Nota de admisiones guardada correctamente.');
+		} catch (error) {
+			console.error('Error guardando nota de admisiones:', error);
+			setErrorNotaAdmisiones(error.message || 'No se pudo guardar la nota.');
+		} finally {
+			setGuardandoNotaAdmisiones(false);
+		}
+	};
+
+	useEffect(() => {
+		if (!expedienteIdParam) return;
+
+		const controller = new AbortController();
+
+		const cargarProspectoDesdeRuta = async () => {
+			try {
+				const response = await fetch(`http://localhost:4000/api/pacientes/${expedienteIdParam}`, {
+					signal: controller.signal,
+				});
+
+				if (!response.ok) return;
+
+				const paciente = await response.json();
+				setProspectoSeleccionado(paciente);
+				setBusquedaExpediente(getNombreProspecto(paciente));
+				setExpedienteExpandidoId(paciente?.id || null);
+			} catch (error) {
+				if (error.name !== 'AbortError') {
+					console.error('No se pudo cargar el expediente desde la ruta:', error);
+				}
+			}
+		};
+
+		cargarProspectoDesdeRuta();
+		return () => controller.abort();
+	}, [expedienteIdParam]);
+
 	useEffect(() => {
 		const query = busquedaExpediente.trim();
 		const controller = new AbortController();
@@ -660,7 +975,6 @@ const ExpedienteAdmisiones = () => {
 			setResultadosBusqueda([]);
 			setCargandoBusqueda(false);
 			setErrorBusqueda('');
-			setMostrarResultados(false);
 			setIndiceResaltado(-1);
 			return () => controller.abort();
 		}
@@ -686,14 +1000,12 @@ const ExpedienteAdmisiones = () => {
 					seleccionarProspecto(resultados[0]);
 					setIndiceResaltado(0);
 				} else {
-					setMostrarResultados(true);
 					setIndiceResaltado(resultados.length > 0 ? 0 : -1);
 				}
 			} catch (error) {
 				if (error.name !== 'AbortError') {
 					console.error('Error al buscar prospectos de expediente:', error);
 					setErrorBusqueda('No se pudo consultar prospectos. Revisa backend o conexión.');
-					setMostrarResultados(true);
 				}
 			} finally {
 				setCargandoBusqueda(false);
@@ -761,23 +1073,47 @@ const ExpedienteAdmisiones = () => {
 		return () => controller.abort();
 	}, [prospectoSeleccionado?.id]);
 
+	useEffect(() => {
+		if (!prospectoSeleccionado?.id) return;
+		cargarRecibosPersistidos(prospectoSeleccionado.id);
+	}, [prospectoSeleccionado?.id]);
+
 	const limpiarBusqueda = () => {
 		setBusquedaExpediente('');
 		setResultadosBusqueda([]);
 		setErrorBusqueda('');
-		setMostrarResultados(false);
 		setIndiceResaltado(-1);
+		setExpedienteExpandidoId(null);
 		setProspectoSeleccionado(null);
 		setDetalleExpediente(null);
 		setErrorDetalleExpediente('');
 		setModalLlamadaInicialAbierto(false);
 		setDiagnosticoTab('solicitante');
+		setNotaAdmisiones('');
+		setErrorNotaAdmisiones('');
+		setMensajeNotaAdmisiones('');
 	};
+
+	const toggleExpedienteExpandido = (id) => {
+		setExpedienteExpandidoId((prev) => (prev === id ? null : id));
+	};
+
+	const expedientesLista = useMemo(() => {
+		const query = busquedaExpediente.trim();
+		if (query.length >= 2) {
+			return resultadosBusqueda;
+		}
+
+		if (prospectoSeleccionado?.id) {
+			return [prospectoSeleccionado];
+		}
+
+		return [];
+	}, [busquedaExpediente, resultadosBusqueda, prospectoSeleccionado]);
 
 	const handleBusquedaKeyDown = (event) => {
 		if (event.key === 'ArrowDown') {
 			event.preventDefault();
-			setMostrarResultados(true);
 			setIndiceResaltado((prev) => {
 				const siguiente = prev + 1;
 				return siguiente >= resultadosBusqueda.length ? 0 : siguiente;
@@ -787,7 +1123,6 @@ const ExpedienteAdmisiones = () => {
 
 		if (event.key === 'ArrowUp') {
 			event.preventDefault();
-			setMostrarResultados(true);
 			setIndiceResaltado((prev) => {
 				const anterior = prev - 1;
 				return anterior < 0 ? resultadosBusqueda.length - 1 : anterior;
@@ -796,7 +1131,7 @@ const ExpedienteAdmisiones = () => {
 		}
 
 		if (event.key === 'Escape') {
-			setMostrarResultados(false);
+			setIndiceResaltado(-1);
 			return;
 		}
 
@@ -819,16 +1154,30 @@ const ExpedienteAdmisiones = () => {
 
 		return [
 			{ label: 'Paciente', value: getNombreProspecto(prospectoSeleccionado) || 'Sin nombre' },
-			{ label: 'Clave', value: formatClave(prospectoSeleccionado) },
+			{ label: 'Clave', value: prospectoSeleccionado.clavePaciente || '--' },
 			{ label: 'Ingreso', value: formatDateValue(prospectoSeleccionado.fechaIngreso || prospectoSeleccionado.createdAt || prospectoSeleccionado.fechaAtencion || prospectoSeleccionado.fechaRegistro) },
-			{ label: 'Estado', value: prospectoSeleccionado.estadoExpediente || prospectoSeleccionado.estadoSeguimiento || 'En valoración' },
+			{ label: 'Estado', value: formatEstadoPacienteDisplay(prospectoSeleccionado.estadoPaciente) },
 		];
 	}, [prospectoSeleccionado]);
 
+	const estadoPacienteActual = useMemo(() => String(prospectoSeleccionado?.estadoPaciente || '').toUpperCase(), [prospectoSeleccionado?.estadoPaciente]);
+	const tieneReciboAdjunto = useMemo(() => recibosSubidos.length > 0, [recibosSubidos]);
+	const reciboBloqueado = useMemo(
+		() => estadoPacienteActual === 'INGRESADO' || estadoPacienteActual === 'DENEGADO' || tieneReciboAdjunto,
+		[estadoPacienteActual, tieneReciboAdjunto]
+	);
+	const puedeValidarIngresoOficial = useMemo(() => estadoPacienteActual === 'PROSPECTO' && tieneReciboAdjunto, [estadoPacienteActual, tieneReciboAdjunto]);
+	const badgeEstadoRecibo = useMemo(() => {
+		if (estadoPacienteActual === 'DENEGADO') return 'DENEGADO';
+		if (estadoPacienteActual === 'INGRESADO') return 'INGRESADO';
+		if (tieneReciboAdjunto) return 'VALIDADO';
+		return 'PENDIENTE';
+	}, [estadoPacienteActual, tieneReciboAdjunto]);
+
 	// --- MODIFICACIÓN 4: Pasamos tieneValoracionMedica al useMemo ---
 	const documentosProspecto = useMemo(() => buildDocumentosProspecto(prospectoSeleccionado, detalleExpediente, tieneValoracionMedica), [prospectoSeleccionado, detalleExpediente, tieneValoracionMedica]);
-	const notasProspecto = useMemo(() => buildNotasProspecto(prospectoSeleccionado, detalleExpediente), [prospectoSeleccionado, detalleExpediente]);
-	const timelineProspecto = useMemo(() => buildTimeline(detalleExpediente), [detalleExpediente]);
+	const notasProspecto = useMemo(() => buildNotasProspecto(prospectoSeleccionado, detalleExpediente, prospectoSeleccionado), [prospectoSeleccionado, detalleExpediente]);
+	const timelineProspecto = useMemo(() => buildTimeline(detalleExpediente, prospectoSeleccionado), [detalleExpediente, prospectoSeleccionado]);
 	const diagnosticoReadOnlyData = useMemo(
 		() => buildDiagnosticoReadOnlyData(prospectoSeleccionado, detalleExpediente),
 		[prospectoSeleccionado, detalleExpediente]
@@ -848,139 +1197,8 @@ const ExpedienteAdmisiones = () => {
 							onClick={() => navigate('/admisiones')}
 							icon={<ArrowRight size={18} />}
 						/>
-							<section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
-								<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-									<div>
-										<p className="text-xs font-bold uppercase tracking-[0.25em] text-[#7E1D3B]">Diseño de expediente</p>
-										<h2 className="text-2xl font-black text-slate-900">Separado por Prospecto y Paciente</h2>
-										<p className="mt-1 text-sm text-slate-500">Usa Prospecto para la admisión inicial y Paciente cuando ya existe una ficha activa en el sistema.</p>
-									</div>
-									<div className="inline-flex rounded-2xl bg-slate-100 p-1">
-										<button
-											type="button"
-											onClick={() => setExpedienteModo('prospecto')}
-											className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${expedienteModo === 'prospecto' ? 'bg-[#7E1D3B] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-										>
-											Prospecto
-										</button>
-										<button
-											type="button"
-											onClick={() => setExpedienteModo('ingresado')}
-											className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${expedienteModo === 'ingresado' ? 'bg-[#7E1D3B] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-										>
-											Paciente
-										</button>
-									</div>
-								</div>
-
-								<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-									{(expedienteModo === 'prospecto' ? [
-										{ title: 'Captura inicial', text: 'Datos del solicitante, contacto y origen de referencia.', icon: User },
-										{ title: 'Llamadas y agenda', text: 'Citas, seguimiento telefónico y pendientes urgentes.', icon: Phone },
-										{ title: 'Estudio socioeconómico', text: 'Evaluación social y económica previa al ingreso.', icon: FileText },
-										{ title: 'Valoración diagnóstica', text: 'Criterios de internamiento y lectura clínica inicial.', icon: HeartPulse },
-									] : [
-										{ title: 'Paciente activo', text: 'Clave de paciente, estado actual y fecha de ingreso.', icon: CheckCircle2 },
-										{ title: 'Evolución clínica', text: 'Notas, indicaciones y seguimiento de tratamiento.', icon: HeartPulse },
-										{ title: 'Documentos', text: 'Recibos, formatos firmados y evidencia de ingreso.', icon: FileText },
-										{ title: 'Salida / egreso', text: 'Preparación de cierre, alta o cambio de área.', icon: ArrowRight },
-									]).map((item) => {
-										const Icon = item.icon;
-
-										return (
-											<article key={item.title} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-												<div className="flex items-start gap-3">
-													<div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#7E1D3B]/10 text-[#7E1D3B]">
-														<Icon size={18} />
-													</div>
-													<div>
-														<p className="font-black text-slate-900">{item.title}</p>
-														<p className="mt-1 text-sm text-slate-500">{item.text}</p>
-													</div>
-												</div>
-											</article>
-										);
-									})}
-								</div>
-							</section>
-						<section className="rounded-[24px] border border-slate-200 bg-slate-100/70 p-4 shadow-sm md:p-5">
-							<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-start">
-								<div
-									className="relative w-full md:max-w-md"
-									onBlur={() => {
-										window.setTimeout(() => setMostrarResultados(false), 120);
-									}}
-								>
-									<Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-									<input
-										type="text"
-										value={busquedaExpediente}
-										onChange={(event) => {
-											const value = event.target.value;
-											setBusquedaExpediente(value);
-											if (prospectoSeleccionado && value !== getNombreProspecto(prospectoSeleccionado)) {
-												setProspectoSeleccionado(null);
-											}
-										}}
-										onKeyDown={handleBusquedaKeyDown}
-										onFocus={() => {
-											if (busquedaExpediente.trim().length >= 2) {
-												setMostrarResultados(true);
-											}
-										}}
-										placeholder="Buscar expediente, nombre o clave..."
-										className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-									/>
-
-									{mostrarResultados && busquedaExpediente.trim().length >= 2 ? (
-										<div className="absolute left-0 right-0 z-10 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.14)]">
-											<div className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Resultados de prospectos</div>
-											{cargandoBusqueda ? <p className="px-4 py-3 text-sm text-slate-500">Buscando prospectos...</p> : null}
-											{errorBusqueda ? <p className="px-4 py-3 text-sm text-rose-700">{errorBusqueda}</p> : null}
-											{!cargandoBusqueda && !errorBusqueda && resultadosBusqueda.length === 0 ? (
-												<p className="px-4 py-3 text-sm text-slate-500">No se encontraron coincidencias.</p>
-											) : null}
-											{!cargandoBusqueda && resultadosBusqueda.length > 0 ? (
-												<ul className="max-h-64 overflow-y-auto">
-													{resultadosBusqueda.map((item, index) => (
-														<li key={item.id || `${getNombreProspecto(item)}-${index}`}>
-															<button
-																type="button"
-																onMouseEnter={() => setIndiceResaltado(index)}
-																onClick={() => seleccionarProspecto(item)}
-																className={`w-full border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 ${
-																	indiceResaltado === index ? 'bg-[#7E1D3B]/10' : 'bg-white hover:bg-slate-50'
-																}`}
-															>
-																<p className="text-sm font-semibold text-slate-900">{getNombreProspecto(item) || 'Sin nombre'}</p>
-																<p className="text-xs text-slate-500">Clave: {formatClave(item)} • Tel: {item.telefonoContacto || item.telefono || item.solicitante?.telefono || '--'}</p>
-															</button>
-														</li>
-													))}
-												</ul>
-											) : null}
-										</div>
-									) : null}
-								</div>
-								<button
-									type="button"
-									onClick={limpiarBusqueda}
-									className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-								>
-									Limpiar búsqueda
-								</button>
-							</div>
-							{prospectoSeleccionado ? (
-								<p className="mt-3 text-sm text-slate-600">
-									Prospecto seleccionado: <span className="font-semibold text-slate-900">{getNombreProspecto(prospectoSeleccionado)}</span>
-								</p>
-							) : (
-								<p className="mt-3 text-sm text-slate-500">Escribe al menos 2 letras para autocompletar prospectos.</p>
-							)}
-							{cargandoDetalleExpediente ? <p className="mt-2 text-xs text-slate-500">Cargando detalle del expediente...</p> : null}
-							{errorDetalleExpediente ? <p className="mt-2 text-xs text-rose-700">{errorDetalleExpediente}</p> : null}
-						</section>
-
+							
+						
 						<section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
 							<div className="mb-3 flex items-center justify-between gap-3">
 								<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Navegación</p>
@@ -1073,90 +1291,98 @@ const ExpedienteAdmisiones = () => {
                 </div>
 
                 {/* SECCIÓN: RECIBO DE PAGO */}
-                <div className="flex flex-col gap-4 rounded-2xl border border-cyan-200 bg-cyan-50/80 p-5 transition-all hover:border-cyan-300 md:flex-row md:items-start md:justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 flex-shrink-0">
-                            <FileText size={24} />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <p className="text-base font-black text-slate-900">Recibo de Pago</p>
-                                {recibosSubidos.length === 0 ? (
-                                    <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">
-                                        <X size={10} /> Pendiente
-                                    </span>
-                                ) : (
-                                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">
-                                        {recibosSubidos.length} adjunto{recibosSubidos.length !== 1 ? 's' : ''}
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-xs text-slate-500">Generar y subir recibos firmados como evidencia de pago.</p>
-                            {recibosSubidos.length > 0 && (
-                                <div className="mt-3 space-y-2">
-                                    {recibosSubidos.map((recibo, idx) => (
-                                        <div key={idx} className="flex items-center justify-between rounded-lg bg-emerald-50 p-3 border border-emerald-100">
-                                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                <div className="text-lg">📎</div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-xs font-semibold text-slate-700 truncate">{recibo.nombre}</p>
-                                                    <p className="text-xs text-slate-400">{recibo.fecha}</p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={generarTokenIngreso}
-                                                disabled={generandoToken || tokenGenerado}
-                                                className={`ml-2 text-xs font-bold px-3 py-1.5 rounded-lg transition whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 ${
-                                                    tokenGenerado
-                                                        ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed border border-emerald-200'
-                                                        : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 border border-cyan-400'
-                                                }`}
-                                            >
-                                                {generandoToken ? (
-                                                    <>
-                                                        <span className="animate-spin inline-block">⏳</span>
-                                                        <span>Procesando...</span>
-                                                    </>
-                                                ) : tokenGenerado ? (
-                                                    <>
-                                                        <span>✅</span>
-                                                        <span className="hidden sm:inline text-xs">{tokenGenerado.substring(0, 6)}</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span>🔑</span>
-                                                        <span>Generar</span>
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
-                        <button
-                            type="button"
-                            onClick={() => setModalReciboAbierto(true)}
-                            className="rounded-xl border border-cyan-300 bg-white px-4 py-2 text-xs font-bold text-cyan-700 transition hover:bg-cyan-50 flex items-center gap-2 whitespace-nowrap"
-                        >
-                            <Download size={14} />
-                            Generar
-                        </button>
-                        <label className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-cyan-700 flex items-center gap-2 cursor-pointer whitespace-nowrap">
-                            <Upload size={14} />
-                            Subir firmado
-                            <input
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                onChange={manejarCargaRecibo}
-                                disabled={cargandoRecibo}
-                                className="hidden"
-                            />
-                        </label>
-                    </div>
-                </div>
+				<div className={`rounded-[28px] border p-5 transition-colors md:p-6 ${badgeEstadoRecibo === 'PENDIENTE' ? 'border-[#7E1D3B]/20 bg-[#7E1D3B]/5' : 'border-emerald-100 bg-emerald-50/50'}`}>
+							{estadoPacienteActual === 'DENEGADO' ? (
+								<div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
+									Este expediente fue denegado. No se permite subir ni generar recibos de pago.
+								</div>
+							) : null}
+					<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+						<div className="flex items-start gap-4 flex-1">
+							<div className={`flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0 ${badgeEstadoRecibo === 'PENDIENTE' ? 'bg-[#7E1D3B]/10 text-[#7E1D3B]' : 'bg-emerald-100 text-emerald-700'}`}>
+								<FileText size={24} />
+							</div>
+							<div>
+								<div className="flex items-center gap-2">
+									<p className="text-base font-black text-slate-900">Recibo de Pago</p>
+									<span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${badgeEstadoRecibo === 'PENDIENTE' ? 'bg-[#7E1D3B]/10 text-[#7E1D3B]' : badgeEstadoRecibo === 'INGRESADO' ? 'bg-[#7E1D3B]/10 text-[#7E1D3B]' : 'bg-emerald-100 text-emerald-700'}`}>
+										{badgeEstadoRecibo}
+									</span>
+								</div>
+								<p className="text-xs text-slate-500">Generar y subir recibos firmados como evidencia de pago.</p>
+
+								{tieneReciboAdjunto && (
+									<div className="mt-3 space-y-2">
+										{recibosSubidos.map((recibo, idx) => {
+											const claveOficial = recibo.tokenGenerado || recibo.nombre || prospectoSeleccionado?.clavePaciente || `INST-${new Date().getFullYear()}-${prospectoSeleccionado?.id || ''}`;
+											return (
+												<div key={idx} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+													<div className="flex min-w-0 items-center gap-3">
+														<div className="rounded-lg bg-slate-100 p-2 text-slate-600">
+															<Paperclip size={16} />
+														</div>
+														<div className="min-w-0">
+															<p className="truncate text-sm font-bold text-slate-900">{claveOficial}</p>
+															<p className="text-xs text-slate-500">{recibo.fecha}</p>
+														</div>
+													</div>
+													<div className="flex items-center gap-2">
+														<span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">
+															<CheckCircle2 size={12} />
+															✓ Validado
+														</span>
+														<button
+															onClick={() => eliminarRecibo(recibo)}
+															disabled={generandoToken}
+															className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+														>
+															<X size={14} />
+														</button>
+													</div>
+												</div>
+											);
+										})}
+									</div>
+								)}
+							</div>
+						</div>
+						<div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
+							<button
+								type="button"
+								onClick={() => {
+									if (!reciboBloqueado) setModalReciboAbierto(true);
+								}}
+								disabled={reciboBloqueado}
+								className="rounded-xl border border-[#7E1D3B]/30 bg-white px-4 py-2 text-xs font-bold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/5 flex items-center gap-2 whitespace-nowrap disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 disabled:hover:bg-white"
+							>
+								<Download size={14} />
+								Generar
+							</button>
+							<label className="rounded-xl bg-[#7E1D3B] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#63162e] flex items-center gap-2 cursor-pointer whitespace-nowrap">
+								<Upload size={14} />
+								Subir firmado
+								<input
+									type="file"
+									accept=".pdf,.jpg,.jpeg,.png"
+									onChange={manejarCargaRecibo}
+									disabled={cargandoRecibo || reciboBloqueado}
+									className="hidden"
+								/>
+							</label>
+						</div>
+					</div>
+
+					{puedeValidarIngresoOficial && (
+						<button
+							type="button"
+							onClick={generarTokenIngreso}
+							disabled={generandoToken}
+							className="mt-4 w-full rounded-2xl bg-[#7E1D3B] px-4 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-[#63162e] disabled:cursor-wait disabled:opacity-70"
+						>
+							{generandoToken ? 'Procesando validación...' : 'VALIDAR INGRESO OFICIAL'}
+						</button>
+					)}
+				</div>
 
                 {/* 2. LISTADO DE DOCUMENTOS PDF Y REGISTROS DINÁMICOS */}
                 <div className="grid gap-3">
@@ -1164,13 +1390,13 @@ const ExpedienteAdmisiones = () => {
                         documentosProspecto.map((doc, idx) => (
                             <div key={`${doc.nombre}-${idx}`} className="group flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
                                 <div className="flex items-center gap-4">
-                                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${doc.estado === 'Adjunto' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
-                                        <FileText size={20} />
+									<div className={`flex h-10 w-10 items-center justify-center rounded-lg ${doc.estado === 'DENEGADO' ? 'bg-rose-50 text-rose-600' : doc.estado === 'Adjunto' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+										{doc.estado === 'DENEGADO' ? <FileX size={20} /> : <FileText size={20} />}
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <p className="text-sm font-bold text-slate-900">{doc.nombre}</p>
-                                            <span className={`text-[10px] font-bold uppercase ${doc.estado === 'Adjunto' ? 'text-emerald-500' : 'text-slate-400'}`}>
+											<span className={`text-[10px] font-bold uppercase ${doc.estado === 'DENEGADO' ? 'text-rose-600' : doc.estado === 'Adjunto' ? 'text-emerald-500' : 'text-slate-400'}`}>
                                                 • {doc.estado}
                                             </span>
                                         </div>
@@ -1218,9 +1444,50 @@ const ExpedienteAdmisiones = () => {
 											Selecciona un prospecto para ver sus notas reales entre áreas.
 										</div>
 									) : null}
+										{prospectoSeleccionado ? (
+											<div className="mb-4 rounded-2xl border border-[#7E1D3B]/20 bg-rose-50/40 p-4">
+												<p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-[#7E1D3B]">Nueva nota de admisiones</p>
+												<textarea
+													value={notaAdmisiones}
+													onChange={(event) => {
+														setNotaAdmisiones(event.target.value);
+														if (errorNotaAdmisiones) setErrorNotaAdmisiones('');
+														if (mensajeNotaAdmisiones) setMensajeNotaAdmisiones('');
+													}}
+													placeholder="Escribe aquí una nota administrativa de admisiones..."
+													className="min-h-[92px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 outline-none transition focus:border-[#7E1D3B]/40 focus:ring-2 focus:ring-[#7E1D3B]/15"
+												/>
+												<div className="mt-3 flex items-center justify-between gap-3">
+													<div className="text-xs">
+														{errorNotaAdmisiones ? <span className="text-rose-700">{errorNotaAdmisiones}</span> : null}
+														{!errorNotaAdmisiones && mensajeNotaAdmisiones ? <span className="text-emerald-700">{mensajeNotaAdmisiones}</span> : null}
+													</div>
+													<button
+														type="button"
+														onClick={guardarNotaAdmisiones}
+														disabled={guardandoNotaAdmisiones}
+														className="rounded-xl bg-[#7E1D3B] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#63162e] disabled:cursor-not-allowed disabled:opacity-60"
+													>
+														{guardandoNotaAdmisiones ? 'Guardando...' : 'Guardar nota'}
+													</button>
+												</div>
+											</div>
+										) : null}
 									<div className="space-y-3">
-										{notasProspecto.map((nota) => (
-											<div key={nota} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 text-slate-700">{nota}</div>
+											{notasProspecto.map((nota) => (
+												<div key={nota.id} className={`rounded-2xl border p-4 text-sm leading-6 ${nota.categoria === 'rechazo' || String(nota.autor || '').includes('RECHAZO') ? 'border-rose-200 bg-rose-50/80 text-rose-900' : 'border-dashed border-slate-200 bg-slate-50/70 text-slate-700'}`}>
+													<div className="mb-1 flex items-center justify-between gap-2 text-[11px]">
+														<span className={`font-bold uppercase tracking-[0.16em] ${nota.categoria === 'rechazo' || String(nota.autor || '').includes('RECHAZO') ? 'text-rose-700' : nota.tipo === 'admisiones' ? 'text-[#7E1D3B]' : 'text-slate-500'}`}>{nota.autor || 'Sistema'}</span>
+														{(nota.categoria === 'rechazo' || String(nota.autor || '').includes('RECHAZO')) && (
+															<span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 font-bold uppercase tracking-[0.14em] text-rose-700">
+																<AlertTriangle size={11} />
+																Rechazo administrativo
+															</span>
+														)}
+														<span className="text-slate-400">{nota.fecha ? `${formatDateValue(nota.fecha)} • ${formatTimeValue(nota.fecha)}` : ''}</span>
+													</div>
+													{nota.texto}
+												</div>
 										))}
 										{prospectoSeleccionado && notasProspecto.length === 0 ? (
 											<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
@@ -1236,7 +1503,7 @@ const ExpedienteAdmisiones = () => {
 							<div className="mb-4 flex items-center justify-between gap-3">
 								<div>
 									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Línea de tiempo</p>
-									<h3 className="text-2xl font-black text-slate-900">Seguimientos del expediente</h3>
+									<h3 className="text-2xl font-black text-slate-900">Seguimientos y notas del expediente</h3>
 								</div>
 								<Sparkles className="text-[#7E1D3B]" size={22} />
 							</div>
