@@ -12,15 +12,16 @@ const moneda = new Intl.NumberFormat("es-MX", {
   currency: "MXN",
 });
 
-interface OrdenCompraProps {
-  requisiciones?: requisicionTypes.Requisicion[];
-  refrescar?: () => void;
+interface OutletCtx {
+  rol: string;
+  requisiciones: requisicionTypes.Requisicion[];
+  refrescar: () => Promise<void>;
 }
 
-const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
+const OrdenCompra = () => {
+  const { rol, requisiciones = [], refrescar } = useOutletContext<OutletCtx>();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const rol = useOutletContext() as string;
   const [requisicion, setRequisicion] =
     useState<requisicionTypes.Requisicion | null>(null);
   const [orden, setOrden] = useState<ordenTypes.OrdenCompra | null>(null);

@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from "react";
 import { ui } from "../../config/theme";
 import * as tipos from "../../types/requisicion.ts";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 
-interface Props {
+interface OutletCtx {
+  rol: string;
   requisiciones: tipos.Requisicion[];
+  refrescar: () => Promise<void>;
 }
 
-const ListaRequisiciones = ({ requisiciones }: Props) => {
+const ListaRequisiciones = () => {
+  const { requisiciones } = useOutletContext<OutletCtx>();
   //mapeo de las rutas
   const navigate = useNavigate();
   // Validar el rol del usuario

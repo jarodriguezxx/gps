@@ -116,16 +116,16 @@ const TarjetaCotizacion = ({
     </div>
   );
 };
-interface Props {
+interface OutletCtx {
+  rol: string;
   requisiciones: tipos.Requisicion[];
   refrescar: () => Promise<void>;
 }
 
-const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
-  // Recuperar el id que está incrustado en la URL
+const DetallesRequisicion = () => {
+  const { rol, requisiciones, refrescar } = useOutletContext<OutletCtx>();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const rol = useOutletContext<string>();
   // Setear los datos cada que haya un cambio
   const [datos, setDatos] = useState<tipos.Requisicion | null>(null);
   const [modal, setModal] = useState(false);
