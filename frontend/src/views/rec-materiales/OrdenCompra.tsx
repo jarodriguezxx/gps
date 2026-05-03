@@ -31,6 +31,12 @@ const OrdenCompra = () => {
   const [firmando, setFirmando] = useState(false);
   const loadedIdRef = useRef<string | null>(null);
 
+  type CotizacionItem =
+    | { fuente: "adjunto"; id: string; nombreOriginal: string }
+    | { fuente: "path"; requisicionId: string; nombre: string };
+  const [cotizaciones, setCotizaciones] = useState<CotizacionItem[] | null>(null);
+  const [descargando, setDescargando] = useState<string | null>(null);
+
   useEffect(() => {
     if (!id) {
       setRequisicion(null);
@@ -63,6 +69,7 @@ const OrdenCompra = () => {
     loadedIdRef.current = id;
     setIsLoading(true);
     setRequisicion(req);
+
 
     const requisicionYaEnviada =
       req.estado === "EN-REVISION" || req.estado === "FINALIZADA";
@@ -125,6 +132,27 @@ const OrdenCompra = () => {
   const iva = ordenTypes.calcularIvaOrdenCompra(subtotal);
   const total = ordenTypes.calcularTotalOrdenCompra(subtotal);
 
+  useEffect(() => {
+    if (!requisicion?.id) return;
+    setCotizaciones(null);
+
+    const desdeAdjuntos = fetch(`${API_BASE}/requisiciones/${requisicion.id}/adjuntos`)
+      .then((res) => res.json())
+      .then((data: { id: string; nombreOriginal: string; tipo: string }[]) =>
+        data
+          .filter((a) => a.tipo === "COTIZACION")
+          .map((a): CotizacionItem => ({ fuente: "adjunto", id: a.id, nombreOriginal: a.nombreOriginal }))
+      )
+      .catch((): CotizacionItem[] => []);
+
+    Promise.all([desdeAdjuntos]).then(([adjuntos]) => {
+      const desdePath: CotizacionItem[] = requisicion.cotizacionPath
+        ? [{ fuente: "path", requisicionId: requisicion.id, nombre: "Cotización principal" }]
+        : [];
+      setCotizaciones([...desdePath, ...adjuntos]);
+    });
+  }, [requisicion?.id]);
+
   // Auto-save debounced al backend
   useEffect(() => {
     if (!orden || !ordenBackendId || enviada) return;
@@ -151,6 +179,28 @@ const OrdenCompra = () => {
     orden.proveedor !== null &&
     orden.justificacion.trim().length > 0 &&
     orden.articulos.every((a) => a.precioUnitario > 0);
+
+  const descargarCotizacion = async (cot: CotizacionItem) => {
+    const key = cot.fuente === "adjunto" ? cot.id : "path";
+    setDescargando(key);
+    try {
+      const url =
+        cot.fuente === "adjunto"
+          ? `${API_BASE}/requisiciones/${requisicion!.id}/adjuntos/${cot.id}/descargar`
+          : `${API_BASE}/requisiciones/${cot.requisicionId}/cotizacion/descargar`;
+      const res = await fetch(url);
+      if (!res.ok) { alert("No se pudo descargar el archivo."); return; }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = cot.fuente === "adjunto" ? cot.nombreOriginal : cot.nombre;
+      a.click();
+      URL.revokeObjectURL(objectUrl);
+    } finally {
+      setDescargando(null);
+    }
+  };
 
   const esComprasInventario = rol === "compras-inventario";
   const regresarPantallaAnterior = () => {
@@ -221,10 +271,21 @@ const OrdenCompra = () => {
   };
 
   const enviarAlmacen = async () => {
-    if (!orden || !ordenBackendId) return;
+    if (!orden || !ordenBackendId || !requisicion) return;
 
     if (!window.confirm("¿Confirmas enviar la orden de compra a Almacén? Una vez enviada no podrá editarse."))
       return;
+
+    const tamanio = subtotal > 100_000 ? "MAYOR" : "MENOR";
+    const patchTamanio = await fetch(`${API_BASE}/requisiciones/${requisicion.id}/tamanio`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tamanio }),
+    });
+    if (!patchTamanio.ok) {
+      alert("Error al determinar el tamaño de la compra. Intenta de nuevo.");
+      return;
+    }
 
     const res = await fetch(
       `${API_BASE}/ordenes-compra/${ordenBackendId}/enviar`,
@@ -449,9 +510,32 @@ const OrdenCompra = () => {
                           </div>
                         </td>
                         <td className={ui.table.cell}>
-                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800 text-right">
-                            {moneda.format(articulo.precioUnitario)}
-                          </div>
+                          {enviada ? (
+                            <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800 text-right">
+                              {moneda.format(articulo.precioUnitario)}
+                            </div>
+                          ) : (
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={articulo.precioUnitario}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setOrden((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        articulos: prev.articulos.map((a) =>
+                                          a.id === articulo.id ? { ...a, precioUnitario: val } : a
+                                        ),
+                                      }
+                                    : prev
+                                );
+                              }}
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 text-right outline-none focus:border-[#7E1D3B]"
+                            />
+                          )}
                         </td>
                         <td className={ui.table.cell + " text-right font-semibold"}>
                           {moneda.format(subtotalLinea)}
@@ -503,6 +587,39 @@ const OrdenCompra = () => {
                 </p>
               </div>
             </div>
+          </section>
+
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+              <h2 className="text-base font-semibold text-slate-800">Cotizaciones de la Requisición</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Descarga y compara para determinar el precio unitario de cada artículo.</p>
+            </div>
+            {cotizaciones === null ? (
+              <p className="px-4 py-5 text-sm text-slate-400">Cargando cotizaciones...</p>
+            ) : cotizaciones.length === 0 ? (
+              <p className="px-4 py-5 text-sm text-slate-400">No hay cotizaciones adjuntas a esta requisición.</p>
+            ) : (
+              <ul className="divide-y divide-slate-100 p-4 space-y-0">
+                {cotizaciones.map((cot, idx) => {
+                  const key = cot.fuente === "adjunto" ? cot.id : "path";
+                  const nombre = cot.fuente === "adjunto" ? cot.nombreOriginal : cot.nombre;
+                  return (
+                    <li key={key} className="flex items-center justify-between py-3">
+                      <span className="text-sm text-slate-700 font-medium">
+                        Cotización {idx + 1} — {nombre}
+                      </span>
+                      <button
+                        onClick={() => descargarCotizacion(cot)}
+                        disabled={descargando === key}
+                        className={ui.buttons.secondary + " text-xs"}
+                      >
+                        {descargando === key ? "Descargando..." : "Descargar"}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </section>
 
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

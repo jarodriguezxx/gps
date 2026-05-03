@@ -2,8 +2,11 @@ package com.marakame.api.controller;
 
 import com.marakame.api.entity.AdjuntoRequisicion;
 import com.marakame.api.entity.Requisicion;
+import com.marakame.api.entity.TamanioCompra;
 import com.marakame.api.service.RequisicionService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +14,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -165,6 +171,59 @@ public class RequisicionController {
             return ResponseEntity.ok(service.listarAdjuntosPorTipo(id, "FACTURA"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-listando-facturas: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/cotizacion/descargar")
+    public ResponseEntity<?> descargarCotizacion(@PathVariable UUID id) {
+        try {
+            Requisicion req = service.obtenerPorId(id).orElseThrow(NoSuchElementException::new);
+            if (req.getCotizacionPath() == null)
+                return ResponseEntity.notFound().build();
+            byte[] datos = Files.readAllBytes(Paths.get(req.getCotizacionPath()));
+            String nombreArchivo = Paths.get(req.getCotizacionPath()).getFileName().toString();
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
+                    .body(new ByteArrayResource(datos));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-leyendo-archivo");
+        }
+    }
+
+    @PatchMapping("/{id}/tamanio")
+    public ResponseEntity<?> actualizarTamanio(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> body) {
+        try {
+            TamanioCompra tamanio = TamanioCompra.valueOf(body.get("tamanio"));
+            return ResponseEntity.ok(service.actualizarTamanio(id, tamanio));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("tamanio-invalido");
+        }
+    }
+
+    @GetMapping("/{id}/adjuntos/{adjuntoId}/descargar")
+    public ResponseEntity<?> descargarAdjunto(
+            @PathVariable UUID id,
+            @PathVariable UUID adjuntoId) {
+        try {
+            AdjuntoRequisicion adjunto = service.obtenerAdjunto(id, adjuntoId);
+            byte[] datos = Files.readAllBytes(Paths.get(adjunto.getRutaArchivo()));
+            String contentType = adjunto.getTipoContenido() != null ? adjunto.getTipoContenido() : "application/octet-stream";
+            String nombreArchivo = adjunto.getNombreOriginal() != null ? adjunto.getNombreOriginal() : adjunto.getNombreArchivo();
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
+                    .body(new ByteArrayResource(datos));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-leyendo-archivo");
         }
     }
 }
