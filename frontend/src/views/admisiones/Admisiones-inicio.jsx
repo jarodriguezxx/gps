@@ -3,46 +3,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ArrowRight, Bell, CalendarDays, CheckCircle2, Clock3, ChevronLeft, ChevronRight, Search, X, FileText, Briefcase, Phone } from 'lucide-react';
-import { AdminHeader, AdmisionesSidebar, AdminMainTitle, AdminErrorAlert, AdminSuccessAlert } from '../../components/layout/AdminLayout';
+import { AdminHeader, AdmisionesSidebar, AdminMainTitle } from '../../components/layout/AdminLayout';
 import AdmisionesInicioDashboard from '../../components/admisiones/AdmisionesInicioDashboard';
-
-const estadoClasses = {
-	Confirmada: 'bg-emerald-100 text-emerald-800',
-	'Llamada hecha': 'bg-emerald-100 text-emerald-800',
-	'No hubo respuesta': 'bg-rose-100 text-rose-800',
-	'Llegó': 'bg-emerald-100 text-emerald-800',
-	'llego': 'bg-emerald-100 text-emerald-800',
-	'No se presentó': 'bg-rose-100 text-rose-800',
-	'no se presento': 'bg-rose-100 text-rose-800',
-	'Llamó': 'bg-emerald-100 text-emerald-800',
-	'llamo': 'bg-emerald-100 text-emerald-800',
-	'No contestó llamada': 'bg-rose-100 text-rose-800',
-	'no contesto llamada': 'bg-rose-100 text-rose-800',
-	'En proceso': 'bg-amber-100 text-amber-900',
-	Pendiente: 'bg-slate-200 text-slate-700',
-	'Convertido a cita': 'bg-emerald-100 text-emerald-800',
-	'No contestó': 'bg-rose-100 text-rose-800',
-	'espera llamada': 'bg-amber-100 text-amber-900',
-	'espera visita': 'bg-sky-100 text-sky-800',
-	'posible ingreso': 'bg-emerald-100 text-emerald-800',
-	'Llamada programada por nosotros': 'bg-violet-100 text-violet-800',
-	'llamada programada por nosotros': 'bg-violet-100 text-violet-800',
-	'Llamada solicitada por el paciente': 'bg-cyan-100 text-cyan-800',
-	'llamada solicitada por el paciente': 'bg-cyan-100 text-cyan-800',
-};
+import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
+import { API_BASE } from '../../config/api';
 
 const diasSemanaCalendario = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 const padNumero = (valor) => String(valor).padStart(2, '0');
 
 const toInputDate = (date) => `${date.getFullYear()}-${padNumero(date.getMonth() + 1)}-${padNumero(date.getDate())}`;
-
-const formatAgendaDate = (value) => {
-	if (!value) return '--';
-	const date = new Date(`${value}T00:00:00`);
-	if (Number.isNaN(date.getTime())) return '--';
-	return date.toLocaleDateString('es-MX', { weekday: 'long', day: '2-digit', month: 'long' });
-};
 
 const todayDateString = toInputDate(new Date());
 
@@ -66,35 +36,17 @@ const AdmisionesInicio = () => {
 	const [agendaTipo, setAgendaTipo] = useState('Entrevista');
 	const [agendaMensaje, setAgendaMensaje] = useState('');
 	const [agendaMensajeTipo, setAgendaMensajeTipo] = useState('success');
-	const [accionMensaje, setAccionMensaje] = useState('');
-	const [accionMensajeTipo, setAccionMensajeTipo] = useState('success');
-	const [actualizandoSeguimientoId, setActualizandoSeguimientoId] = useState(null);
-	const [diagnosticoModalAbierto, setDiagnosticoModalAbierto] = useState(false);
-	const [citaDiagnosticoObjetivoId, setCitaDiagnosticoObjetivoId] = useState(null);
-	const [diagnosticoVisualTexto, setDiagnosticoVisualTexto] = useState('');
-	const [diagnosticoVisualError, setDiagnosticoVisualError] = useState('');
 	const [mesCalendario, setMesCalendario] = useState(() => {
 		const hoy = new Date();
 		return { year: hoy.getFullYear(), month: hoy.getMonth() };
 	});
 
 	const formatEstado = (estado = '') => estado.replaceAll('_', ' ').trim();
-	const estadoClass = (estado = '') => {
-		const normalizado = formatEstado(estado);
-		return estadoClasses[normalizado] || estadoClasses[normalizado.toLowerCase()] || 'bg-slate-200 text-slate-700';
-	};
 	const formatFecha = (fechaIso) => {
 		if (!fechaIso) return '--';
 		const date = new Date(fechaIso);
 		if (Number.isNaN(date.getTime())) return '--';
 		return date.toLocaleDateString('es-MX');
-	};
-
-	const formatHora = (fechaIso) => {
-		if (!fechaIso) return '--:--';
-		const date = new Date(fechaIso);
-		if (Number.isNaN(date.getTime())) return '--:--';
-		return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
 	};
 
 	const calendarioMesLabel = new Date(mesCalendario.year, mesCalendario.month, 1).toLocaleDateString('es-MX', {
@@ -122,18 +74,13 @@ const AdmisionesInicio = () => {
 		return cells;
 	}, [mesCalendario]);
 
-	const agendaResumen = useMemo(() => ({
-		total: citasHoy.length,
-		proxima: citasHoy[0] || null,
-	}), [citasHoy]);
-
 	const puedeIrMesAnterior = mesCalendario.year > new Date().getFullYear() || (mesCalendario.year === new Date().getFullYear() && mesCalendario.month > new Date().getMonth());
 
 	const cargarTablas = async () => {
 		try {
 			setLoadingTablas(true);
 			setErrorTablas('');
-			const response = await fetch('http://localhost:4000/api/seguimientos/tablas');
+			const response = await fetch(`${API_BASE}/seguimientos/tablas`);
 
 			if (!response.ok) {
 				const errorText = await response.text();
@@ -172,7 +119,7 @@ const AdmisionesInicio = () => {
 			try {
 				setCargandoPacientesAgenda(true);
 				setErrorPacientesAgenda('');
-				const response = await fetch(`http://localhost:4000/api/pacientes/busqueda?query=${encodeURIComponent(nombre)}`, {
+				const response = await fetch(`${API_BASE}/pacientes/busqueda?query=${encodeURIComponent(nombre)}`, {
 					signal: controller.signal,
 				});
 
@@ -243,7 +190,7 @@ const AdmisionesInicio = () => {
 
 			const estado = String(item?.estadoSeguimiento || item?.estadoAsistencia || '').toLowerCase();
 
-			if (estado.includes('no se presentó') || estado.includes('no contestó') || estado.includes('no hubo respuesta')) {
+			if (estado.includes('no se presentado') || estado.includes('no contestado') || estado.includes('no hubo respuesta')) {
 				return { etiqueta: 'Alta', clase: 'bg-rose-100 text-rose-800', orden: 0 };
 			}
 
@@ -264,7 +211,7 @@ const AdmisionesInicio = () => {
 		const obtenerSiguienteAccion = (item) => {
 			const estado = String(item?.estadoSeguimiento || item?.estadoAsistencia || '').toLowerCase();
 
-			if (estado.includes('no se presentó') || estado.includes('no contestó') || estado.includes('no hubo respuesta')) {
+			if (estado.includes('no se presentado') || estado.includes('no contestado') || estado.includes('no hubo respuesta')) {
 				return 'Reintentar contacto';
 			}
 
@@ -381,7 +328,7 @@ const AdmisionesInicio = () => {
 
 		try {
 			const fechaHoraProgramada = `${agendaFecha}T${agendaHora}:00`;
-			const response = await fetch('http://localhost:4000/api/seguimientos/citas', {
+			const response = await fetch(`${API_BASE}/seguimientos/citas`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -443,152 +390,6 @@ const AdmisionesInicio = () => {
 		}
 	};
 
-	const abrirModalDiagnostico = (citaId) => {
-		const cita = citasHoy.find((item) => item.id === citaId);
-		setCitaDiagnosticoObjetivoId(citaId);
-		setDiagnosticoVisualTexto(cita?.diagnosticoVisual || '');
-		setDiagnosticoVisualError('');
-		setDiagnosticoModalAbierto(true);
-	};
-
-	const cerrarModalDiagnostico = () => {
-		setDiagnosticoModalAbierto(false);
-		setCitaDiagnosticoObjetivoId(null);
-		setDiagnosticoVisualTexto('');
-		setDiagnosticoVisualError('');
-	};
-
-	const confirmarLlegadaConDiagnostico = async () => {
-		if (!String(diagnosticoVisualTexto || '').trim()) {
-			setDiagnosticoVisualError('Captura el diagnóstico visual para registrar llegada.');
-			return;
-		}
-
-		try {
-			const response = await fetch(`http://localhost:4000/api/seguimientos/${citaDiagnosticoObjetivoId}/asistencia`, {
-				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					estadoAsistencia: 'Llegó',
-					diagnosticoVisual: diagnosticoVisualTexto.trim(),
-				}),
-			});
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(errorText || 'No se pudo registrar la llegada.');
-			}
-
-			await cargarTablas();
-			cerrarModalDiagnostico();
-		} catch (error) {
-			console.error('Error al registrar llegada con diagnóstico visual:', error);
-			setDiagnosticoVisualError('No se pudo registrar la llegada. Revisa backend o conexión.');
-		}
-	};
-
-	const marcarNoPresentoCita = async (citaId) => {
-		try {
-			const response = await fetch(`http://localhost:4000/api/seguimientos/${citaId}/asistencia`, {
-				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					estadoAsistencia: 'No se presentó',
-					diagnosticoVisual: '',
-				}),
-			});
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(errorText || 'No se pudo registrar inasistencia.');
-			}
-
-			await cargarTablas();
-		} catch (error) {
-			console.error('Error al registrar no se presentó:', error);
-			setAccionMensaje('No se pudo actualizar asistencia de la cita.');
-			setAccionMensajeTipo('error');
-		}
-	};
-
-	const actualizarEstadoSeguimiento = async (id, nuevoEstado, tipoTabla) => {
-		if (actualizandoSeguimientoId) {
-			return;
-		}
-
-		try {
-			setActualizandoSeguimientoId(id);
-			setAccionMensaje('');
-			setAccionMensajeTipo('success');
-
-			const response = await fetch(`http://localhost:4000/api/seguimientos/${id}/estado`, {
-				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ estadoSeguimiento: nuevoEstado }),
-			});
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(errorText || 'No se pudo actualizar el estado.');
-			}
-
-			if (tipoTabla === 'citas') {
-				setCitasHoy((prev) => prev.map((item) => (item.id === id ? { ...item, estadoSeguimiento: nuevoEstado } : item)));
-			} else {
-				setSeguimiento((prev) => prev.map((item) => (item.id === id ? { ...item, estadoSeguimiento: nuevoEstado } : item)));
-			}
-
-			setAccionMensaje(`Estado actualizado: ${nuevoEstado}.`);
-			setAccionMensajeTipo('success');
-		} catch (error) {
-			console.error('Error al actualizar estado de seguimiento:', error);
-			setAccionMensaje('No se pudo actualizar el estado. Revisa backend o conexión.');
-			setAccionMensajeTipo('error');
-		} finally {
-			setActualizandoSeguimientoId(null);
-		}
-	};
-
-	const obtenerOrigenLlamada = (item) => {
-		const origenExplicito = String(item?.origenLlamada || '').toUpperCase();
-		if (origenExplicito === 'PROSPECTO' || origenExplicito === 'NOSOTROS') {
-			return origenExplicito;
-		}
-
-		const estado = String(item?.estadoSeguimiento || '').toLowerCase();
-		if (estado.includes('solicitada por el prospecto') || estado.includes('solicitada por el paciente')) {
-			return 'PROSPECTO';
-		}
-
-		if (estado.includes('programada por nosotros')) {
-			return 'NOSOTROS';
-		}
-
-		return 'NOSOTROS';
-	};
-
-	const obtenerAccionesLlamada = (item) => {
-		const origen = obtenerOrigenLlamada(item);
-
-		if (origen === 'PROSPECTO') {
-			return [
-				{ label: 'Llamó', estado: 'Llamó', clase: 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' },
-				{ label: 'No hubo respuesta', estado: 'No hubo respuesta', clase: 'border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100' },
-			];
-		}
-
-		return [
-			{ label: 'Llamada hecha', estado: 'Llamada hecha', clase: 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' },
-			{ label: 'No contestó', estado: 'No contestó', clase: 'border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100' },
-		];
-	};
-
 	return (
 		<div className="min-h-screen bg-slate-100 text-slate-900">
 			<div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
@@ -634,6 +435,12 @@ const AdmisionesInicio = () => {
 
 							<div className="grid flex-1 gap-5 overflow-y-auto px-5 py-5 md:px-6 lg:grid-cols-[1.05fr_1.6fr]">
 								<div className="space-y-4">
+									<AdmisionesToast
+										message={agendaMensaje}
+										variant={agendaMensajeTipo}
+										onClose={() => setAgendaMensaje('')}
+										title={agendaMensajeTipo === 'success' ? 'Agenda confirmada' : 'Aviso de agenda'}
+									/>
 									<div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
 										<p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Paciente</p>
 										<div className="relative mt-3">
@@ -788,11 +595,7 @@ const AdmisionesInicio = () => {
 
 							<div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200 px-5 py-4 md:px-6">
 								<div className="text-sm text-slate-500">
-									{agendaMensaje ? (
-										<span className={`rounded-full px-3 py-2 ${agendaMensajeTipo === 'error' ? 'bg-rose-50 text-rose-800' : 'bg-emerald-50 text-emerald-800'}`}>
-											{agendaMensaje}
-										</span>
-									) : <span></span>}
+									<span></span>
 								</div>
 								<div className="flex gap-2">
 									<button type="button" onClick={() => setAgendaAbierta(false)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Cancelar</button>
@@ -803,46 +606,6 @@ const AdmisionesInicio = () => {
 					</div>
 				) : null}
 
-				{diagnosticoModalAbierto ? (
-					<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-						<div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.35)]">
-							<div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 md:px-6">
-								<div>
-									<p className="text-xs font-bold uppercase tracking-[0.3em] text-[#7E1D3B]">Control de llegada</p>
-									<h3 className="text-xl font-black text-slate-900">Registrar llegada con diagnóstico visual</h3>
-									<p className="mt-1 text-sm text-slate-500">Captura este dato al momento de confirmar que el paciente llegó.</p>
-								</div>
-								<button onClick={cerrarModalDiagnostico} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-[#7E1D3B] hover:text-[#7E1D3B]">
-									<X size={20} />
-								</button>
-							</div>
-							<div className="px-5 py-5 md:px-6">
-								<label className="block space-y-2">
-									<span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Diagnóstico visual</span>
-									<textarea
-										value={diagnosticoVisualTexto}
-										onChange={(event) => {
-											setDiagnosticoVisualTexto(event.target.value);
-											if (diagnosticoVisualError) {
-												setDiagnosticoVisualError('');
-											}
-										}}
-										rows={6}
-										className="w-full rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-										placeholder="Describe observaciones visuales relevantes al momento de llegada..."
-									/>
-								</label>
-								{diagnosticoVisualError ? (
-									<p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{diagnosticoVisualError}</p>
-								) : null}
-							</div>
-							<div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4 md:px-6">
-								<button type="button" onClick={cerrarModalDiagnostico} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Cancelar</button>
-								<button type="button" onClick={confirmarLlegadaConDiagnostico} className="rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#63162e]">Confirmar llegada</button>
-							</div>
-						</div>
-					</div>
-				) : null}
 			</div>
 		</div>
 	);

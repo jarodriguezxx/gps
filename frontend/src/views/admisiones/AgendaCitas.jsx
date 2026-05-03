@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { CalendarDays, CheckCircle2, Clock3, Eye, LoaderCircle, Plus, Search, X } from 'lucide-react';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
+import { API_BASE } from '../../config/api';
 
 const formatFecha = (value) => {
 	if (!value) return '--';
@@ -78,14 +79,14 @@ const AgendaCitas = () => {
 		const cargarDatos = async () => {
         try {
             setLoading(true);
-            const response = await fetch('http://localhost:4000/api/seguimientos/tablas');
+			const response = await fetch(`${API_BASE}/seguimientos/tablas`);
             if (!response.ok) throw new Error('Error al cargar datos');
             const data = await response.json();
             
             setCitas(Array.isArray(data?.citas) ? data.citas : []);
             setLlamadas(Array.isArray(data?.llamadas) ? data.llamadas : []); // Nueva tabla
-        } catch (fetchError) {
-            setError('No se pudo conectar con el backend.');
+		} catch {
+				setError('No se pudo conectar con el backend.');
         } finally {
             setLoading(false);
         }

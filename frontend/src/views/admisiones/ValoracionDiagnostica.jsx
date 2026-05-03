@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, User, Phone, Activity, HeartPulse, Clipboard, Search, ArrowRight, FileText, Briefcase, CheckCircle2 } from 'lucide-react';
+import { Save, X, User, Phone, Activity, HeartPulse, Clipboard, Search, ArrowRight, FileText, Briefcase } from 'lucide-react';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
+import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
+import { SUSTANCIAS_CONSUMO } from '../../config/catalogs';
+import { API_BASE } from '../../config/api';
 
 const structuredAddressDefaults = {
   solicitanteDireccionCalle: '',
@@ -193,6 +196,7 @@ const ValoracionDiagnostica = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState('solicitante');
   const [isSaving, setIsSaving] = useState(false);
+  const [notification, setNotification] = useState({ type: '', message: '' });
 
   const composeNombreCompleto = (nombres, apellidoPaterno, apellidoMaterno) => {
     return [nombres, apellidoPaterno, apellidoMaterno]
@@ -297,7 +301,7 @@ const ValoracionDiagnostica = () => {
   const handleSavePaciente = async () => {
     const validationIssue = findFirstValidationIssue(formData);
     if (validationIssue) {
-      window.alert(`Completa el campo: ${validationIssue.label}.`);
+      setNotification({ type: 'error', message: `Completa el campo: ${validationIssue.label}.` });
       setTab(validationIssue.tab);
       return;
     }
@@ -368,7 +372,7 @@ const ValoracionDiagnostica = () => {
 
     try {
       setIsSaving(true);
-      const solicitanteResponse = await fetch('http://localhost:4000/api/solicitantes', {
+      const solicitanteResponse = await fetch(`${API_BASE}/solicitantes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -383,7 +387,7 @@ const ValoracionDiagnostica = () => {
 
       const solicitanteGuardado = await solicitanteResponse.json();
 
-      const pacienteResponse = await fetch('http://localhost:4000/api/pacientes', {
+      const pacienteResponse = await fetch(`${API_BASE}/pacientes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -396,11 +400,13 @@ const ValoracionDiagnostica = () => {
         throw new Error(errorText || 'No se pudo guardar el paciente.');
       }
 
-      window.alert('Valoracion diagnostica guardada correctamente.');
-      navigate('/admisiones/expediente');
+      setNotification({ type: 'success', message: 'Valoración diagnóstica guardada correctamente.' });
+      setTimeout(() => {
+        navigate('/admisiones/expediente');
+      }, 900);
     } catch (error) {
       console.error('Error al guardar valoracion diagnostica:', error);
-      window.alert('Error al guardar. Revisa que el backend este corriendo en el puerto 4000.');
+      setNotification({ type: 'error', message: 'No se pudo guardar la valoración. Verifica tu conexión e inténtalo de nuevo.' });
     } finally {
       setIsSaving(false);
     }
@@ -416,6 +422,11 @@ const ValoracionDiagnostica = () => {
             <AdmisionesSidebar />
 
             <div className="space-y-5">
+              <AdmisionesToast
+                message={notification.message}
+                variant={notification.type || 'info'}
+                onClose={() => setNotification({ type: '', message: '' })}
+              />
               
 
         {/* Datos Generales */}
@@ -702,22 +713,10 @@ const ValoracionDiagnostica = () => {
                     value={formData.sustanciaConsumo}
                     onChange={handleInputChange}
                     className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
-                  >                    <option value="">Seleccionar...</option>
-                    <option value="alcohol">ALCOHOL</option>
-                    <option value="cocaina">COCAÍNA</option>
-                    <option value="marihuana">MARIHUANA</option>
-                    <option value="base">BASE</option>
-                    <option value="extasis">ÉXTASIS</option>
-                    <option value="cristal">CRISTAL</option>
-                    <option value="heroina">TABACO</option>
-                    <option value="metanfetaminas">BZD</option>
-                    <option value="solventes">INHALANTES</option>
-                    <option value="tca">TCA</option>
-                    <option value="ludopatia">LUDOPATIA</option>
-                    <option value=" acidos">ACIDOS</option>
-                    <option value="otros">OTROS</option>
-                    
-                  
+                  >
+                    {SUSTANCIAS_CONSUMO.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
                   </select>
                   {(formData.sustanciaConsumo === 'otros' ) && (
                   <div className="space-y-3">

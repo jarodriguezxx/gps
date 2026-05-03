@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import marakameLogo from '../../assets/marakame.jpeg';
 
-export const RHHeader = ({ moduleTitle, moduleSubtitle, submodule = 'Recursos Humanos' }) => (
+export const RHHeader = ({ submodule = 'Recursos Humanos' }) => (
   <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
     <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
       <div className="flex items-center gap-3">
@@ -35,7 +35,10 @@ export const RHSidebar = ({ navItems, activeKey }) => {
   
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {navItems.map(({ label, icon: Icon, key, path }) => (
+      {navItems.map(({ label, icon, key, path }) => {
+        const NavIcon = icon;
+
+        return (
         <button 
           key={key} 
           onClick={() => navigate(path)}
@@ -45,10 +48,11 @@ export const RHSidebar = ({ navItems, activeKey }) => {
               : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
           }`}
         >
-          <Icon size={15} />
+          {React.createElement(NavIcon, { size: 15 })}
           {label}
         </button>
-      ))}
+        );
+      })}
     </aside>
   );
 };

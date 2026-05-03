@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight, AlertTriangle, FileText, FileX, Phone, Calculator, DollarSign } from 'lucide-react';
-import { AdminHeader, AdminMainTitle, AdminErrorAlert, AdminSuccessAlert } from '../../components/layout/AdminLayout';
+import { AdminHeader, AdminMainTitle } from '../../components/layout/AdminLayout';
+import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
+import { API_BASE, API_HOST } from '../../config/api';
 
 const EstudioSocioeconomico = () => {
   const navigate = useNavigate();
@@ -952,7 +954,7 @@ const EstudioSocioeconomico = () => {
       try {
         setCargandoCitasRegistradas(true);
         setErrorCitasRegistradas('');
-        const response = await fetch('http://localhost:4000/api/seguimientos/tablas');
+        const response = await fetch(`${API_BASE}/seguimientos/tablas`);
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -990,7 +992,7 @@ const EstudioSocioeconomico = () => {
         setCargandoPacientes(true);
         setErrorPacientes('');
         const response = await fetch(
-          `http://localhost:4000/api/pacientes/busqueda?query=${encodeURIComponent(nombre)}`,
+          `${API_BASE}/pacientes/busqueda?query=${encodeURIComponent(nombre)}`,
           { signal: controller.signal }
         );
 
@@ -1620,7 +1622,7 @@ const EstudioSocioeconomico = () => {
       setGuardandoRechazo(true);
       setErrorRechazo('');
 
-      const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteSeleccionadoId}/rechazo-administrativo`, {
+      const response = await fetch(`${API_BASE}/pacientes/${pacienteSeleccionadoId}/rechazo-administrativo`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1928,7 +1930,7 @@ const EstudioSocioeconomico = () => {
         const fechaCita = new Date(citaPaciente.fechaHoraProgramada);
         if (fechaCita.getTime() <= ahora.getTime()) {
           // La cita ya ocurrió, activar la ficha
-          const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteSeleccionadoId}/datos-basicos`, {
+          const response = await fetch(`${API_BASE}/pacientes/${pacienteSeleccionadoId}/datos-basicos`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -1972,7 +1974,7 @@ const EstudioSocioeconomico = () => {
         },
       };
 
-      const pdfResponse = await fetch(`http://localhost:4000/api/pacientes/${pacienteSeleccionadoId}/estudio-socioeconomico/pdf`, {
+      const pdfResponse = await fetch(`${API_BASE}/pacientes/${pacienteSeleccionadoId}/estudio-socioeconomico/pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2036,30 +2038,12 @@ const EstudioSocioeconomico = () => {
 
         <main className="space-y-5">
 
-        {feedback && (
-          <section
-            className={`mb-4 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-sm ${
-              feedback.type === 'success'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                : feedback.type === 'info'
-                ? 'border-sky-200 bg-sky-50 text-sky-800'
-                : feedback.type === 'warning'
-                ? 'border-amber-200 bg-amber-50 text-amber-800'
-                : 'border-rose-200 bg-rose-50 text-rose-800'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <p>{feedback.message}</p>
-              <button
-                type="button"
-                onClick={() => setFeedback(null)}
-                className="rounded-md px-2 py-1 text-xs font-bold uppercase tracking-wide opacity-80 hover:opacity-100"
-              >
-                Cerrar
-              </button>
-            </div>
-          </section>
-        )}
+        <AdmisionesToast
+          message={feedback?.message}
+          variant={feedback?.type || 'info'}
+          onClose={() => setFeedback(null)}
+          title={feedback?.type === 'success' ? 'Confirmación' : feedback?.type === 'warning' ? 'Atención' : feedback?.type === 'error' ? 'Aviso' : 'Información'}
+        />
         
         {/* --- BUSCADOR DE SOLICITANTE --- */}
         <section className="mb-8">

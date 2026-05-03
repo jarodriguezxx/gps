@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, FileText, FileX, AlertTriangle, Search, Sparkles, X, Download, Upload, CheckCircle2, Paperclip, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
+import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
+import { API_BASE, API_HOST } from '../../config/api';
 import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
 
 const formatDateValue = (value) => {
@@ -13,13 +15,6 @@ const formatDateValue = (value) => {
 };
 
 const hasValue = (value) => String(value ?? '').trim().length > 0;
-
-const formatClave = (item) => {
-	if (item?.claveExpediente) return String(item.claveExpediente);
-	if (item?.folioExpediente) return String(item.folioExpediente);
-	if (item?.id) return String(item.id).padStart(5, '0');
-	return '--';
-};
 
 const getNombreProspecto = (item) => item?.nombreCompleto || item?.nombrePaciente || item?.nombre || '';
 
@@ -57,7 +52,7 @@ const toDateTimeLocalValue = (value) => {
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
-const buildPdfActionUrl = (path) => `http://localhost:4000${path}`;
+const buildPdfActionUrl = (path) => `${API_HOST}${path}`;
 
 const getTimelineTone = (seguimiento) => {
 	const estado = String(seguimiento?.estadoSeguimiento || seguimiento?.estadoAsistencia || '').toLowerCase();
@@ -87,7 +82,7 @@ const buildDocumentosProspecto = (prospecto, detalleExpediente, tieneValoracionM
 			detalle: documentoDenegado
 				? `Generado: ${formatDateValue(doc.generadoEn)} • Denegado por insuficiencia económica.`
 				: `Generado: ${formatDateValue(doc.generadoEn)}${doc.descargaUrl ? ' • Disponible para descarga' : ''}`,
-			descargaUrl: doc.descargaUrl ? `http://localhost:4000${doc.descargaUrl}` : '',
+			descargaUrl: doc.descargaUrl ? `${API_HOST}${doc.descargaUrl}` : '',
 			verUrl: doc.descargaUrl ? buildPdfActionUrl(doc.descargaUrl.replace('/descargar', '/ver')) : '',
 			imprimirUrl: doc.descargaUrl ? buildPdfActionUrl(doc.descargaUrl.replace('/descargar', '/imprimir')) : '',
 		};
@@ -230,7 +225,7 @@ const buildNotasProspecto = (prospecto, detalleExpediente, prospectoSeleccionado
 	return unificadas;
 };
 
-const buildTimeline = (detalleExpediente, prospectoSeleccionado) => {
+const buildTimeline = (detalleExpediente) => {
 	const seguimientos = Array.isArray(detalleExpediente?.seguimientos) ? detalleExpediente.seguimientos : [];
 	const notasAdmisiones = (Array.isArray(detalleExpediente?.notasEvolucion) ? detalleExpediente.notasEvolucion : [])
 		.filter((nota) => String(nota?.medicoAsignado || '').toUpperCase().includes('ADMISION'));
@@ -570,14 +565,14 @@ const ExpedienteAdmisiones = () => {
 	const { id: expedienteIdParam } = useParams();
 	const [tab, setTab] = useState('general');
 	const [busquedaExpediente, setBusquedaExpediente] = useState('');
-	const [resultadosBusqueda, setResultadosBusqueda] = useState([]);
-	const [cargandoBusqueda, setCargandoBusqueda] = useState(false);
-	const [errorBusqueda, setErrorBusqueda] = useState('');
-	const [indiceResaltado, setIndiceResaltado] = useState(-1);
+	const [, setResultadosBusqueda] = useState([]);
+	const [, setCargandoBusqueda] = useState(false);
+	const [, setErrorBusqueda] = useState('');
+	const [, setIndiceResaltado] = useState(-1);
 	const [prospectoSeleccionado, setProspectoSeleccionado] = useState(null);
 	const [detalleExpediente, setDetalleExpediente] = useState(null);
-	const [cargandoDetalleExpediente, setCargandoDetalleExpediente] = useState(false);
-	const [errorDetalleExpediente, setErrorDetalleExpediente] = useState('');
+	const [, setCargandoDetalleExpediente] = useState(false);
+	const [, setErrorDetalleExpediente] = useState('');
 	const [modalLlamadaInicialAbierto, setModalLlamadaInicialAbierto] = useState(false);
 	const [diagnosticoTab, setDiagnosticoTab] = useState('solicitante');
 	const [modalReciboAbierto, setModalReciboAbierto] = useState(false);
@@ -609,22 +604,21 @@ const ExpedienteAdmisiones = () => {
 		nombreRecibe: '',
 	});
 	const [recibosSubidos, setRecibosSubidos] = useState([]);
-	const [reciboPersistido, setReciboPersistido] = useState(null);
+	const [, setReciboPersistido] = useState(null);
 	const [cargandoRecibo, setCargandoRecibo] = useState(false);
 	const [tokenGenerado, setTokenGenerado] = useState(null);
 	const [generandoToken, setGenerandoToken] = useState(false);
-	const [expedienteModo, setExpedienteModo] = useState('prospecto');
-	const [expedienteExpandidoId, setExpedienteExpandidoId] = useState(null);
+	const [, setExpedienteModo] = useState('prospecto');
+	const [, setExpedienteExpandidoId] = useState(null);
 	const [notaAdmisiones, setNotaAdmisiones] = useState('');
 	const [guardandoNotaAdmisiones, setGuardandoNotaAdmisiones] = useState(false);
-	const [errorNotaAdmisiones, setErrorNotaAdmisiones] = useState('');
-	const [mensajeNotaAdmisiones, setMensajeNotaAdmisiones] = useState('');
+	const [toast, setToast] = useState({ type: '', message: '' });
 
 	const cargarRecibosPersistidos = async (pacienteId) => {
 		if (!pacienteId) return [];
 		const storageKey = getRecibosStorageKey(pacienteId);
 		try {
-			const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteId}/recibos`);
+			const response = await fetch(`${API_BASE}/pacientes/${pacienteId}/recibos`);
 			if (response.ok) {
 				const recibosApi = await response.json();
 				const normalizados = Array.isArray(recibosApi) ? recibosApi.map(normalizarReciboApi) : [];
@@ -668,7 +662,7 @@ const ExpedienteAdmisiones = () => {
 
 		// Consultar el estado real del paciente desde el backend
 		try {
-			const response = await fetch(`http://localhost:4000/api/pacientes/${prospecto.id}`);
+			const response = await fetch(`${API_BASE}/pacientes/${prospecto.id}`);
 			if (response.ok) {
 				const pacienteActualizado = await response.json();
 				const estadoPaciente = pacienteActualizado.estadoPaciente || 'PROSPECTO';
@@ -740,7 +734,7 @@ const ExpedienteAdmisiones = () => {
 				lector.readAsDataURL(archivo);
 			});
 
-			const res = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/recibos`, {
+			const res = await fetch(`${API_BASE}/pacientes/${prospectoSeleccionado.id}/recibos`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -787,7 +781,7 @@ const ExpedienteAdmisiones = () => {
 
 	const generarTokenIngreso = async () => {
 		if (!recibosSubidos.length) {
-			alert('Debe subir el recibo firmado antes de generar el token');
+			setToast({ type: 'error', message: 'Debe subir el recibo firmado antes de generar el token.' });
 			return;
 		}
 
@@ -795,7 +789,7 @@ const ExpedienteAdmisiones = () => {
 
 		try {
 			// Llamar al backend para validar ingreso y generar token
-			const response = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/validar-ingreso`, {
+			const response = await fetch(`${API_BASE}/pacientes/${prospectoSeleccionado.id}/validar-ingreso`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -832,7 +826,7 @@ const ExpedienteAdmisiones = () => {
 			setModalReciboAbierto(false);
 
 			setTimeout(() => {
-				alert(`✅ Token generado exitosamente:\n\n${tokenGenerado}\n\nEl prospecto ahora es PACIENTE`);
+				setToast({ type: 'success', message: `Token generado exitosamente: ${tokenGenerado}. El prospecto ahora es paciente.` });
 				setTokenGenerado(null);
 				if (prospectoSeleccionado?.id) {
 					cargarRecibosPersistidos(prospectoSeleccionado.id);
@@ -840,7 +834,7 @@ const ExpedienteAdmisiones = () => {
 			}, 500);
 		} catch (error) {
 			console.error('Error al generar token:', error);
-			alert(`Error al generar el token: ${error.message}`);
+			setToast({ type: 'error', message: `No se pudo generar el token: ${error.message}` });
 		} finally {
 			setGenerandoToken(false);
 		}
@@ -859,7 +853,7 @@ const ExpedienteAdmisiones = () => {
 				return;
 			}
 
-			const res = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/recibos/${recibo.id}`, {
+			const res = await fetch(`${API_BASE}/pacientes/${prospectoSeleccionado.id}/recibos/${recibo.id}`, {
 				method: 'DELETE',
 			});
 
@@ -869,29 +863,27 @@ const ExpedienteAdmisiones = () => {
 				window.localStorage.removeItem(storageKey);
 			} else {
 				const err = await res.json();
-				alert(err.message || 'No se pudo eliminar el recibo en el servidor');
+				setToast({ type: 'error', message: err.message || 'No se pudo eliminar el recibo en el servidor.' });
 			}
 		} catch (error) {
 			console.error('Error al eliminar recibo:', error);
-			alert('Error al eliminar recibo');
+			setToast({ type: 'error', message: 'Error al eliminar el recibo.' });
 		}
 	};
 
 	const guardarNotaAdmisiones = async () => {
 		if (!prospectoSeleccionado?.id) {
-			setErrorNotaAdmisiones('Selecciona un prospecto antes de guardar la nota.');
+			setToast({ type: 'error', message: 'Selecciona un prospecto antes de guardar la nota.' });
 			return;
 		}
 
 		const texto = notaAdmisiones.trim();
 		if (!texto) {
-			setErrorNotaAdmisiones('Escribe una nota para poder guardarla.');
+			setToast({ type: 'error', message: 'Escribe una nota para poder guardarla.' });
 			return;
 		}
 
 		setGuardandoNotaAdmisiones(true);
-		setErrorNotaAdmisiones('');
-		setMensajeNotaAdmisiones('');
 
 		try {
 			const payload = {
@@ -912,7 +904,7 @@ const ExpedienteAdmisiones = () => {
 				medicoAsignado: 'ADMISIONES',
 			};
 
-			const response = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/notas-evolucion`, {
+			const response = await fetch(`${API_BASE}/pacientes/${prospectoSeleccionado.id}/notas-evolucion`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(payload),
@@ -923,17 +915,17 @@ const ExpedienteAdmisiones = () => {
 				throw new Error(errorText || 'No se pudo guardar la nota de admisiones.');
 			}
 
-			const detalleResponse = await fetch(`http://localhost:4000/api/pacientes/${prospectoSeleccionado.id}/expediente`);
+			const detalleResponse = await fetch(`${API_BASE}/pacientes/${prospectoSeleccionado.id}/expediente`);
 			if (detalleResponse.ok) {
 				const data = await detalleResponse.json();
 				setDetalleExpediente(data);
 			}
 
 			setNotaAdmisiones('');
-			setMensajeNotaAdmisiones('Nota de admisiones guardada correctamente.');
+			setToast({ type: 'success', message: 'Nota de admisiones guardada correctamente.' });
 		} catch (error) {
 			console.error('Error guardando nota de admisiones:', error);
-			setErrorNotaAdmisiones(error.message || 'No se pudo guardar la nota.');
+			setToast({ type: 'error', message: error.message || 'No se pudo guardar la nota.' });
 		} finally {
 			setGuardandoNotaAdmisiones(false);
 		}
@@ -946,7 +938,7 @@ const ExpedienteAdmisiones = () => {
 
 		const cargarProspectoDesdeRuta = async () => {
 			try {
-				const response = await fetch(`http://localhost:4000/api/pacientes/${expedienteIdParam}`, {
+				const response = await fetch(`${API_BASE}/pacientes/${expedienteIdParam}`, {
 					signal: controller.signal,
 				});
 
@@ -983,7 +975,7 @@ const ExpedienteAdmisiones = () => {
 			try {
 				setCargandoBusqueda(true);
 				setErrorBusqueda('');
-				const response = await fetch(`http://localhost:4000/api/pacientes/busqueda?query=${encodeURIComponent(query)}`, {
+				const response = await fetch(`${API_BASE}/pacientes/busqueda?query=${encodeURIComponent(query)}`, {
 					signal: controller.signal,
 				});
 
@@ -1035,7 +1027,7 @@ const ExpedienteAdmisiones = () => {
 				setErrorDetalleExpediente('');
 				
 				// 1. Cargar el expediente base
-				const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteId}/expediente`, {
+				const response = await fetch(`${API_BASE}/pacientes/${pacienteId}/expediente`, {
 					signal: controller.signal,
 				});
 
@@ -1048,7 +1040,7 @@ const ExpedienteAdmisiones = () => {
 				setDetalleExpediente(data);
 
 				// 2. PREGUNTAR AL BACKEND SI EL MÉDICO YA HIZO LA VALORACIÓN
-				const valoracionRes = await fetch(`http://localhost:4000/api/valoraciones/paciente/${pacienteId}`, {
+				const valoracionRes = await fetch(`${API_BASE}/valoraciones/paciente/${pacienteId}`, {
 					signal: controller.signal,
 				});
 				
@@ -1077,70 +1069,6 @@ const ExpedienteAdmisiones = () => {
 		if (!prospectoSeleccionado?.id) return;
 		cargarRecibosPersistidos(prospectoSeleccionado.id);
 	}, [prospectoSeleccionado?.id]);
-
-	const limpiarBusqueda = () => {
-		setBusquedaExpediente('');
-		setResultadosBusqueda([]);
-		setErrorBusqueda('');
-		setIndiceResaltado(-1);
-		setExpedienteExpandidoId(null);
-		setProspectoSeleccionado(null);
-		setDetalleExpediente(null);
-		setErrorDetalleExpediente('');
-		setModalLlamadaInicialAbierto(false);
-		setDiagnosticoTab('solicitante');
-		setNotaAdmisiones('');
-		setErrorNotaAdmisiones('');
-		setMensajeNotaAdmisiones('');
-	};
-
-	const toggleExpedienteExpandido = (id) => {
-		setExpedienteExpandidoId((prev) => (prev === id ? null : id));
-	};
-
-	const expedientesLista = useMemo(() => {
-		const query = busquedaExpediente.trim();
-		if (query.length >= 2) {
-			return resultadosBusqueda;
-		}
-
-		if (prospectoSeleccionado?.id) {
-			return [prospectoSeleccionado];
-		}
-
-		return [];
-	}, [busquedaExpediente, resultadosBusqueda, prospectoSeleccionado]);
-
-	const handleBusquedaKeyDown = (event) => {
-		if (event.key === 'ArrowDown') {
-			event.preventDefault();
-			setIndiceResaltado((prev) => {
-				const siguiente = prev + 1;
-				return siguiente >= resultadosBusqueda.length ? 0 : siguiente;
-			});
-			return;
-		}
-
-		if (event.key === 'ArrowUp') {
-			event.preventDefault();
-			setIndiceResaltado((prev) => {
-				const anterior = prev - 1;
-				return anterior < 0 ? resultadosBusqueda.length - 1 : anterior;
-			});
-			return;
-		}
-
-		if (event.key === 'Escape') {
-			setIndiceResaltado(-1);
-			return;
-		}
-
-		if (event.key === 'Enter' && resultadosBusqueda.length > 0) {
-			event.preventDefault();
-			const indiceObjetivo = indiceResaltado >= 0 ? indiceResaltado : 0;
-			seleccionarProspecto(resultadosBusqueda[indiceObjetivo]);
-		}
-	};
 
 	const tarjetasGeneral = useMemo(() => {
 		if (!prospectoSeleccionado) {
@@ -1231,6 +1159,7 @@ const ExpedienteAdmisiones = () => {
             <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Expediente Digital</p>
                 <h3 className="text-2xl font-black text-slate-900">Documentación y Registros</h3>
+		<AdmisionesToast message={toast.message} variant={toast.type || 'info'} onClose={() => setToast({ type: '', message: '' })} />
             </div>
             <FileText className="text-[#7E1D3B]" size={28} />
         </div>
@@ -1451,17 +1380,11 @@ const ExpedienteAdmisiones = () => {
 													value={notaAdmisiones}
 													onChange={(event) => {
 														setNotaAdmisiones(event.target.value);
-														if (errorNotaAdmisiones) setErrorNotaAdmisiones('');
-														if (mensajeNotaAdmisiones) setMensajeNotaAdmisiones('');
 													}}
 													placeholder="Escribe aquí una nota administrativa de admisiones..."
 													className="min-h-[92px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 outline-none transition focus:border-[#7E1D3B]/40 focus:ring-2 focus:ring-[#7E1D3B]/15"
 												/>
-												<div className="mt-3 flex items-center justify-between gap-3">
-													<div className="text-xs">
-														{errorNotaAdmisiones ? <span className="text-rose-700">{errorNotaAdmisiones}</span> : null}
-														{!errorNotaAdmisiones && mensajeNotaAdmisiones ? <span className="text-emerald-700">{mensajeNotaAdmisiones}</span> : null}
-													</div>
+												<div className="mt-3 flex items-center justify-end gap-3">
 													<button
 														type="button"
 														onClick={guardarNotaAdmisiones}
