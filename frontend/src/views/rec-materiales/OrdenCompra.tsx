@@ -1,60 +1,121 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { ui } from "../../config/theme";
+import { API_BASE } from "../../config/api.ts";
 import * as requisicionTypes from "../../types/requisicion.ts";
 import * as ordenTypes from "../../types/ordenCompra.ts";
 import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
-import {
-  cargarOrdenCompraPersistida,
-  guardarOrdenCompraPersistida,
-} from "./ordenCompraStorage";
+import { buscarEnCatalogo, DATA_CATALOGO_ARTICULOS } from "../../types/catalogoArticulos.ts";
 
 const moneda = new Intl.NumberFormat("es-MX", {
   style: "currency",
   currency: "MXN",
 });
 
-const OrdenCompra = () => {
+interface OrdenCompraProps {
+  requisiciones?: requisicionTypes.Requisicion[];
+  refrescar?: () => void;
+}
+
+const OrdenCompra = ({ requisiciones = [], refrescar }: OrdenCompraProps) => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const rol = useOutletContext() as string;
   const [requisicion, setRequisicion] =
     useState<requisicionTypes.Requisicion | null>(null);
   const [orden, setOrden] = useState<ordenTypes.OrdenCompra | null>(null);
+  const [ordenBackendId, setOrdenBackendId] = useState<string | null>(null);
+  const [enviada, setEnviada] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [firmando, setFirmando] = useState(false);
+  const loadedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!id) {
       setRequisicion(null);
       setOrden(null);
+      setIsLoading(false);
+      loadedIdRef.current = null;
       return;
     }
 
-    const requisicionEncontrada = requisicionTypes.REQUISICIONES_COMPLETO.find(
-      (item) => item.id === id,
-    );
+    if (!requisiciones.length) {
+      setIsLoading(true);
+      return;
+    }
 
-    if (!requisicionEncontrada) {
+    const req = requisiciones.find((r) => r.id === id);
+    if (!req) {
       setRequisicion(null);
       setOrden(null);
+      setIsLoading(false);
+      loadedIdRef.current = null;
       return;
     }
 
-    setRequisicion(requisicionEncontrada);
+    // Ya cargamos este ID — solo actualizar la copia local sin re-fetch
+    if (loadedIdRef.current === id) {
+      setRequisicion(req);
+      return;
+    }
 
-    const borradorGuardado = cargarOrdenCompraPersistida(
-      requisicionEncontrada.id,
-    );
-    setOrden(
-      borradorGuardado ??
-        ordenTypes.crearBorradorOrdenCompra(requisicionEncontrada),
-    );
-  }, [id]);
+    loadedIdRef.current = id;
+    setIsLoading(true);
+    setRequisicion(req);
 
-  const proveedoresActivos = useMemo(
-    () =>
-      DATA_PROVEEDORES.filter((proveedor) => proveedor.estatus === "ACTIVO"),
-    [],
-  );
+    const requisicionYaEnviada =
+      req.estado === "EN-REVISION" || req.estado === "FINALIZADA";
+    setEnviada(requisicionYaEnviada);
+
+    fetch(`${API_BASE}/ordenes-compra?requisicionId=${req.id}`)
+      .then(async (res) => {
+        if (res.ok) return res.json() as Promise<ordenTypes.OrdenCompraBackend>;
+        if (res.status === 404) {
+          const create = await fetch(`${API_BASE}/ordenes-compra`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ requisicionId: req.id }),
+          });
+          if (!create.ok) throw new Error("error-creando-orden");
+          return create.json() as Promise<ordenTypes.OrdenCompraBackend>;
+        }
+        const body = await res.text().catch(() => "");
+        throw new Error(`error-cargando-orden: status=${res.status} body=${body}`);
+      })
+      .then((backend) => {
+        setOrdenBackendId(backend.id);
+        setEnviada(backend.estatus === "ENVIADA" || requisicionYaEnviada);
+
+        const ordenLocal = ordenTypes.mapBackendToLocal(backend, req);
+
+        const articulosConCatalogo = ordenLocal.articulos.map((art, idx) => {
+          const entrada = buscarEnCatalogo(art.articulo) ?? DATA_CATALOGO_ARTICULOS[idx % DATA_CATALOGO_ARTICULOS.length];
+          return { ...art, unidad: entrada.unidad, precioUnitario: entrada.precioUnitario };
+        });
+
+        const primeraEntrada = buscarEnCatalogo(ordenLocal.articulos[0]?.articulo ?? "") ?? DATA_CATALOGO_ARTICULOS[0];
+        const proveedorAuto = DATA_PROVEEDORES.find((p) => p.id === primeraEntrada.proveedorId);
+
+        setOrden({
+          ...ordenLocal,
+          articulos: articulosConCatalogo,
+          proveedor: proveedorAuto
+            ? {
+                id: proveedorAuto.id,
+                nombre: proveedorAuto.nombre,
+                rfc: proveedorAuto.rfc,
+                telefono: proveedorAuto.contacto.telefono,
+                correo: proveedorAuto.contacto.correo,
+                contactoNombre: proveedorAuto.contacto.nombreEncargado,
+              }
+            : ordenLocal.proveedor,
+        });
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setIsLoading(false);
+      });
+  }, [id, requisiciones]);
 
   const subtotal = useMemo(
     () => (orden ? ordenTypes.calcularSubtotalOrdenCompra(orden.articulos) : 0),
@@ -63,22 +124,33 @@ const OrdenCompra = () => {
   const iva = ordenTypes.calcularIvaOrdenCompra(subtotal);
   const total = ordenTypes.calcularTotalOrdenCompra(subtotal);
 
+  // Auto-save debounced al backend
   useEffect(() => {
-    if (!orden) {
-      return;
-    }
+    if (!orden || !ordenBackendId || enviada) return;
 
     const timeoutId = window.setTimeout(() => {
-      guardarOrdenCompraPersistida(orden);
-    }, 300);
+      fetch(`${API_BASE}/ordenes-compra/${ordenBackendId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ordenTypes.mapLocalToUpdateRequest(orden)),
+      }).catch(() => {});
+    }, 500);
 
     return () => window.clearTimeout(timeoutId);
-  }, [orden]);
+  }, [orden, ordenBackendId, enviada]);
 
   const firmasCompletas =
     orden?.firmas.encargadoCompras.estado === "FIRMADA" &&
     orden?.firmas.administradora.estado === "FIRMADA" &&
     orden?.firmas.directoraGeneral.estado === "FIRMADA";
+
+  const puedeEnviar =
+    !!orden &&
+    firmasCompletas &&
+    orden.proveedor !== null &&
+    orden.justificacion.trim().length > 0 &&
+    orden.articulos.every((a) => a.precioUnitario > 0);
+
   const esComprasInventario = rol === "compras-inventario";
   const regresarPantallaAnterior = () => {
     if (window.history.length > 1) {
@@ -89,104 +161,97 @@ const OrdenCompra = () => {
     navigate(`/${rol}`);
   };
 
-  const actualizarArticulo = (
-    articuloId: string,
-    campo:
-      | "articulo"
-      | "descripcion"
-      | "unidad"
-      | "cantidad"
-      | "precioUnitario",
-    valor: string | number,
+  const firmarDocumento = async (
+    clave: keyof ordenTypes.OrdenCompra["firmas"],
   ) => {
-    setOrden((prev) => {
-      if (!prev) {
-        return prev;
+    if (!esComprasInventario || clave !== "encargadoCompras" || !ordenBackendId)
+      return;
+    if (orden?.firmas.encargadoCompras.estado === "FIRMADA") return;
+
+    if (!window.confirm("¿Confirmas firmar este documento? Esta acción no se puede revertir."))
+      return;
+
+    setFirmando(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/ordenes-compra/${ordenBackendId}/firmar-encargado`,
+        { method: "PATCH" },
+      );
+      if (!res.ok) {
+        const msg = await res.text().catch(() => String(res.status));
+        alert(`Error al registrar la firma. ${msg}`);
+        return;
       }
 
-      return {
-        ...prev,
-        articulos: prev.articulos.map((articulo) =>
-          articulo.id === articuloId
-            ? {
-                ...articulo,
-                [campo]: valor,
-              }
-            : articulo,
-        ),
-      };
-    });
+      const backend = await res.json() as ordenTypes.OrdenCompraBackend;
+      setOrden((prev) =>
+        prev
+          ? {
+              ...prev,
+              firmas: {
+                ...prev.firmas,
+                encargadoCompras: {
+                  ...prev.firmas.encargadoCompras,
+                  estado: backend.firmaEncargadoCompras ? "FIRMADA" : "PENDIENTE",
+                  fechaFirma: backend.firmaEncargadoCompras ? new Date() : null,
+                },
+              },
+            }
+          : prev,
+      );
+    } finally {
+      setFirmando(false);
+    }
   };
 
-  const eliminarArticulo = (articuloId: string) => {
-    setOrden((prev) => {
-      if (!prev) {
-        return prev;
-      }
+  const guardarBorrador = async () => {
+    if (!orden || !ordenBackendId || enviada) return;
 
-      return {
-        ...prev,
-        articulos: prev.articulos.filter((articulo) => articulo.id !== articuloId),
-      };
+    const res = await fetch(`${API_BASE}/ordenes-compra/${ordenBackendId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(ordenTypes.mapLocalToUpdateRequest(orden)),
     });
-  };
-
-  const firmarDocumento = (clave: keyof ordenTypes.OrdenCompra["firmas"]) => {
-    if (!esComprasInventario || clave !== "encargadoCompras") {
+    if (!res.ok) {
+      alert("Error al guardar el borrador. Intenta de nuevo.");
       return;
     }
-
-    setOrden((prev) => {
-      if (!prev) {
-        return prev;
-      }
-
-      const firmas = { ...prev.firmas };
-      const firmaAnteriorFirmada =
-        clave === "encargadoCompras" ||
-        (clave === "administradora" &&
-          firmas.encargadoCompras.estado === "FIRMADA") ||
-        (clave === "directoraGeneral" &&
-          firmas.administradora.estado === "FIRMADA");
-
-      if (!firmaAnteriorFirmada || firmas[clave].estado === "FIRMADA") {
-        return prev;
-      }
-
-      firmas[clave] = {
-        ...firmas[clave],
-        estado: "FIRMADA",
-        fechaFirma: new Date(),
-      };
-
-      return {
-        ...prev,
-        firmas,
-        estatus:
-          firmas.administradora.estado === "FIRMADA" &&
-          firmas.directoraGeneral.estado === "FIRMADA"
-            ? "AUTORIZADA"
-            : prev.estatus,
-      };
-    });
-  };
-
-  const guardarBorrador = () => {
-    if (!orden) {
-      return;
-    }
-
-    guardarOrdenCompraPersistida(orden);
     alert("Borrador guardado");
   };
 
-  const enviarAutorizacion = () => {
-    if (!orden) {
+  const enviarAlmacen = async () => {
+    if (!orden || !ordenBackendId) return;
+
+    if (!window.confirm("¿Confirmas enviar la orden de compra a Almacén? Una vez enviada no podrá editarse."))
+      return;
+
+    const res = await fetch(
+      `${API_BASE}/ordenes-compra/${ordenBackendId}/enviar`,
+      { method: "PATCH" },
+    );
+    if (!res.ok) {
+      const msg = await res.text().catch(() => res.status.toString());
+      alert(`Error al enviar la orden: ${msg}`);
       return;
     }
-
-    alert("Orden enviada a autorización");
+    refrescar?.();
+    alert("Orden de compra enviada a Almacén exitosamente. Regresando a la requisición.");
+    navigate(-1);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-3 text-slate-500">
+          <svg className="h-8 w-8 animate-spin text-[#8B1238]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          <p className="text-sm font-medium">Cargando orden...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!requisicion || !orden) {
     return (
@@ -194,8 +259,7 @@ const OrdenCompra = () => {
         <div className="max-w-lg rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
           <h1 className={ui.text.h1}>Orden de compra</h1>
           <p className={ui.text.body + " mt-2"}>
-            No se encontró la requisición solicitada o la ruta no contiene un id
-            válido.
+            No se encontró la requisición solicitada o hubo un error de conexión.
           </p>
           <button
             onClick={() => navigate(-1)}
@@ -238,16 +302,28 @@ const OrdenCompra = () => {
           <button onClick={() => window.print()} className={ui.buttons.neutral}>
             Imprimir
           </button>
-          <button onClick={guardarBorrador} className={ui.buttons.neutral}>
-            Guardar Borrador
-          </button>
-          <button
-            onClick={enviarAutorizacion}
-            disabled={!firmasCompletas}
-            className={ui.buttons.primary}
-          >
-            Enviar a Autorización
-          </button>
+          {!enviada && puedeEnviar && (
+            <button
+              onClick={guardarBorrador}
+              className={ui.buttons.neutral}
+            >
+              Guardar Borrador
+            </button>
+          )}
+          {!enviada && (
+            <button
+              onClick={enviarAlmacen}
+              disabled={!puedeEnviar}
+              className={ui.buttons.primary}
+            >
+              Enviar a Almacén
+            </button>
+          )}
+          {enviada && (
+            <span className="rounded-full bg-green-100 px-4 py-1.5 text-sm font-semibold text-green-800">
+              Enviada a Almacén
+            </span>
+          )}
         </div>
       </div>
 
@@ -296,10 +372,14 @@ const OrdenCompra = () => {
                 <label className="text-sm font-semibold text-slate-700">
                   Estatus
                 </label>
-                <div className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">
-                  {orden.estatus === "BORRADOR"
-                    ? "Pendiente de Autorización"
-                    : orden.estatus}
+                <div
+                  className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${
+                    enviada
+                      ? "bg-green-100 text-green-800"
+                      : "bg-amber-100 text-amber-800"
+                  }`}
+                >
+                  {enviada ? "Enviada a Almacén" : "Pendiente de Autorización"}
                 </div>
               </div>
 
@@ -307,48 +387,14 @@ const OrdenCompra = () => {
                 <label className="text-sm font-semibold text-slate-700">
                   Proveedor / Razón Social
                 </label>
-                <select
-                  value={orden.proveedor?.id ?? ""}
-                  onChange={(event) => {
-                    const proveedorSeleccionado = proveedoresActivos.find(
-                      (proveedor) => proveedor.id === event.target.value,
-                    );
-
-                    setOrden((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            proveedor: proveedorSeleccionado
-                              ? {
-                                  id: proveedorSeleccionado.id,
-                                  nombre: proveedorSeleccionado.nombre,
-                                  rfc: proveedorSeleccionado.rfc,
-                                  telefono:
-                                    proveedorSeleccionado.contacto.telefono,
-                                  correo: proveedorSeleccionado.contacto.correo,
-                                  contactoNombre:
-                                    proveedorSeleccionado.contacto
-                                      .nombreEncargado,
-                                }
-                              : null,
-                          }
-                        : prev,
-                    );
-                  }}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-[#7E1D3B]"
-                >
-                  <option value="">Selecciona un proveedor activo</option>
-                  {proveedoresActivos.map((proveedor) => (
-                    <option key={proveedor.id} value={proveedor.id}>
-                      {proveedor.nombre}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-sm text-slate-500">
-                  {orden.proveedor
-                    ? `Razón Social: ${orden.proveedor.nombre} | ID: ${orden.proveedor.id}`
-                    : "Selecciona un proveedor para completar la orden."}
-                </p>
+                <div className="rounded-xl bg-slate-100 px-3 py-2 font-semibold text-slate-900">
+                  {orden.proveedor?.nombre ?? "—"}
+                </div>
+                {orden.proveedor && (
+                  <p className="text-sm text-slate-500">
+                    RFC: {orden.proveedor.rfc} | Tel: {orden.proveedor.telefono} | Contacto: {orden.proveedor.contactoNombre}
+                  </p>
+                )}
               </div>
             </div>
           </section>
@@ -356,31 +402,6 @@ const OrdenCompra = () => {
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between bg-[#3F5F1D] px-4 py-3 text-white">
               <h2 className="text-base font-semibold">Artículos de la Orden</h2>
-              <button
-                onClick={() => {
-                  setOrden((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          articulos: [
-                            ...prev.articulos,
-                            {
-                              id: `${prev.id}-${prev.articulos.length + 1}`,
-                              articulo: "",
-                              descripcion: "",
-                              unidad: "PIEZA",
-                              cantidad: 1,
-                              precioUnitario: 0,
-                            },
-                          ],
-                        }
-                      : prev,
-                  );
-                }}
-                className="rounded-lg bg-white px-3 py-1 text-xs font-semibold text-[#3F5F1D] transition hover:bg-slate-100"
-              >
-                + Agregar Artículo
-              </button>
             </div>
 
             <div className="overflow-x-auto">
@@ -394,7 +415,6 @@ const OrdenCompra = () => {
                     <th className={ui.table.header}>Cantidad</th>
                     <th className={ui.table.header}>Precio Unit.</th>
                     <th className={ui.table.header}>Subtotal</th>
-                    <th className={ui.table.header}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -408,96 +428,32 @@ const OrdenCompra = () => {
                           {index + 1}
                         </td>
                         <td className={ui.table.cell}>
-                          <input
-                            value={articulo.articulo}
-                            onChange={(event) =>
-                              actualizarArticulo(
-                                articulo.id,
-                                "articulo",
-                                event.target.value,
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
-                            placeholder="Artículo"
-                          />
+                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800">
+                            {articulo.articulo}
+                          </div>
                         </td>
                         <td className={ui.table.cell}>
-                          <input
-                            value={articulo.descripcion}
-                            onChange={(event) =>
-                              actualizarArticulo(
-                                articulo.id,
-                                "descripcion",
-                                event.target.value,
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
-                            placeholder="Descripción"
-                          />
+                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800">
+                            {articulo.descripcion}
+                          </div>
                         </td>
                         <td className={ui.table.cell}>
-                          <select
-                            value={articulo.unidad}
-                            onChange={(event) =>
-                              actualizarArticulo(
-                                articulo.id,
-                                "unidad",
-                                event.target
-                                  .value as requisicionTypes.UnidadesArticulos,
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
-                          >
-                            <option value="PIEZA">Pieza</option>
-                            <option value="CAJA">Caja</option>
-                            <option value="PAQUETE">Paquete</option>
-                          </select>
+                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800">
+                            {articulo.unidad}
+                          </div>
                         </td>
                         <td className={ui.table.cell}>
-                          <input
-                            type="number"
-                            min={1}
-                            value={articulo.cantidad}
-                            onChange={(event) =>
-                              actualizarArticulo(
-                                articulo.id,
-                                "cantidad",
-                                Number(event.target.value),
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
-                          />
+                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800 text-center">
+                            {articulo.cantidad}
+                          </div>
                         </td>
                         <td className={ui.table.cell}>
-                          <input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            value={articulo.precioUnitario}
-                            onChange={(event) =>
-                              actualizarArticulo(
-                                articulo.id,
-                                "precioUnitario",
-                                Number(event.target.value),
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#7E1D3B]"
-                          />
+                          <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800 text-right">
+                            {moneda.format(articulo.precioUnitario)}
+                          </div>
                         </td>
-                        <td
-                          className={
-                            ui.table.cell + " text-right font-semibold"
-                          }
-                        >
+                        <td className={ui.table.cell + " text-right font-semibold"}>
                           {moneda.format(subtotalLinea)}
-                        </td>
-                        <td className={ui.table.cell + " text-center"}>
-                          <button
-                            onClick={() => eliminarArticulo(articulo.id)}
-                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
-                          >
-                            Eliminar
-                          </button>
                         </td>
                       </tr>
                     );
@@ -556,6 +512,7 @@ const OrdenCompra = () => {
             </div>
             <div className="p-4">
               <textarea
+                disabled={enviada}
                 value={orden.justificacion}
                 onChange={(event) =>
                   setOrden((prev) =>
@@ -567,7 +524,7 @@ const OrdenCompra = () => {
                       : prev,
                   )
                 }
-                className="min-h-40 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#7E1D3B]"
+                className="min-h-40 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#7E1D3B] disabled:opacity-60"
                 placeholder="Escriba la justificación detallada de esta orden de compra..."
               />
               <p className="mt-2 text-xs text-slate-500">
@@ -609,7 +566,9 @@ const OrdenCompra = () => {
                   esBloqueCompras &&
                   esComprasInventario &&
                   firma.estado !== "FIRMADA" &&
-                  firmaAnteriorFirmada;
+                  firmaAnteriorFirmada &&
+                  !enviada &&
+                  !firmando;
 
                 return (
                   <article

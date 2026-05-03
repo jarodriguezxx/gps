@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { API_BASE } from './config/api.ts';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 // Autenticación
@@ -21,6 +22,7 @@ import ExpedientesClinicos from './views/medico/ExpedientesClinicos';
 import DetalleExpediente from './views/medico/DetalleExpediente';
 import ValoracionMedica from './views/medico/ValoracionMedica';
 import Prospectos from './views/medico/Prospectos';
+import HistoriaMedica from './views/medico/HistoriaMedica';
 
 // Recursos Humanos
 import AltaPersonal from './views/rh/AltaPersonal';
@@ -44,7 +46,6 @@ import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
 import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion';
 import OrdenCompra from './views/rec-materiales/OrdenCompra';
 import Historial from './views/rec-materiales/Historial';
-import { REQUISICIONES_COMPLETO } from './types/requisicion.ts';
 
 // Almacén
 import AlmacenDashboard from './views/almacen/AlmacenDashboard';
@@ -67,6 +68,7 @@ const quickViews = [
   { label: 'Médico - Pacientes',     path: '/medico/pacientes' },
   { label: 'Médico - Expedientes',   path: '/medico/expedientes' },
   { label: 'Médico - Prospectos',    path: '/medico/prospectos' },
+  { label: 'Medico - Historia '  ,   path: '/medico/historia-medica' },
   { label: 'RH - Alta',              path: '/rh/alta-personal' },
   { label: 'RH - Baja',              path: '/rh/baja-personal' },
   { label: 'RH - Catálogo',          path: '/rh/catalogo-roles' },
@@ -146,6 +148,21 @@ const QuickNavigator = () => {
 };
 
 function App() {
+  const [requisiciones, setRequisiciones] = useState([]);
+
+  const cargarRequisiciones = () => {
+    return fetch(`${API_BASE}/requisiciones`)
+      .then(res => res.json())
+      .then(data => setRequisiciones(data.map(r => ({ ...r, fecha: new Date(r.fecha) }))))
+      .catch(err => console.error('Error cargando requisiciones:', err));
+  };
+
+  useEffect(() => {
+    cargarRequisiciones();
+    const intervalo = setInterval(cargarRequisiciones, 30000);
+    return () => clearInterval(intervalo);
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -171,6 +188,7 @@ function App() {
         <Route path="/medico/expedientes/:id"                  element={<PrivateRoute><DetalleExpediente /></PrivateRoute>} />
         <Route path="/medico/prospectos"                       element={<PrivateRoute><Prospectos /></PrivateRoute>} />
         <Route path="/medico/valoracion/:id"                   element={<PrivateRoute><ValoracionMedica /></PrivateRoute>} />
+        <Route path="/medico/historia-medica"              element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
 
         {/* Recursos Humanos */}
         <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
@@ -187,13 +205,13 @@ function App() {
         <Route path="/financiero/gestionar-correcciones"       element={<PrivateRoute><GestionarCorreciones /></PrivateRoute>} />
         <Route path="/financiero/deposito-bancario"            element={<PrivateRoute><DepositoBancario /></PrivateRoute>} />
 
-        {/* Recursos Materiales */}
-        <Route path='/rec-materiales/:rol' element={<PrivateRoute><RecMaterialesDashboard /></PrivateRoute>}>
-          <Route index element={<ListaRequisiciones requisiciones={REQUISICIONES_COMPLETO}/>}/>
-          <Route path='proveedores' element={<Proveedores/>}/>
-          <Route path='historial' element={<Historial/>}/>
-          <Route path='requisicion/:id' element={<DetallesRequisicion/>}/>
-          <Route path='orden-compra/:id' element={<OrdenCompra/>}/>
+{/* Rutas para Recursos Materiales y Compras/Inventario */}
+        <Route path='/materiales/:rol' element={<RecMaterialesDashboard/>}>
+          <Route index element={<ListaRequisiciones requisiciones={requisiciones}/>}/>
+          <Route path='proveedores' element = {<Proveedores/>}/>
+          <Route path='historial' element={<Historial requisiciones={requisiciones}/>}/>
+          <Route path='requisicion/:id' element={<DetallesRequisicion requisiciones={requisiciones} refrescar={cargarRequisiciones}/>}/>
+          <Route path='orden-compra/:id' element={<OrdenCompra requisiciones={requisiciones} refrescar={cargarRequisiciones}/>}/>
         </Route>
 
         {/* Almacén */}
