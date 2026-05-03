@@ -137,7 +137,10 @@ public class OrdenCompraService {
         orden.setNumeroOrden("OC-" + Year.now().getValue() + "-" + String.format("%04d", cons.intValue()));
         orden.setEstatus("ENVIADA");
         if (req.getTipo() == TipoCompra.ORDINARIA) {
-            req.setEstado(Estado.FINALIZADA);
+            if (req.getTamanio() != TamanioCompra.MAYOR) {
+                req.setEstado(Estado.FINALIZADA);
+            }
+            // MAYOR: estado queda en AUTORIZADA; compras sube cotizaciones + factura antes de finalizar
         } else if (req.getTipo() == TipoCompra.EXTRAORDINARIA) {
             req.setEstado(Estado.EN_REVISION);
         } else {

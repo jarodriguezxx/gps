@@ -116,16 +116,16 @@ const TarjetaCotizacion = ({
     </div>
   );
 };
-interface Props {
+interface OutletCtx {
+  rol: string;
   requisiciones: tipos.Requisicion[];
   refrescar: () => Promise<void>;
 }
 
-const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
-  // Recuperar el id que está incrustado en la URL
+const DetallesRequisicion = () => {
+  const { rol, requisiciones, refrescar } = useOutletContext<OutletCtx>();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const rol = useOutletContext<string>();
   // Setear los datos cada que haya un cambio
   const [datos, setDatos] = useState<tipos.Requisicion | null>(null);
   const [modal, setModal] = useState(false);
@@ -335,7 +335,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
       }
 
       const facturasGuardadas = adjuntosGuardados.filter((a) => a.tipo === "FACTURA");
-      const dispFact = Math.max(0, 5 - facturasGuardadas.length);
+      const dispFact = Math.max(0, 1 - facturasGuardadas.length);
       const factASubir = Object.values(archivosFacturas)
         .filter((f): f is File => f !== null)
         .slice(0, dispFact);
@@ -353,11 +353,12 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
         }
       }
 
+      let listaActualizada: AdjuntoGuardado[] = [];
       try {
         const adjRes = await fetch(`${API_BASE}/requisiciones/${id}/adjuntos`);
         if (adjRes.ok) {
-          const lista: AdjuntoGuardado[] = await adjRes.json();
-          setAdjuntosGuardados(lista);
+          listaActualizada = await adjRes.json();
+          setAdjuntosGuardados(listaActualizada);
         }
       } catch {
         alert("No se pudo actualizar la lista de adjuntos. Recarga la página.");
@@ -366,6 +367,25 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
       setArchivosCotizaciones({ "1": null, "2": null, "3": null });
       setArchivosFacturas({ "1": null });
       setModal(false);
+
+      const cotizListas = listaActualizada.filter((a) => a.tipo === "COTIZACION").length >= 3;
+      const facturaLista = listaActualizada.filter((a) => a.tipo === "FACTURA").length >= 1;
+      if (cotizListas && facturaLista) {
+        setIsEnviando(true);
+        try {
+          const res = await fetch(`${API_BASE}/requisiciones/${id}/enviar`, { method: "PATCH" });
+          if (!res.ok) throw new Error(await res.text());
+          const data: tipos.Requisicion = await res.json();
+          setDatos({ ...data, fecha: new Date(data.fecha as unknown as string) });
+          await refrescar();
+          alert("Expediente enviado a Recursos Financieros exitosamente.");
+          navigate(-1);
+        } catch (e: any) {
+          alert(`Error al enviar el expediente: ${e.message}`);
+        } finally {
+          setIsEnviando(false);
+        }
+      }
       return;
     }
 
@@ -375,7 +395,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
       datos?.tipo === "EXTRAORDINARIA" &&
       datos?.tamanio === "MENOR"
     ) {
-      const disponibles = 5 - adjuntosGuardados.length;
+      const disponibles = 1 - adjuntosGuardados.length;
       const archivosASubir = Object.values(archivosCotizaciones)
         .filter((f): f is File => f !== null)
         .slice(0, disponibles);
@@ -552,7 +572,8 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
     rol === "compras-inventario" &&
     (datos?.estado === "AUTORIZADA" || datos?.estado === "EN-REVISION" || datos?.estado === "FINALIZADA") &&
     (datos?.tipo === "EXTRAORDINARIA" ||
-      (datos?.tipo === "ORDINARIA" && datos?.tamanio === "MENOR")) &&
+      (datos?.tipo === "ORDINARIA" && datos?.tamanio === "MENOR") ||
+      (datos?.tipo === "ORDINARIA" && datos?.tamanio === "INDEFINIDO" && datos?.estado === "AUTORIZADA")) &&
     !(datos?.tipo === "EXTRAORDINARIA" && datos?.estado === "EN-REVISION");
   const mostrarIntegrarExpediente =
     esExtraordinariaMenor || esExtraordinariaMayor;
@@ -632,33 +653,6 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                   return;
                 }
 
-                if (esFlujoCargaExpedienteMayor) {
-                  if (!id) return;
-                  if (!window.confirm("¿Confirmas enviar el expediente a Recursos financieros? Esta acción no se puede revertir.")) return;
-                  setIsEnviando(true);
-                  try {
-                    const res = await fetch(
-                      `${API_BASE}/requisiciones/${id}/enviar`,
-                      { method: "PATCH" },
-                    );
-                    if (!res.ok) throw new Error(await res.text());
-                    const data: tipos.Requisicion = await res.json();
-                    const parsed = {
-                      ...data,
-                      fecha: new Date(data.fecha as unknown as string),
-                    };
-                    setDatos(parsed);
-                    await refrescar();
-                    alert("Expediente enviado a Recursos Financieros exitosamente.");
-                    navigate(-1);
-                  } catch (e: any) {
-                    alert(`Error al integrar expediente: ${e.message}`);
-                  } finally {
-                    setIsEnviando(false);
-                  }
-                  return;
-                }
-
                 if (!id) return;
                 if (!window.confirm("¿Confirmas enviar esta requisición? El estado cambiará y no podrás revertirlo.")) return;
                 setIsEnviando(true);
@@ -691,12 +685,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                 (esFlujoCargaFacturasExpediente &&
                   datos?.estado === "EN-REVISION" &&
                   adjuntosGuardados.length < 1) ||
-                (esFlujoCargaExpedienteMayor &&
-                  datos?.estado === "EN-REVISION" &&
-                  (adjuntosGuardados.filter((a) => a.tipo === "COTIZACION").length < 3 ||
-                    adjuntosGuardados.filter((a) => a.tipo === "FACTURA").length < 1)) ||
                 (!esFlujoCargaFacturasExpediente &&
-                  !esFlujoCargaExpedienteMayor &&
                   !mostrarOrdenDeCompra &&
                   !mostrarIntegrarExpediente &&
                   !mostrarEnviarFinanzas &&
@@ -715,9 +704,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                   ? "Orden de compra / Recursos financieros"
                   : mostrarIntegrarExpediente
                     ? "Orden de compra / Integrar expediente"
-                    : esFlujoCargaExpedienteMayor
-                      ? "Enviar a Recursos financieros"
-                      : mostrarOrdenDeCompra
+                    : mostrarOrdenDeCompra
                         ? "Orden de compra"
                         : esFlujoCargaFacturasExpediente
                           ? "Integrar al expediente"
@@ -951,7 +938,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                     {esFlujoCargaExpedienteMayor
                       ? "Integre las 3 cotizaciones requeridas y al menos 1 factura para completar el expediente"
                       : esFlujoCargaFacturasExpediente
-                        ? "Integre al menos 1 factura (máximo 5) para habilitar el envío del expediente"
+                        ? "Integre 1 factura para habilitar el envío del expediente"
                         : `Cargue las ${totalNecesarios} cotizaciones requeridas y consulte los proveedores autorizados`}
                   </p>
                   {requiereFacturas && (
@@ -1059,7 +1046,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
 
                     {/* Sección facturas */}
                     <p className={ui.text.body + " font-bold"}>
-                      Facturas del expediente (mínimo 1, máximo 5)
+                      Factura del expediente
                     </p>
                     <div className="w-full flex flex-col gap-3">
                       {adjuntosGuardados.filter((a) => a.tipo === "FACTURA").map((adj, idx) => (
@@ -1096,10 +1083,10 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                           </button>
                         </div>
                       ))}
-                      {adjuntosGuardados.filter((a) => a.tipo === "FACTURA").length < 5 && (
+                      {adjuntosGuardados.filter((a) => a.tipo === "FACTURA").length < 1 && (
                         <div className="w-full flex flex-col gap-3">
                           {Array.from(
-                            { length: 5 - adjuntosGuardados.filter((a) => a.tipo === "FACTURA").length },
+                            { length: 1 - adjuntosGuardados.filter((a) => a.tipo === "FACTURA").length },
                             (_, i) => {
                               const slotKey = String(i + 1);
                               const slotNum = adjuntosGuardados.filter((a) => a.tipo === "FACTURA").length + i + 1;
@@ -1121,7 +1108,7 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                 ) : esFlujoCargaFacturasExpediente && !yaEnviada ? (
                   <>
                     <p className={ui.text.body + " font-bold"}>
-                      Facturas del expediente (mínimo 1, máximo 5)
+                      Facturas del expediente
                     </p>
                     <div className="w-full flex flex-col gap-3">
                       {adjuntosGuardados.map((adj, idx) => (
@@ -1183,10 +1170,10 @@ const DetallesRequisicion = ({ requisiciones, refrescar }: Props) => {
                           </button>
                         </div>
                       ))}
-                      {adjuntosGuardados.length < 5 && (
+                      {adjuntosGuardados.length < 1 && (
                         <div className="w-full flex flex-col gap-3">
                           {Array.from(
-                            { length: 5 - adjuntosGuardados.length },
+                            { length: 1 - adjuntosGuardados.length },
                             (_, i) => {
                               const slotKey = String(i + 1);
                               const slotNum = adjuntosGuardados.length + i + 1;

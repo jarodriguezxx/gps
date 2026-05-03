@@ -148,20 +148,6 @@ const QuickNavigator = () => {
 };
 
 function App() {
-  const [requisiciones, setRequisiciones] = useState([]);
-
-  const cargarRequisiciones = () => {
-    return fetch(`${API_BASE}/requisiciones`)
-      .then(res => res.json())
-      .then(data => setRequisiciones(data.map(r => ({ ...r, fecha: new Date(r.fecha) }))))
-      .catch(err => console.error('Error cargando requisiciones:', err));
-  };
-
-  useEffect(() => {
-    cargarRequisiciones();
-    const intervalo = setInterval(cargarRequisiciones, 30000);
-    return () => clearInterval(intervalo);
-  }, []);
 
   return (
     <BrowserRouter>
@@ -207,11 +193,11 @@ function App() {
 
 {/* Rutas para Recursos Materiales y Compras/Inventario */}
         <Route path='/materiales/:rol' element={<RecMaterialesDashboard/>}>
-          <Route index element={<ListaRequisiciones requisiciones={requisiciones}/>}/>
-          <Route path='proveedores' element = {<Proveedores/>}/>
-          <Route path='historial' element={<Historial requisiciones={requisiciones}/>}/>
-          <Route path='requisicion/:id' element={<DetallesRequisicion requisiciones={requisiciones} refrescar={cargarRequisiciones}/>}/>
-          <Route path='orden-compra/:id' element={<OrdenCompra requisiciones={requisiciones} refrescar={cargarRequisiciones}/>}/>
+          <Route index element={<ListaRequisiciones />}/>
+          <Route path='proveedores' element={<Proveedores/>}/>
+          <Route path='historial' element={<Historial />}/>
+          <Route path='requisicion/:id' element={<DetallesRequisicion />}/>
+          <Route path='orden-compra/:id' element={<OrdenCompra />}/>
         </Route>
 
         {/* Almacén */}
