@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from "react";
 import { ui } from "../../config/theme";
 import * as tipos from "../../types/requisicion.ts";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 
-interface Props {
+interface OutletCtx {
+  rol: string;
   requisiciones: tipos.Requisicion[];
+  refrescar: () => Promise<void>;
 }
 
-const ListaRequisiciones = ({ requisiciones }: Props) => {
+const ListaRequisiciones = () => {
+  const { requisiciones } = useOutletContext<OutletCtx>();
   //mapeo de las rutas
   const navigate = useNavigate();
   // Validar el rol del usuario
@@ -49,7 +52,13 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
     }
   };
 
-  // TODO se cargarán diferentes requis si es compras-inventario, ya que este solo recibe las autorizadas, por lo que se filtrarán estas
+  const obtenerEstiloTamanio = (tamanio: tipos.TamanioCompra) => {
+    switch (tamanio) {
+      case "MAYOR": return "bg-red-100 text-red-800 border border-red-300";
+      case "MENOR": return "bg-sky-100 text-sky-800 border border-sky-300";
+      case "INDEFINIDO": return "bg-slate-100 text-slate-500 border border-slate-300";
+    }
+  };
 
   // Direccionamiento hacia la ventana para ver la requisicion seleccionada
   const goDetalleRequisicion = (id: string) => navigate(`requisicion/${id}`); // Constantes de estado
@@ -125,8 +134,10 @@ const ListaRequisiciones = ({ requisiciones }: Props) => {
                       {item.estado}
                     </span>
                   </td>
-                  <td className={ui.table.cell + " text-center " + textColor}>
-                    {item.tamanio}
+                  <td className={ui.table.cell + " text-center"}>
+                    <span className={`inline-block rounded-full px-2 py-1 text-xs font-bold ${obtenerEstiloTamanio(item.tamanio)}`}>
+                      {item.tamanio}
+                    </span>
                   </td>
                   <td className={ui.table.cell + " text-center " + textColor}>
                     {item.tipo}

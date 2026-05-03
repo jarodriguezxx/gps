@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   useLocation,
   useNavigate,
@@ -9,21 +9,42 @@ import {
 import marakameLogo from "../../assets/marakame.jpeg";
 import { ui } from "../../config/theme";
 import { ROLES_PERMITIDOS } from "../../types/roles";
+import { API_BASE } from "../../config/api";
+import { Requisicion } from "../../types/requisicion";
 
 const RecMaterialesDashboard = () => {
-  //devuelve la ruta sobre la que está esta pantalla
   const location = useLocation();
-  // Validar el rol del usuario
   const { rol } = useParams<{ rol: string }>();
+  const navigate = useNavigate();
+
+  const [requisiciones, setRequisiciones] = useState<Requisicion[]>([]);
+
+  const cargarRequisiciones = () => {
+    return fetch(`${API_BASE}/requisiciones`)
+      .then((res) => res.json())
+      .then((data) =>
+        setRequisiciones(
+          data.map((r: Requisicion) => ({ ...r, fecha: new Date(r.fecha) })),
+        ),
+      )
+      .catch((err) => console.error("Error cargando requisiciones:", err));
+  };
+
+  useEffect(() => {
+    cargarRequisiciones();
+    // ahí son 2 minutos y 60 segundos (3 minutos)
+    //2 * 60 * 1000
+
+    const intervalo = setInterval(cargarRequisiciones, 30 * 1000);
+    return () => clearInterval(intervalo);
+  }, []);
+
   const esRolValido = ROLES_PERMITIDOS.includes(rol || "");
   if (!esRolValido) {
-    // TODO poner la ruta del login
     return <Navigate to="/login" replace />;
   }
-  // . Funciones de navegación dinámicas
+
   const goTo = (path: string) => navigate(`/materiales/${rol}${path}`);
-  //mapeo de las rutas
-  const navigate = useNavigate();
 
   const isRequisicionesActive =
     location.pathname === `/materiales/${rol}` ||
@@ -105,7 +126,9 @@ const RecMaterialesDashboard = () => {
 
             {/* Este es el contenedor que se estirará */}
             <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
-              <Outlet context={rol} />
+              <Outlet
+                context={{ rol, requisiciones, refrescar: cargarRequisiciones }}
+              />
             </main>
           </div>
         </div>
