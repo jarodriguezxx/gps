@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, FileText, Search, Sparkles, X, Download, Upload, CheckCircle2, Paperclip, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowRight, FileText, FileX, AlertTriangle, Search, Sparkles, X, Download, Upload, CheckCircle2, Paperclip, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
 import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
@@ -74,15 +74,24 @@ const buildDocumentosProspecto = (prospecto, detalleExpediente, tieneValoracionM
 	}
 
 	const documentosBackend = Array.isArray(detalleExpediente?.documentos) ? detalleExpediente.documentos : [];
-	const documentosPdf = documentosBackend.map((doc) => ({
-		nombre: doc.nombreArchivo || 'PDF socioeconomico',
-		tipo: doc.tipo || 'PDF',
-		estado: 'Adjunto',
-		detalle: `Generado: ${formatDateValue(doc.generadoEn)}${doc.descargaUrl ? ' • Disponible para descarga' : ''}`,
-		descargaUrl: doc.descargaUrl ? `http://localhost:4000${doc.descargaUrl}` : '',
-		verUrl: doc.descargaUrl ? buildPdfActionUrl(doc.descargaUrl.replace('/descargar', '/ver')) : '',
-		imprimirUrl: doc.descargaUrl ? buildPdfActionUrl(doc.descargaUrl.replace('/descargar', '/imprimir')) : '',
-	}));
+	const estadoPaciente = String(prospecto?.estadoPaciente || '').toUpperCase();
+	const documentosPdf = documentosBackend.map((doc) => {
+		const esSocioeconomico = /socioeconomico/i.test(String(doc.nombreArchivo || '')) || /socioeconomico/i.test(String(doc.tipo || ''));
+		const documentoDenegado = esSocioeconomico && estadoPaciente === 'DENEGADO';
+
+		return {
+			nombre: doc.nombreArchivo || 'PDF socioeconomico',
+			tipo: doc.tipo || 'PDF',
+			estado: documentoDenegado ? 'DENEGADO' : 'Adjunto',
+			esSocioeconomico,
+			detalle: documentoDenegado
+				? `Generado: ${formatDateValue(doc.generadoEn)} • Denegado por insuficiencia económica.`
+				: `Generado: ${formatDateValue(doc.generadoEn)}${doc.descargaUrl ? ' • Disponible para descarga' : ''}`,
+			descargaUrl: doc.descargaUrl ? `http://localhost:4000${doc.descargaUrl}` : '',
+			verUrl: doc.descargaUrl ? buildPdfActionUrl(doc.descargaUrl.replace('/descargar', '/ver')) : '',
+			imprimirUrl: doc.descargaUrl ? buildPdfActionUrl(doc.descargaUrl.replace('/descargar', '/imprimir')) : '',
+		};
+	});
 
 	const tieneSolicitante = !!prospecto.solicitante;
 	const tieneDatosBasicos = hasValue(prospecto.nombreCompleto) && (hasValue(prospecto.telefonoContacto) || hasValue(prospecto.telefonoCasa));
@@ -179,6 +188,17 @@ const buildNotasProspecto = (prospecto, detalleExpediente, prospectoSeleccionado
 		});
 	}
 
+	const notasAdministrativasGuardadas = (Array.isArray(detalleExpediente?.notasAdministrativas) ? detalleExpediente.notasAdministrativas : [])
+		.map((nota) => ({
+			id: `adm-admin-${nota.id}`,
+			texto: nota.observaciones || 'Nota administrativa sin contenido.',
+			fecha: nota.fechaRegistro || null,
+			autor: nota.autor || 'TRABAJO SOCIAL - RECHAZO',
+			tipo: 'sistema',
+			categoria: 'rechazo',
+			estadoNuevo: nota.estadoNuevo || '',
+		}));
+
 	const notasAdmisionesGuardadas = (Array.isArray(detalleExpediente?.notasEvolucion) ? detalleExpediente.notasEvolucion : [])
 		.filter((nota) => String(nota?.medicoAsignado || '').toUpperCase().includes('ADMISION'))
 		.map((nota) => ({
@@ -189,7 +209,7 @@ const buildNotasProspecto = (prospecto, detalleExpediente, prospectoSeleccionado
 			tipo: 'admisiones',
 		}));
 
-	const unificadas = [...notasAdmisionesGuardadas, ...notas];
+	const unificadas = [...notasAdministrativasGuardadas, ...notasAdmisionesGuardadas, ...notas];
 
 	unificadas.sort((a, b) => {
 		const da = a.fecha ? new Date(a.fecha).getTime() : 0;
@@ -1358,13 +1378,13 @@ const ExpedienteAdmisiones = () => {
                         documentosProspecto.map((doc, idx) => (
                             <div key={`${doc.nombre}-${idx}`} className="group flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
                                 <div className="flex items-center gap-4">
-                                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${doc.estado === 'Adjunto' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
-                                        <FileText size={20} />
+									<div className={`flex h-10 w-10 items-center justify-center rounded-lg ${doc.estado === 'DENEGADO' ? 'bg-rose-50 text-rose-600' : doc.estado === 'Adjunto' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+										{doc.estado === 'DENEGADO' ? <FileX size={20} /> : <FileText size={20} />}
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <p className="text-sm font-bold text-slate-900">{doc.nombre}</p>
-                                            <span className={`text-[10px] font-bold uppercase ${doc.estado === 'Adjunto' ? 'text-emerald-500' : 'text-slate-400'}`}>
+											<span className={`text-[10px] font-bold uppercase ${doc.estado === 'DENEGADO' ? 'text-rose-600' : doc.estado === 'Adjunto' ? 'text-emerald-500' : 'text-slate-400'}`}>
                                                 • {doc.estado}
                                             </span>
                                         </div>
@@ -1443,9 +1463,15 @@ const ExpedienteAdmisiones = () => {
 										) : null}
 									<div className="space-y-3">
 											{notasProspecto.map((nota) => (
-												<div key={nota.id} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 text-slate-700">
+												<div key={nota.id} className={`rounded-2xl border p-4 text-sm leading-6 ${nota.categoria === 'rechazo' || String(nota.autor || '').includes('RECHAZO') ? 'border-rose-200 bg-rose-50/80 text-rose-900' : 'border-dashed border-slate-200 bg-slate-50/70 text-slate-700'}`}>
 													<div className="mb-1 flex items-center justify-between gap-2 text-[11px]">
-														<span className={`font-bold uppercase tracking-[0.16em] ${nota.tipo === 'admisiones' ? 'text-[#7E1D3B]' : 'text-slate-500'}`}>{nota.autor || 'Sistema'}</span>
+														<span className={`font-bold uppercase tracking-[0.16em] ${nota.categoria === 'rechazo' || String(nota.autor || '').includes('RECHAZO') ? 'text-rose-700' : nota.tipo === 'admisiones' ? 'text-[#7E1D3B]' : 'text-slate-500'}`}>{nota.autor || 'Sistema'}</span>
+														{(nota.categoria === 'rechazo' || String(nota.autor || '').includes('RECHAZO')) && (
+															<span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 font-bold uppercase tracking-[0.14em] text-rose-700">
+																<AlertTriangle size={11} />
+																Rechazo administrativo
+															</span>
+														)}
 														<span className="text-slate-400">{nota.fecha ? `${formatDateValue(nota.fecha)} • ${formatTimeValue(nota.fecha)}` : ''}</span>
 													</div>
 													{nota.texto}

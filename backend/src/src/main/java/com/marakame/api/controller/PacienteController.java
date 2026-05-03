@@ -106,6 +106,20 @@ public class PacienteController {
         }
     }
 
+    @PutMapping("/{id}/rechazo-administrativo")
+    public ResponseEntity<?> registrarRechazoAdministrativo(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        try {
+            String estado = payload.get("estado");
+            String observaciones = payload.get("observaciones");
+            Map<String, Object> resultado = pacienteService.registrarRechazoAdministrativo(id, estado, observaciones);
+            return ResponseEntity.ok(resultado);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al registrar el rechazo: " + e.getMessage()));
+        }
+    }
+
     @PostMapping
     public ResponseEntity<?> guardarNuevoExpediente(@RequestBody PacienteDTO dto) {
         try {

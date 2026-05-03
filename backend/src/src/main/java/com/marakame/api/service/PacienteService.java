@@ -35,6 +35,7 @@ import com.marakame.api.dto.NotaEvolucionDTO;
 import com.marakame.api.dto.PacienteDTO;
 import com.marakame.api.entity.EstudioSocioeconomicoPdf;
 import com.marakame.api.entity.ExpedienteClinico;
+import com.marakame.api.entity.NotaAdministrativa;
 import com.marakame.api.entity.NotaEvolucion;
 import com.marakame.api.entity.Paciente;
 import com.marakame.api.entity.ReciboPago;
@@ -43,6 +44,7 @@ import com.marakame.api.entity.Seguimiento;
 import com.marakame.api.entity.Solicitante;
 import com.marakame.api.repository.EstudioSocioeconomicoPdfRepository;
 import com.marakame.api.repository.ExpedienteClinicoRepository;
+import com.marakame.api.repository.NotaAdministrativaRepository;
 import com.marakame.api.repository.NotaEvolucionRepository;
 import com.marakame.api.repository.PacienteRepository;
 import com.marakame.api.repository.ReciboPagoRepository;
@@ -69,6 +71,9 @@ public class PacienteService {
  
     @Autowired
     private ReciboPagoRepository reciboPagoRepository;
+
+    @Autowired
+    private NotaAdministrativaRepository notaAdministrativaRepository;
     public List<Paciente> obtenerPacientesParaEstudio(String query) {
         String filtro = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
 
@@ -119,6 +124,20 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
     // 4. Obtener las notas a través de la relación de expediente (Esto corrige el error de arranque)
     // Usamos el repositorio de notas para asegurar que traemos la información actualizada de la nueva tabla
     List<NotaEvolucion> notas = notaEvolucionRepository.findByExpediente_Paciente_IdOrderByFechaRegistroDesc(pacienteId);
+    List<NotaAdministrativa> notasAdministrativas = notaAdministrativaRepository.findByExpediente_Paciente_IdOrderByFechaRegistroDesc(pacienteId);
+
+    List<Map<String, Object>> notasAdministrativasMap = notasAdministrativas.stream()
+        .map(nota -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", nota.getId());
+            item.put("autor", nota.getAutor());
+            item.put("estadoAnterior", nota.getEstadoAnterior());
+            item.put("estadoNuevo", nota.getEstadoNuevo());
+            item.put("observaciones", nota.getObservaciones());
+            item.put("fechaRegistro", nota.getFechaRegistro());
+            return item;
+        })
+        .collect(Collectors.toList());
 
     // 5. Respuesta unificada para React
     Map<String, Object> respuesta = new LinkedHashMap<>();
@@ -131,6 +150,7 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
     ));
     // CAMBIO: Enviamos la lista 'notas' que consultamos explícitamente
     respuesta.put("notasEvolucion", notas); 
+    respuesta.put("notasAdministrativas", notasAdministrativasMap);
     respuesta.put("documentos", documentos);
 
     return respuesta;
@@ -214,6 +234,54 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         nota.setFechaProximaSesion(dto.fechaProximaSesion());
 
         notaEvolucionRepository.save(nota);
+    }
+
+    @Transactional
+    public Map<String, Object> registrarRechazoAdministrativo(Long pacienteId, String estado, String observaciones) {
+        if (estado == null || !"RECHAZADO_ECONOMICO".equalsIgnoreCase(estado.trim())) {
+            throw new IllegalArgumentException("Estado administrativo inválido");
+        }
+
+        if (observaciones == null || observaciones.trim().isBlank()) {
+            throw new IllegalArgumentException("Las observaciones son obligatorias");
+        }
+
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
+
+        ExpedienteClinico expediente = expedienteRepository.findByPacienteId(pacienteId)
+            .orElseGet(() -> crearExpedienteAutomatico(pacienteId));
+
+        String estadoAnterior = paciente.getEstadoPaciente() != null ? paciente.getEstadoPaciente().name() : EstadoPaciente.PROSPECTO.name();
+
+        paciente.setEstadoPaciente(EstadoPaciente.DENEGADO);
+        pacienteRepository.save(paciente);
+
+        expediente.setEstado(EstadoPaciente.DENEGADO.name());
+        expedienteRepository.save(expediente);
+
+        NotaAdministrativa nota = new NotaAdministrativa();
+        nota.setExpediente(expediente);
+        nota.setFechaRegistro(LocalDateTime.now());
+        nota.setAutor("TRABAJO SOCIAL - RECHAZO");
+        nota.setEstadoAnterior(estadoAnterior);
+        nota.setEstadoNuevo(EstadoPaciente.DENEGADO.name());
+        nota.setObservaciones(observaciones.trim());
+        notaAdministrativaRepository.save(nota);
+
+        Map<String, Object> respuesta = new LinkedHashMap<>();
+        respuesta.put("success", true);
+        respuesta.put("estadoPaciente", paciente.getEstadoPaciente());
+        respuesta.put("estadoExpediente", expediente.getEstado());
+        respuesta.put("notaAdministrativa", Map.of(
+            "id", nota.getId(),
+            "autor", nota.getAutor(),
+            "estadoAnterior", nota.getEstadoAnterior(),
+            "estadoNuevo", nota.getEstadoNuevo(),
+            "observaciones", nota.getObservaciones(),
+            "fechaRegistro", nota.getFechaRegistro()
+        ));
+        return respuesta;
     }
 
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight, AlertTriangle, FileText, Phone } from 'lucide-react';
+import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight, AlertTriangle, FileText, Phone, Calculator, DollarSign } from 'lucide-react';
 import { AdminHeader, AdminMainTitle, AdminErrorAlert, AdminSuccessAlert } from '../../components/layout/AdminLayout';
 
 const EstudioSocioeconomico = () => {
@@ -25,6 +25,11 @@ const EstudioSocioeconomico = () => {
   const [checklistVisible, setChecklistVisible] = useState(false);
   const [checklistItems, setChecklistItems] = useState([]);
   const [guardandoEstudio, setGuardandoEstudio] = useState(false);
+  const [rechazoModalAbierto, setRechazoModalAbierto] = useState(false);
+  const [observacionesRechazo, setObservacionesRechazo] = useState('');
+  const [errorRechazo, setErrorRechazo] = useState('');
+  const [guardandoRechazo, setGuardandoRechazo] = useState(false);
+  const [rechazoRegistrado, setRechazoRegistrado] = useState(false);
   const [citasRegistradas, setCitasRegistradas] = useState([]);
   const [cargandoCitasRegistradas, setCargandoCitasRegistradas] = useState(true);
   const [errorCitasRegistradas, setErrorCitasRegistradas] = useState('');
@@ -35,7 +40,7 @@ const EstudioSocioeconomico = () => {
     { parentesco: '', cantidadMensual: '' },
   ]);
   const [vehicleAssets, setVehicleAssets] = useState([
-    { marca: '', modelo: '', propietario: '' },
+    { marca: '', ano: '', propietario: '' },
   ]);
   const [monthlyIncomes, setMonthlyIncomes] = useState({
     solicitante: '',
@@ -96,6 +101,152 @@ const EstudioSocioeconomico = () => {
       .map((parte) => String(parte || '').trim())
       .filter(Boolean)
       .join(' ');
+  };
+
+  const FIXED_KIT_COST = 550;
+
+  const createDiagnosticoEconomicoState = () => ({
+    puntosNivel1: '',
+    costoNivel1: '',
+    puntosNivel2: '',
+    costoNivel2: '',
+    puntosNivel3: '',
+    costoNivel3: '',
+    totalPuntos: '0',
+    costoBase: '0',
+    diasTratamiento: '',
+    montoKit: String(FIXED_KIT_COST),
+    costoTotal: '0',
+  });
+
+  const getNestedFieldValue = (source, path) => {
+    if (!path.includes('.')) {
+      return source?.[path];
+    }
+
+    return path.split('.').reduce((accumulator, key) => {
+      if (accumulator && typeof accumulator === 'object') {
+        return accumulator[key];
+      }
+
+      return undefined;
+    }, source);
+  };
+
+  const setNestedFieldValue = (source, path, value) => {
+    if (!path.includes('.')) {
+      return { ...source, [path]: value };
+    }
+
+    const keys = path.split('.');
+    const next = { ...source };
+    let current = next;
+
+    keys.forEach((key, index) => {
+      if (index === keys.length - 1) {
+        current[key] = value;
+        return;
+      }
+
+      current[key] = { ...(current[key] || {}) };
+      current = current[key];
+    });
+
+    return next;
+  };
+
+  const calculateDiagnosticoEconomico = (diagnostico = {}) => {
+    const puntosNivel1 = Number(diagnostico.puntosNivel1) || 0;
+    const costoNivel1 = Number(diagnostico.costoNivel1) || 0;
+    const puntosNivel2 = Number(diagnostico.puntosNivel2) || 0;
+    const costoNivel2 = Number(diagnostico.costoNivel2) || 0;
+    const puntosNivel3 = Number(diagnostico.puntosNivel3) || 0;
+    const costoNivel3 = Number(diagnostico.costoNivel3) || 0;
+    const totalPuntos = puntosNivel1 + puntosNivel2 + puntosNivel3;
+    const costoBase = costoNivel1 + costoNivel2 + costoNivel3;
+    const montoKit = FIXED_KIT_COST;
+    const diasTratamiento = Number(diagnostico.diasTratamiento) || 35;
+
+    // Calcular precio por día con 4 decimales
+    const precioPorDia = costoBase > 0 ? (costoBase / 35).toFixed(4) : 0;
+    // Aplicar fórmula: (precioPorDia × diasTratamiento) + montoKit
+    const costoTotal = (Number(precioPorDia) * diasTratamiento + montoKit).toFixed(2);
+
+    return {
+      totalPuntos: String(totalPuntos),
+      costoBase: String(costoBase),
+      costoTotal: String(costoTotal),
+    };
+  };
+
+  const calculateNivel1Cost = (points) => {
+    const p = Number(points) || 0;
+    if (p <= 1) return 6000;
+    if (p === 2) return 9421;
+    if (p === 3) return 12842;
+    if (p === 4) return 16263;
+    if (p === 5) return 19684;
+    if (p >= 6 && p <= 7) return 23947;
+    return 0; // 8-10 no aplica en este nivel
+  };
+
+  const calculateNivel2Cost = (points) => {
+    const p = Number(points) || 0;
+    if (p <= 0) return 0;
+    if (p === 1) return 3421;
+    if (p === 2) return 6842;
+    return 0;
+  };
+
+  const calculateNivel3Cost = (points) => {
+    const p = Number(points) || 0;
+    if (p <= 1) return 0;
+    if (p === 2) return 6842;
+    if (p === 3) return 10263;
+    if (p === 4) return 13684;
+    if (p === 5) return 17105;
+    if (p === 6) return 20526;
+    if (p === 7) return 23947;
+    if (p === 8) return 27368;
+    if (p === 9) return 30789;
+    if (p === 10) return 34210;
+    return 0;
+  };
+
+  const calculateVehiclePoints = (vehicles = []) => {
+    // Suma 1 punto por cada vehículo con año >= 2020
+    return vehicles.reduce((total, vehicle) => {
+      const year = Number(vehicle.ano) || 0;
+      return total + (year >= 2020 ? 1 : 0);
+    }, 0);
+  };
+
+  const detectTcaLudopatiaAndSetDays = (data) => {
+    // Si hay TCA/Ludopatía con frecuencia → 45 días, si no → 35 días
+    const hasTcaLudopatia = data.saludAdicTcaLudopatiaFrecuencia && data.saludAdicTcaLudopatiaFrecuencia.trim() !== '';
+    return hasTcaLudopatia ? 45 : 35;
+  };
+
+  const calculateAportacionFamiliarPoints = (aportaIngreso) => {
+    // Aportación de otros familiares: Si = 1, No = 0
+    return aportaIngreso === 'si' ? 1 : 0;
+  };
+
+  const calculateBalancePoints = (balanceType) => {
+    // Calcula puntos según balance económico
+    // Déficit = 0, Superávit = 1
+    return balanceType === 'superavit' ? 1 : 0;
+  };
+
+  const calculateHousingPoints = (data) => {
+    // Suma puntos de vivienda: régimen + total habitaciones + tipo + materiales
+    const regimen = Number(data.viviendaRegimenNumero) || 0;
+    const totalHabitaciones = Number(data.viviendaTotalHabitacionesNumero) || 0;
+    const tipo = Number(data.viviendaTipoNumero) || 0;
+    const materialPiso = Number(data.viviendaMaterialPisoNumero) || 0;
+    const materialMuros = Number(data.viviendaMaterialMurosNumero) || 0;
+    const materialTecho = Number(data.viviendaMaterialTechoNumero) || 0;
+    return regimen + totalHabitaciones + tipo + materialPiso + materialMuros + materialTecho;
   };
 
   const [formData, setFormData] = useState({
@@ -189,6 +340,7 @@ const EstudioSocioeconomico = () => {
     viviendaMaterialMurosNumero: '',
     viviendaMaterialTecho: '',
     viviendaMaterialTechoNumero: '',
+    diagnosticoEconomico: createDiagnosticoEconomicoState(),
     familiarDiagnostico: '',
     familiarObservacionesTrabajoSocial: '',
     familiarObservacionesVisitaDomiciliaria: '',
@@ -211,6 +363,7 @@ const EstudioSocioeconomico = () => {
     patrimonioCantidad: 'Cantidad de autos',
     familiarAportaIngreso: 'Aportación de otros familiares',
     numeroIntegrantesAportan: 'Número de integrantes que aportan',
+    'diagnosticoEconomico.diasTratamiento': 'Días de tratamiento',
   };
 
   const sectionRequiredFields = {
@@ -264,9 +417,8 @@ const EstudioSocioeconomico = () => {
       'viviendaMaterialTecho',
     ],
     familiar: [
+      'diagnosticoEconomico.diasTratamiento',
       'familiarDiagnostico',
-      'familiarObservacionesTrabajoSocial',
-      'familiarObservacionesVisitaDomiciliaria',
     ],
   };
 
@@ -362,6 +514,12 @@ const EstudioSocioeconomico = () => {
   const totalExpenses = Object.values(monthlyExpenses).reduce((acc, value) => acc + (Number(value) || 0), 0);
   const economicResult = totalIncomes - totalExpenses;
   const hasVehicle = formData.patrimonioCuentaAuto === 'si';
+  const diagnosticoEconomico = formData.diagnosticoEconomico || createDiagnosticoEconomicoState();
+  const diagnosticoEconomicoCalculado = calculateDiagnosticoEconomico(diagnosticoEconomico);
+  const diagnosticoEconomicoDias = String(diagnosticoEconomico.diasTratamiento || '').trim() || '0';
+  const diagnosticoEconomicoCostoBase = Number(diagnosticoEconomicoCalculado.costoBase || 0);
+  const diagnosticoEconomicoMontoKit = FIXED_KIT_COST;
+  const diagnosticoEconomicoCostoTotal = Number(diagnosticoEconomicoCalculado.costoTotal || 0);
   const validIncomeContributors = incomeContributors.filter(
     (row) => String(row.parentesco || '').trim() && Number(row.cantidadMensual || 0) > 0
   ).length;
@@ -381,6 +539,25 @@ const EstudioSocioeconomico = () => {
       'laboralPuesto',
       'laboralHorario',
     ];
+
+    if (name === 'diagnosticoEconomico.diasTratamiento') {
+      if (!String(value || '').trim()) {
+        return 'Este campo es obligatorio.';
+      }
+
+      if (Number(value) <= 0) {
+        return 'Los días de tratamiento deben ser mayores a 0.';
+      }
+    }
+
+    if (
+      name.startsWith('diagnosticoEconomico.') &&
+      name !== 'diagnosticoEconomico.diasTratamiento' &&
+      value !== '' &&
+      Number(value) < 0
+    ) {
+      return 'El valor no puede ser negativo.';
+    }
 
     if (camposLaboralesDependenEmpleo.includes(name) && formData.laboralCuentaConEmpleo === 'no') {
       return '';
@@ -540,10 +717,105 @@ const EstudioSocioeconomico = () => {
     return fields;
   };
 
+  useEffect(() => {
+    const nextCalculated = calculateDiagnosticoEconomico(formData.diagnosticoEconomico || {});
+
+    setFormData((prev) => {
+      const currentDiagnostico = prev.diagnosticoEconomico || createDiagnosticoEconomicoState();
+
+      if (
+        currentDiagnostico.totalPuntos === nextCalculated.totalPuntos &&
+        currentDiagnostico.costoBase === nextCalculated.costoBase &&
+        currentDiagnostico.costoTotal === nextCalculated.costoTotal
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        diagnosticoEconomico: {
+          ...currentDiagnostico,
+          ...nextCalculated,
+        },
+      };
+    });
+  }, [
+    formData.diagnosticoEconomico,
+    formData.diagnosticoEconomico?.puntosNivel1,
+    formData.diagnosticoEconomico?.costoNivel1,
+    formData.diagnosticoEconomico?.puntosNivel2,
+    formData.diagnosticoEconomico?.costoNivel2,
+    formData.diagnosticoEconomico?.puntosNivel3,
+    formData.diagnosticoEconomico?.costoNivel3,
+    formData.diagnosticoEconomico?.montoKit,
+  ]);
+
+  useEffect(() => {
+    const autoBalance = economicResult < 0 ? 'deficit' : 'superavit';
+
+    setFormData((prev) => {
+      if (prev.balanceEconomico === autoBalance) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        balanceEconomico: autoBalance,
+      };
+    });
+  }, [economicResult]);
+
+  // Actualizar puntos de Nivel 1 (categoría + aportación + balance), Nivel 2 (vehículos), Nivel 3 (vivienda), más días de tratamiento
+  useEffect(() => {
+    setFormData((prev) => {
+      // Puntos Nivel 1: categoría de ocupación + aportación de otros familiares + balance
+      const ocupacionPoints = Number(prev.laboralNumeroOcupacion) || Number(prev.laboralCategoriaOcupacion) || 0;
+      const aportacionFamiliarPoints = calculateAportacionFamiliarPoints(prev.familiarAportaIngreso);
+      const balancePoints = calculateBalancePoints(prev.balanceEconomico);
+      const totalNivel1 = ocupacionPoints + aportacionFamiliarPoints + balancePoints;
+
+      // Puntos Nivel 2: vehículos
+      const vehiclePoints = Math.min(calculateVehiclePoints(vehicleAssets), 2);
+      
+      // Puntos Nivel 3: vivienda (régimen + habitaciones + tipo + materiales)
+      const housingPoints = calculateHousingPoints(prev);
+
+      // Costos por nivel según tabulador institucional
+      const costoNivel1 = calculateNivel1Cost(totalNivel1);
+      const costoNivel2 = calculateNivel2Cost(vehiclePoints);
+      const costoNivel3 = calculateNivel3Cost(housingPoints);
+      
+      // Días de tratamiento detectados automáticamente
+      const autoDetectedDays = detectTcaLudopatiaAndSetDays(prev);
+
+      const updatedDiagnostico = {
+        ...prev.diagnosticoEconomico,
+        puntosNivel1: String(totalNivel1),
+        costoNivel1: String(costoNivel1),
+        puntosNivel2: String(vehiclePoints),
+        costoNivel2: String(costoNivel2),
+        puntosNivel3: String(housingPoints),
+        costoNivel3: String(costoNivel3),
+        diasTratamiento: String(autoDetectedDays),
+        montoKit: String(FIXED_KIT_COST),
+      };
+
+      return {
+        ...prev,
+        diagnosticoEconomico: updatedDiagnostico,
+      };
+    });
+  }, [vehicleAssets, formData.laboralCategoriaOcupacion, formData.laboralNumeroOcupacion, formData.familiarAportaIngreso, formData.balanceEconomico, formData.saludAdicTcaLudopatiaFrecuencia, formData.viviendaRegimenNumero, formData.viviendaTotalHabitacionesNumero, formData.viviendaTipoNumero, formData.viviendaMaterialPisoNumero, formData.viviendaMaterialMurosNumero, formData.viviendaMaterialTechoNumero]);
+
+  const handleDiagnosticoEconomicoChange = (name, value) => {
+    setIsDirty(true);
+    setFormData((prev) => setNestedFieldValue(prev, `diagnosticoEconomico.${name}`, value));
+  };
+
   const handleChange = (name, value) => {
     setIsDirty(true);
     setFormData((prev) => {
-      const next = { ...prev, [name]: value };
+      const next = setNestedFieldValue(prev, name, value);
 
       if ([
         'solicitanteNombres',
@@ -634,7 +906,7 @@ const EstudioSocioeconomico = () => {
     });
 
     if (name === 'patrimonioCuentaAuto' && value === 'no') {
-      setVehicleAssets([{ marca: '', modelo: '', propietario: '' }]);
+      setVehicleAssets([{ marca: '', ano: '', propietario: '' }]);
       setActiveVehicleRow(0);
       setErrors((prev) => ({ ...prev, vehiculoCategoria: '' }));
       setFeedback({
@@ -805,6 +1077,11 @@ const EstudioSocioeconomico = () => {
     setIsDirty(true);
     setActiveTab('solicitante');
     setFeedback(null);
+    setRechazoModalAbierto(false);
+    setObservacionesRechazo('');
+    setErrorRechazo('');
+    setGuardandoRechazo(false);
+    setRechazoRegistrado(false);
     const nombreSolicitanteCompleto = paciente.solicitante?.nombre || '';
     const solicitantePartes = splitNombreCompleto(nombreSolicitanteCompleto);
     const pacientePartes = splitNombreCompleto(paciente.nombreCompleto || '');
@@ -846,12 +1123,13 @@ const EstudioSocioeconomico = () => {
       pacienteTelefonoCasa: paciente.telefonoCasa || '',
       pacienteTelefonoCelular: paciente.telefonoContacto || '',
       sustanciaConsumo: paciente.sustanciaConsumo || '',
+      diagnosticoEconomico: createDiagnosticoEconomicoState(),
     }));
   };
 
   const handleBlur = (name) => {
     setTouched((prev) => ({ ...prev, [name]: true }));
-    const msg = validateField(name, formData[name]);
+    const msg = validateField(name, getNestedFieldValue(formData, name));
     setErrors((prev) => ({ ...prev, [name]: msg }));
   };
 
@@ -1009,7 +1287,7 @@ const EstudioSocioeconomico = () => {
 
   const handleAddVehicleAsset = () => {
     setIsDirty(true);
-    setVehicleAssets((prev) => [...prev, { marca: '', modelo: '', propietario: '' }]);
+    setVehicleAssets((prev) => [...prev, { marca: '', ano: '', propietario: '' }]);
     setActiveVehicleRow(vehicleAssets.length);
   };
 
@@ -1018,7 +1296,7 @@ const EstudioSocioeconomico = () => {
     setVehicleAssets((prev) => {
       if (prev.length === 1) {
         setActiveVehicleRow(0);
-        return [{ marca: '', modelo: '', propietario: '' }];
+        return [{ marca: '', ano: '', propietario: '' }];
       }
       const next = prev.filter((_, i) => i !== index);
       setActiveVehicleRow((current) => Math.max(0, Math.min(current, next.length - 1)));
@@ -1030,7 +1308,10 @@ const EstudioSocioeconomico = () => {
     const fields = getActiveRequiredFields(tabId);
     if (fields.length === 0) return false;
 
-    const requiredFieldsDone = fields.every((name) => String(formData[name] || '').trim() !== '');
+    const requiredFieldsDone = fields.every((name) => {
+      const fieldValue = getNestedFieldValue(formData, name);
+      return validateField(name, fieldValue) === '';
+    });
     if (tabId === 'familiar') {
       return requiredFieldsDone && hasMinimumFamilyReferences;
     }
@@ -1048,7 +1329,7 @@ const EstudioSocioeconomico = () => {
     const newErrors = {};
 
     reqFields.forEach((name) => {
-      const msg = validateField(name, formData[name]);
+      const msg = validateField(name, getNestedFieldValue(formData, name));
       if (msg) newErrors[name] = msg;
     });
 
@@ -1251,13 +1532,14 @@ const EstudioSocioeconomico = () => {
       viviendaMaterialMurosNumero: '',
       viviendaMaterialTecho: '',
       viviendaMaterialTechoNumero: '',
+      diagnosticoEconomico: createDiagnosticoEconomicoState(),
       familiarDiagnostico: '',
       familiarObservacionesTrabajoSocial: '',
       familiarObservacionesVisitaDomiciliaria: '',
     });
     setHouseholdMembers([{ nombre: '', parentesco: '', edad: '', sexo: '', estadoCivil: '', ocupacionLugar: '' }]);
     setIncomeContributors([{ parentesco: '', cantidadMensual: '' }]);
-    setVehicleAssets([{ marca: '', modelo: '', propietario: '' }]);
+    setVehicleAssets([{ marca: '', ano: '', propietario: '' }]);
     setMonthlyIncomes({ solicitante: '', conyuge: '', hijos: '', otros: '' });
     setMonthlyExpenses({
       alimentacion: '',
@@ -1289,6 +1571,11 @@ const EstudioSocioeconomico = () => {
       { nombre: '', telefono: '', relacion: '', tiempoConocer: '' },
     ]);
     setActiveFamilyReferenceRow(0);
+    setRechazoModalAbierto(false);
+    setObservacionesRechazo('');
+    setErrorRechazo('');
+    setGuardandoRechazo(false);
+    setRechazoRegistrado(false);
     setTouched({});
     setErrors({});
     setIsDirty(false);
@@ -1302,6 +1589,55 @@ const EstudioSocioeconomico = () => {
       type: 'success',
       message: `Borrador guardado para la sección "${activeTab}".`,
     });
+  };
+
+  const handleOpenRechazoAdministrativo = () => {
+    setErrorRechazo('');
+    setObservacionesRechazo('');
+    setRechazoModalAbierto(true);
+  };
+
+  const handleConfirmarRechazoAdministrativo = async () => {
+    if (guardandoRechazo) {
+      return;
+    }
+
+    const observaciones = observacionesRechazo.trim();
+    if (!observaciones) {
+      setErrorRechazo('Debes registrar las observaciones del rechazo.');
+      return;
+    }
+
+    try {
+      setGuardandoRechazo(true);
+      setErrorRechazo('');
+
+      const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteSeleccionadoId}/rechazo-administrativo`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          estado: 'RECHAZADO_ECONOMICO',
+          observaciones,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'No se pudo registrar el rechazo administrativo.');
+      }
+
+      setRechazoRegistrado(true);
+      setRechazoModalAbierto(false);
+      setObservacionesRechazo('');
+      setFeedback({
+        type: 'success',
+        message: 'Se registró la denegación por insuficiencia económica y el expediente quedó marcado como DENEGADO.',
+      });
+    } catch (error) {
+      setErrorRechazo(error.message || 'No se pudo registrar el rechazo.');
+    } finally {
+      setGuardandoRechazo(false);
+    }
   };
 
   const cargarDatosDePrueba = () => {
@@ -1360,7 +1696,7 @@ const EstudioSocioeconomico = () => {
       conyugeIngresoMensual: '12000',
       familiarAportaIngreso: 'si',
       numeroIntegrantesAportan: '2',
-      balanceEconomico: '43000',
+      balanceEconomico: 'superavit',
       patrimonioCuentaAuto: 'si',
       patrimonioCantidad: '1',
       vehiculoCategoria: 'uno_dos',
@@ -1399,6 +1735,19 @@ const EstudioSocioeconomico = () => {
       viviendaMaterialMurosNumero: '1',
       viviendaMaterialTecho: 'concreto',
       viviendaMaterialTechoNumero: '1',
+      diagnosticoEconomico: {
+        puntosNivel1: '2',
+        costoNivel1: '1500',
+        puntosNivel2: '1',
+        costoNivel2: '1200',
+        puntosNivel3: '1',
+        costoNivel3: '900',
+        totalPuntos: '4',
+        costoBase: '3600',
+        diasTratamiento: '30',
+        montoKit: '550',
+        costoTotal: '4400',
+      },
       familiarDiagnostico: 'Entorno familiar funcional con soporte económico estable.',
       familiarObservacionesTrabajoSocial: 'Se observa red de apoyo suficiente para el proceso de ingreso.',
       familiarObservacionesVisitaDomiciliaria: 'Vivienda limpia, organizada y con condiciones adecuadas para evaluación institucional.',
@@ -1416,8 +1765,8 @@ const EstudioSocioeconomico = () => {
     ]);
 
     setVehicleAssets([
-      { marca: 'Toyota', modelo: 'RAV4 2020', propietario: 'Solicitante' },
-      { marca: 'Nissan', modelo: 'Versa 2018', propietario: 'Cónyuge' },
+      { marca: 'Toyota', ano: '2020', propietario: 'Solicitante' },
+      { marca: 'Nissan', ano: '2018', propietario: 'Cónyuge' },
     ]);
 
     setMonthlyIncomes({
@@ -1601,6 +1950,10 @@ const EstudioSocioeconomico = () => {
       const pdfPayload = {
         estudio: {
           formData,
+          diagnosticoEconomico: {
+            ...formData.diagnosticoEconomico,
+            ...calculateDiagnosticoEconomico(formData.diagnosticoEconomico || {}),
+          },
           householdMembers,
           incomeContributors,
           vehicleAssets,
@@ -2203,6 +2556,10 @@ const EstudioSocioeconomico = () => {
                         {item.message}
                       </p>
                     ))}
+                    <div className="mt-3 h-[44px] rounded-xl border border-[#7E1D3B]/30 bg-[#7E1D3B]/5 flex items-center justify-between px-3">
+                      <span className="text-[11px] font-black uppercase tracking-wide text-slate-500">Puntos Aportación</span>
+                      <span className="text-base font-black text-[#7E1D3B] leading-none">{calculateAportacionFamiliarPoints(formData.familiarAportaIngreso)}</span>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -2305,51 +2662,42 @@ const EstudioSocioeconomico = () => {
               <section className="mt-8">
                 <label className="block text-[11px] font-black uppercase text-slate-600 mb-2 ml-1 tracking-widest">Balance Económico (Ingresos - Egresos) <span className="text-[#7E1D3B]">*</span></label>
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-3 items-start max-w-2xl">
-                  <div className="flex gap-3">
-                    <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className={`flex items-center justify-center gap-2 p-3 border rounded-xl transition-all ${
                       formData.balanceEconomico === 'deficit'
                         ? 'border-rose-300 bg-rose-50'
-                        : 'border-slate-100 bg-slate-50 hover:bg-white hover:border-[#7E1D3B]'
+                        : 'border-slate-200 bg-slate-100'
                     }`}>
-                      <input
-                        type="radio"
-                        name="balanceEconomico"
-                        value="deficit"
-                        checked={formData.balanceEconomico === 'deficit'}
-                        onChange={(e) => handleChange('balanceEconomico', e.target.value)}
-                        onBlur={() => handleBlur('balanceEconomico')}
-                        className="accent-[#7E1D3B]"
-                      />
-                      <span className={`text-sm font-bold ${formData.balanceEconomico === 'deficit' ? 'text-rose-700' : 'text-slate-600'}`}>Déficit (Falta)</span>
-                    </label>
-                    <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${
+                      <span className={`text-sm font-bold ${formData.balanceEconomico === 'deficit' ? 'text-rose-700' : 'text-slate-500'}`}>Déficit (Falta)</span>
+                    </div>
+                    <div className={`flex items-center justify-center gap-2 p-3 border rounded-xl transition-all ${
                       formData.balanceEconomico === 'superavit'
                         ? 'border-emerald-300 bg-emerald-50'
-                        : 'border-slate-100 bg-slate-50 hover:bg-white hover:border-[#7E1D3B]'
+                        : 'border-slate-200 bg-slate-100'
                     }`}>
-                      <input
-                        type="radio"
-                        name="balanceEconomico"
-                        value="superavit"
-                        checked={formData.balanceEconomico === 'superavit'}
-                        onChange={(e) => handleChange('balanceEconomico', e.target.value)}
-                        onBlur={() => handleBlur('balanceEconomico')}
-                        className="accent-[#7E1D3B]"
-                      />
-                      <span className={`text-sm font-bold ${formData.balanceEconomico === 'superavit' ? 'text-emerald-700' : 'text-slate-600'}`}>Superávit (Sobra)</span>
-                    </label>
+                      <span className={`text-sm font-bold ${formData.balanceEconomico === 'superavit' ? 'text-emerald-700' : 'text-slate-500'}`}>Superávit (Sobra)</span>
+                    </div>
                   </div>
-                  <div className={`h-[48px] rounded-xl border px-3 flex items-center justify-between ${
-                    economicResult < 0
-                      ? 'border-rose-300 bg-rose-50'
-                      : 'border-emerald-300 bg-emerald-50'
-                  }`}>
-                    <span className="text-[11px] font-black uppercase tracking-wide text-slate-500">Resultado</span>
-                    <span className={`text-sm font-black ${economicResult < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
-                      $ {economicResult.toLocaleString('es-MX')}
-                    </span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className={`h-[48px] rounded-xl border px-3 flex items-center justify-between ${
+                      economicResult < 0
+                        ? 'border-rose-300 bg-rose-50'
+                        : 'border-emerald-300 bg-emerald-50'
+                    }`}>
+                      <span className="text-[11px] font-black uppercase tracking-wide text-slate-500">Resultado</span>
+                      <span className={`text-sm font-black ${economicResult < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                        $ {economicResult.toLocaleString('es-MX')}
+                      </span>
+                    </div>
+                    <div className="h-[48px] rounded-xl border border-[#7E1D3B]/30 bg-[#7E1D3B]/5 flex items-center justify-between px-3">
+                      <span className="text-[11px] font-black uppercase tracking-wide text-slate-500">Puntos</span>
+                      <span className="text-base font-black text-[#7E1D3B] leading-none">{calculateBalancePoints(formData.balanceEconomico)}</span>
+                    </div>
                   </div>
                 </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  Este campo se calcula automáticamente con base en Ingresos - Egresos.
+                </p>
                 {errors.balanceEconomico && <p className="mt-1 text-xs font-semibold text-rose-700">{errors.balanceEconomico}</p>}
                 {getFindingsByField('balanceEconomico', 'error').map((item) => (
                   <p key={`err-${item.field}`} className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
@@ -2419,7 +2767,7 @@ const EstudioSocioeconomico = () => {
                         <thead className="bg-slate-100 text-slate-600 uppercase tracking-wide">
                           <tr>
                             <th className="px-3 py-2 text-left">Marca</th>
-                            <th className="px-3 py-2 text-left">Modelo</th>
+                            <th className="px-3 py-2 text-left">Año</th>
                             <th className="px-3 py-2 text-left">Propietario</th>
                             <th className="px-3 py-2 text-center">Acción</th>
                           </tr>
@@ -2443,11 +2791,15 @@ const EstudioSocioeconomico = () => {
                               </td>
                               <td className="p-2">
                                 <input
-                                  value={row.modelo}
-                                  onChange={(e) => handleVehicleAssetChange(index, 'modelo', e.target.value)}
+                                  type="number"
+                                  min="1900"
+                                  max="2099"
+                                  value={row.ano}
+                                  onChange={(e) => handleVehicleAssetChange(index, 'ano', e.target.value)}
                                   onFocus={() => setActiveVehicleRow(index)}
                                   disabled={!hasVehicle}
                                   className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+                                  placeholder="Ej: 2020"
                                 />
                               </td>
                               <td className="p-2">
@@ -2849,6 +3201,188 @@ const EstudioSocioeconomico = () => {
                 )}
               </section>
 
+              <section className="mt-8 rounded-[28px] border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="rounded-2xl bg-[#7E1D3B]/10 p-3 text-[#7E1D3B]">
+                    <Calculator size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wide text-slate-700">Diagnóstico económico familiar</h3>
+                    <p className="text-xs text-slate-500">Captura niveles, puntos, costo base y kit para el tratamiento.</p>
+                  </div>
+                </div>
+
+                {formData.balanceEconomico === 'deficit' && (
+                  <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
+                    Aviso: hay déficit económico. Los ingresos no alcanzan para cubrir el costo del tratamiento.
+                  </div>
+                )}
+
+                <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50/50 text-slate-700">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-black uppercase tracking-wide">Nivel</th>
+                        <th className="px-4 py-3 text-left font-black uppercase tracking-wide">Puntos</th>
+                        <th className="px-4 py-3 text-left font-black uppercase tracking-wide">Costo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { label: 'Nivel 1 (Categoría, Aportación, Balance)', puntos: 'puntosNivel1', costo: 'costoNivel1', readonly: true },
+                        { label: 'Nivel 2 (Transporte/Vehículos)', puntos: 'puntosNivel2', costo: 'costoNivel2', readonly: true },
+                        { label: 'Nivel 3 (Vivienda)', puntos: 'puntosNivel3', costo: 'costoNivel3', readonly: true },
+                      ].map((row, index) => (
+                        <tr key={row.label} className={`border-t border-slate-200 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
+                          <td className="px-4 py-3 font-semibold text-slate-700">{row.label}</td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="number"
+                              min="0"
+                              value={diagnosticoEconomico[row.puntos]}
+                              onChange={(e) => !row.readonly && handleDiagnosticoEconomicoChange(row.puntos, e.target.value)}
+                              readOnly={row.readonly}
+                              className={`w-full rounded-xl border border-slate-200 px-3 py-2 outline-none transition ${
+                                row.readonly
+                                  ? 'bg-slate-100 text-slate-700 font-semibold cursor-not-allowed border-slate-300'
+                                  : 'bg-slate-50 focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15'
+                              }`}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-400">$</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={diagnosticoEconomico[row.costo]}
+                                readOnly
+                                className="w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 font-semibold text-slate-700 outline-none cursor-not-allowed"
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="border-t border-slate-200 bg-slate-50/50">
+                        <td className="px-4 py-3 font-black uppercase tracking-wide text-slate-700">Total</td>
+                        <td className="px-4 py-3 font-black text-[#7E1D3B]">{diagnosticoEconomicoCalculado.totalPuntos}</td>
+                        <td className="px-4 py-3 font-black text-[#7E1D3B]">$ {diagnosticoEconomicoCostoBase.toLocaleString('es-MX')}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+                  <div>
+                    <label className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-600">
+                      <Calculator size={14} /> Días de tratamiento <span className="text-[#7E1D3B]">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={diagnosticoEconomico.diasTratamiento}
+                      onChange={(e) => handleDiagnosticoEconomicoChange('diasTratamiento', e.target.value)}
+                      onBlur={() => handleBlur('diagnosticoEconomico.diasTratamiento')}
+                      aria-invalid={Boolean(errors['diagnosticoEconomico.diasTratamiento'])}
+                      className={`w-full rounded-2xl border px-4 py-3 outline-none transition focus:ring-2 ${
+                        errors['diagnosticoEconomico.diasTratamiento']
+                          ? 'border-rose-300 bg-rose-50 focus:border-rose-500 focus:ring-rose-200'
+                          : 'border-slate-200 bg-slate-50 focus:border-[#7E1D3B] focus:ring-[#7E1D3B]/15'
+                      }`}
+                      placeholder="0"
+                    />
+                    {errors['diagnosticoEconomico.diasTratamiento'] && (
+                      <p className="mt-1 text-xs font-semibold text-rose-700">{errors['diagnosticoEconomico.diasTratamiento']}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-600">
+                      <DollarSign size={14} /> Costo base
+                    </label>
+                    <input
+                      type="number"
+                      value={diagnosticoEconomicoCalculado.costoBase}
+                      readOnly
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-600">
+                      <DollarSign size={14} /> Costo de Kit
+                    </label>
+                    <input
+                      type="number"
+                      value={FIXED_KIT_COST}
+                      readOnly
+                      className="w-full rounded-2xl border border-slate-300 bg-slate-100 px-4 py-3 font-semibold text-slate-700 outline-none cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div className={`mt-5 rounded-[28px] border px-5 py-5 ${formData.balanceEconomico === 'deficit' ? 'border-rose-200 bg-rose-50' : 'border-[#7E1D3B]/15 bg-[#7E1D3B]/5'}`}>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
+                    <div className="min-h-[92px] rounded-2xl border border-white/70 bg-white/70 px-4 py-4 shadow-sm">
+                      <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Resultado</p>
+                      <p className={`mt-2 text-xl font-black leading-none ${economicResult < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                        $ {economicResult.toLocaleString('es-MX')}
+                      </p>
+                    </div>
+                    <div className="min-h-[92px] rounded-2xl border border-white/70 bg-white/70 px-4 py-4 shadow-sm">
+                      <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Estado</p>
+                      <p className={`mt-2 text-xl font-black leading-none ${formData.balanceEconomico === 'deficit' ? 'text-rose-700' : 'text-emerald-700'}`}>
+                        {formData.balanceEconomico === 'deficit' ? 'Déficit' : 'Superávit'}
+                      </p>
+                    </div>
+                    <div className="min-h-[92px] rounded-2xl border border-white/70 bg-white/70 px-4 py-4 shadow-sm">
+                      <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Total estimado</p>
+                      <p className="mt-2 text-xl font-black leading-none text-[#7E1D3B]">
+                        $ {diagnosticoEconomicoCostoTotal.toLocaleString('es-MX')}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm font-semibold text-slate-700">
+                    Tratamiento por {diagnosticoEconomicoDias} días con kit fijo de $ {diagnosticoEconomicoMontoKit.toLocaleString('es-MX')}.
+                  </p>
+                </div>
+
+                {formData.balanceEconomico === 'deficit' && pacienteSeleccionadoId && !rechazoRegistrado && (
+                  <div className="rounded-[28px] border border-rose-200 bg-rose-50/80 p-5 shadow-sm">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div className="max-w-2xl">
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-rose-700">Validación administrativa</p>
+                        <h4 className="mt-1 text-xl font-black text-slate-900">El balance está en déficit y puede negarse el ingreso</h4>
+                        <p className="mt-2 text-sm leading-6 text-slate-700">
+                          Antes de registrar la denegación, confirma las observaciones administrativas. Esta acción actualizará el expediente como DENEGADO y dejará una nota de trabajo social.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleOpenRechazoAdministrativo}
+                        className="inline-flex items-center justify-center rounded-[28px] border border-[#7E1D3B] px-5 py-3 text-sm font-black uppercase tracking-wide text-[#7E1D3B] transition hover:bg-[#7E1D3B] hover:text-white"
+                      >
+                        Denegar por falta de recursos
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {rechazoRegistrado && (
+                  <div className="rounded-[28px] border border-rose-200 bg-rose-50 p-5 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <FileX className="mt-0.5 text-rose-700" size={20} />
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-rose-700">DENEGADO</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-700">
+                          El rechazo administrativo quedó registrado correctamente en el expediente.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+
               <section className="mt-8 grid grid-cols-1 gap-6">
                 <TextAreaGroup
                   label="Diagnóstico"
@@ -2865,7 +3399,6 @@ const EstudioSocioeconomico = () => {
                   label="Observaciones del trabajador social"
                   name="familiarObservacionesTrabajoSocial"
                   value={formData.familiarObservacionesTrabajoSocial}
-                  required
                   error={errors.familiarObservacionesTrabajoSocial}
                   onChange={handleChange}
                   onBlur={handleBlur}
@@ -2876,7 +3409,6 @@ const EstudioSocioeconomico = () => {
                   label="Observaciones de la visita domiciliaria"
                   name="familiarObservacionesVisitaDomiciliaria"
                   value={formData.familiarObservacionesVisitaDomiciliaria}
-                  required
                   error={errors.familiarObservacionesVisitaDomiciliaria}
                   onChange={handleChange}
                   onBlur={handleBlur}
@@ -3018,6 +3550,85 @@ const EstudioSocioeconomico = () => {
               </div>
             )}
           </section>
+        )}
+        {rechazoModalAbierto && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5 md:p-6">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-rose-700">Denegación de ingreso</p>
+                  <h3 className="mt-1 text-2xl font-black text-slate-900">Registrar rechazo por insuficiencia económica</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRechazoModalAbierto(false)}
+                  className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  aria-label="Cerrar modal de rechazo"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-5 p-5 md:p-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Ingresos</p>
+                    <p className="mt-2 text-lg font-black text-slate-900">$ {totalIncomes.toLocaleString('es-MX')}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Egresos</p>
+                    <p className="mt-2 text-lg font-black text-slate-900">$ {totalExpenses.toLocaleString('es-MX')}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Costo total estimado</p>
+                    <p className="mt-2 text-lg font-black text-[#7E1D3B]">$ {diagnosticoEconomicoCostoTotal.toLocaleString('es-MX')}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 text-rose-600" size={18} />
+                    <p className="text-sm font-semibold leading-6 text-rose-900">
+                      Verifica que las observaciones describan con claridad el motivo de la denegación. Esta nota se guardará como información administrativa del expediente.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[11px] font-black uppercase tracking-widest text-slate-600">Observaciones de rechazo *</label>
+                  <textarea
+                    value={observacionesRechazo}
+                    onChange={(event) => {
+                      setObservacionesRechazo(event.target.value);
+                      if (errorRechazo) setErrorRechazo('');
+                    }}
+                    rows={5}
+                    className="w-full rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+                    placeholder="Explica por qué el balance económico impide continuar con el ingreso..."
+                  />
+                  {errorRechazo && <p className="mt-2 text-xs font-semibold text-rose-700">{errorRechazo}</p>}
+                </div>
+
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setRechazoModalAbierto(false)}
+                    className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmarRechazoAdministrativo}
+                    disabled={guardandoRechazo}
+                    className="rounded-2xl bg-[#7E1D3B] px-5 py-3 text-sm font-black uppercase tracking-wide text-white transition hover:bg-[#63162e] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {guardandoRechazo ? 'Registrando...' : 'Confirmar denegación'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>
