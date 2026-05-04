@@ -193,6 +193,63 @@ public class RequisicionController {
         }
     }
 
+    @PatchMapping("/{id}/firma-administradora")
+    public ResponseEntity<?> firmarAdministradora(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Rol", required = false) String rol) {
+        if (!"administracion".equals(rol)) {
+            return ResponseEntity.status(403).body("acceso-denegado");
+        }
+        try {
+            return ResponseEntity.ok(service.firmarAdministradora(id));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{id}/firma-directora-gral")
+    public ResponseEntity<?> firmarDirectoraGral(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Rol", required = false) String rol) {
+        if (!"direccion-general".equals(rol)) {
+            return ResponseEntity.status(403).body("acceso-denegado");
+        }
+        try {
+            return ResponseEntity.ok(service.firmarDirectoraGral(id));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{id}/rechazar")
+    public ResponseEntity<?> rechazar(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Rol", required = false) String rol,
+            @RequestBody Map<String, String> body) {
+        if (!"administracion".equals(rol) && !"direccion-general".equals(rol)) {
+            return ResponseEntity.status(403).body("acceso-denegado");
+        }
+        try {
+            return ResponseEntity.ok(service.rechazar(id, rol, body.get("observaciones")));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
     @PatchMapping("/{id}/tamanio")
     public ResponseEntity<?> actualizarTamanio(
             @PathVariable UUID id,

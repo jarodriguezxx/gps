@@ -16,12 +16,18 @@ const ListaRequisiciones = () => {
   // Validar el rol del usuario
   const { rol } = useParams<{ rol: string }>();
   const requisicionesAMostrar = useMemo(() => {
-    // Este console.log servirá para comprobar que ya no se filtra al hacer clic en filas
-    console.log("Calculando filtro de requisiciones...");
-
     if (rol === "rec-materiales") {
       return requisiciones;
+    } else if (rol === "administracion") {
+      return requisiciones.filter(
+        (r) => r.estado === "PRE-AUTORIZADA" && !r.firmaAdminsitradora,
+      );
+    } else if (rol === "direccion-general") {
+      return requisiciones.filter(
+        (r) => r.estado === "PRE-AUTORIZADA" && !r.firmaDirectoraGral,
+      );
     } else {
+      // compras-inventario
       const ordinarias = requisiciones.filter(
         (r) => r.tipo === "ORDINARIA" && r.estado !== "PENDIENTE",
       );
@@ -30,7 +36,6 @@ const ListaRequisiciones = () => {
           r.tipo === "EXTRAORDINARIA" &&
           (r.estado === "AUTORIZADA" || r.estado === "EN-REVISION" || r.estado === "FINALIZADA"),
       );
-
       return [...ordinarias, ...extraordinarias];
     }
   }, [requisiciones, rol]);
@@ -47,6 +52,8 @@ const ListaRequisiciones = () => {
         return "bg-purple-100 text-purple-800 border border-purple-300";
       case "EN-REVISION":
         return "bg-orange-100 text-orange-800 border border-orange-300";
+      case "RECHAZADA":
+        return "bg-red-100 text-red-800 border border-red-300";
       default:
         return "bg-slate-100 text-slate-800 border border-slate-300";
     }

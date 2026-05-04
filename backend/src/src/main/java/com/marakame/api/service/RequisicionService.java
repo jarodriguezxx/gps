@@ -249,6 +249,40 @@ public class RequisicionService {
         return repository.save(req);
     }
 
+    @Transactional
+    public Requisicion firmarAdministradora(UUID id) {
+        Requisicion req = repository.findById(id).orElseThrow(NoSuchElementException::new);
+        if (req.getEstado() != Estado.PRE_AUTORIZADA)
+            throw new IllegalStateException("estado-invalido");
+        req.setFirmaAdministradora(true);
+        return repository.save(req);
+    }
+
+    @Transactional
+    public Requisicion firmarDirectoraGral(UUID id) {
+        Requisicion req = repository.findById(id).orElseThrow(NoSuchElementException::new);
+        if (req.getEstado() != Estado.PRE_AUTORIZADA)
+            throw new IllegalStateException("estado-invalido");
+        if (!Boolean.TRUE.equals(req.getFirmaAdministradora()))
+            throw new IllegalStateException("firma-administradora-requerida");
+        req.setFirmaDirectoraGral(true);
+        req.setEstado(Estado.AUTORIZADA);
+        return repository.save(req);
+    }
+
+    @Transactional
+    public Requisicion rechazar(UUID id, String rol, String observaciones) {
+        if (observaciones == null || observaciones.isBlank())
+            throw new IllegalArgumentException("motivo-requerido");
+        Requisicion req = repository.findById(id).orElseThrow(NoSuchElementException::new);
+        if (req.getEstado() != Estado.PRE_AUTORIZADA)
+            throw new IllegalStateException("estado-invalido");
+        req.setObservacionesRechazo(observaciones);
+        req.setRechazadoPor(rol);
+        req.setEstado(Estado.RECHAZADA);
+        return repository.save(req);
+    }
+
     public AdjuntoRequisicion obtenerAdjunto(UUID requisicionId, UUID adjuntoId) {
         AdjuntoRequisicion adjunto = adjuntoRepository.findById(adjuntoId)
                 .orElseThrow(NoSuchElementException::new);

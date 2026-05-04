@@ -61,6 +61,14 @@ public class Requisicion {
     @JsonProperty("firmaDirectoraGral")
     private Boolean firmaDirectoraGral = false;
 
+    @Column(name = "observaciones_rechazo", columnDefinition = "TEXT")
+    @JsonProperty("observacionesRechazo")
+    private String observacionesRechazo;
+
+    @Column(name = "rechazado_por")
+    @JsonProperty("rechazadoPor")
+    private String rechazadoPor;
+
     @Column(name = "cotizacion_path")
     @JsonProperty("cotizacionPath")
     private String cotizacionPath;
@@ -118,6 +126,12 @@ public class Requisicion {
 
     public Boolean getFirmaDirectoraGral() { return firmaDirectoraGral; }
     public void setFirmaDirectoraGral(Boolean firmaDirectoraGral) { this.firmaDirectoraGral = firmaDirectoraGral; }
+
+    public String getObservacionesRechazo() { return observacionesRechazo; }
+    public void setObservacionesRechazo(String observacionesRechazo) { this.observacionesRechazo = observacionesRechazo; }
+
+    public String getRechazadoPor() { return rechazadoPor; }
+    public void setRechazadoPor(String rechazadoPor) { this.rechazadoPor = rechazadoPor; }
 
     public String getCotizacionPath() { return cotizacionPath; }
     public void setCotizacionPath(String cotizacionPath) { this.cotizacionPath = cotizacionPath; }

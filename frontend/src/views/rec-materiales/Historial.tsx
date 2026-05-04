@@ -26,9 +26,23 @@ const Historial = () => {
     return Array.from(new Set(requisiciones.map((r) => r.area))).sort();
   }, [requisiciones]);
 
+  // Base de requisiciones según rol
+  const requisicionesBase = useMemo(() => {
+    if (rol === "administracion") {
+      return requisiciones.filter(
+        (r) => r.firmaAdminsitradora === true || r.rechazadoPor === "administracion",
+      );
+    } else if (rol === "direccion-general") {
+      return requisiciones.filter(
+        (r) => r.firmaDirectoraGral === true || r.rechazadoPor === "direccion-general",
+      );
+    }
+    return requisiciones;
+  }, [requisiciones, rol]);
+
   // Filtrar requisiciones
   const requisicionesFiltradas = useMemo(() => {
-    return requisiciones.filter((req) => {
+    return requisicionesBase.filter((req) => {
       const cumpleBusqueda =
         busqueda === "" ||
         req.id.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -50,17 +64,17 @@ const Historial = () => {
         cumpleTipo
       );
     });
-  }, [busqueda, filtroEstado, filtroArea, filtroTamanio, filtroTipo]);
+  }, [requisicionesBase, busqueda, filtroEstado, filtroArea, filtroTamanio, filtroTipo]);
 
   // Estadísticas
   const stats = useMemo(() => {
     return {
-      total: requisiciones.length,
-      pendientes: requisiciones.filter((r) => r.estado === "PENDIENTE").length,
-      autorizadas: requisiciones.filter((r) => r.estado === "AUTORIZADA").length,
-      finalizadas: requisiciones.filter((r) => r.estado === "FINALIZADA").length,
+      total: requisicionesBase.length,
+      pendientes: requisicionesBase.filter((r) => r.estado === "PENDIENTE").length,
+      autorizadas: requisicionesBase.filter((r) => r.estado === "AUTORIZADA").length,
+      finalizadas: requisicionesBase.filter((r) => r.estado === "FINALIZADA").length,
     };
-  }, [requisiciones]);
+  }, [requisicionesBase]);
 
   // Badge de estado con colores
   const obtenerEstiloBadge = (estado: Estado) => {
@@ -75,6 +89,8 @@ const Historial = () => {
         return "bg-purple-100 text-purple-800 border border-purple-300";
       case "EN-REVISION":
         return "bg-orange-100 text-orange-800 border border-orange-300";
+      case "RECHAZADA":
+        return "bg-red-100 text-red-800 border border-red-300";
       default:
         return "bg-slate-100 text-slate-800 border border-slate-300";
     }
@@ -148,6 +164,7 @@ const Historial = () => {
             <option value="AUTORIZADA">Autorizada</option>
             <option value="FINALIZADA">Finalizada</option>
             <option value="PRE-AUTORIZADA">Pre-Autorizada</option>
+            <option value="RECHAZADA">Rechazada</option>
           </select>
 
           {/* Área */}
