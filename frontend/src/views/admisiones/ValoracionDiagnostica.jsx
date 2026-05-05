@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Save, X, User, Phone, Activity, HeartPulse, Clipboard, Search, ArrowRight, FileText, Briefcase } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Save, X, User, Phone, Activity, HeartPulse, Clipboard, Search, ArrowRight, FileText, Briefcase, AlertTriangle } from 'lucide-react';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
 import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
 import { SUSTANCIAS_CONSUMO } from '../../config/catalogs';
@@ -66,6 +66,149 @@ const getSystemDateValue = () => {
 const getSystemDayValue = () => {
   const now = new Date();
   return new Intl.DateTimeFormat('es-MX', { weekday: 'long' }).format(now);
+};
+
+const getEntityFullName = (entity = {}) => {
+  const joined = [entity.nombres, entity.apellidoPaterno, entity.apellidoMaterno].filter((part) => String(part || '').trim()).join(' ');
+  const candidate = entity.nombreCompleto || entity.nombre || entity.nombrePaciente || entity.nombreSolicitante || '';
+  return String(joined || candidate || '').trim();
+};
+
+const splitNameParts = (fullName = '') => {
+  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return { nombres: '', apellidoPaterno: '', apellidoMaterno: '' };
+  }
+
+  if (parts.length === 1) {
+    return { nombres: parts[0], apellidoPaterno: '', apellidoMaterno: '' };
+  }
+
+  if (parts.length === 2) {
+    return { nombres: parts[0], apellidoPaterno: parts[1], apellidoMaterno: '' };
+  }
+
+  return {
+    nombres: parts.slice(0, Math.max(1, parts.length - 2)).join(' '),
+    apellidoPaterno: parts[parts.length - 2],
+    apellidoMaterno: parts[parts.length - 1],
+  };
+};
+
+const buildStructuredAddress = (address = {}) => {
+  const parts = [
+    address.calle,
+    address.noExt,
+    address.noInt,
+    address.colonia,
+    address.municipioDelegacion,
+    address.cp,
+    address.ciudadEstado,
+  ];
+
+  return parts.some((part) => String(part || '').trim())
+    ? {
+        calle: address.calle || '',
+        noExt: address.noExt || '',
+        noInt: address.noInt || '',
+        colonia: address.colonia || '',
+        municipioDelegacion: address.municipioDelegacion || '',
+        cp: address.cp || '',
+        ciudadEstado: address.ciudadEstado || '',
+      }
+    : null;
+};
+
+const mapIncomingStateToFormData = (incomingState = {}) => {
+  const readOnly = incomingState.diagnosticoReadOnlyData || {};
+  const solicitante = readOnly.solicitante || {};
+  const prospecto = readOnly.prospecto || {};
+  const llamadaInicial = incomingState.llamadaInicial || {};
+  const prospectoBase = incomingState.prospecto || {};
+  const prospectoDesdeLlamada = llamadaInicial.paciente || {};
+  const solicitanteDesdeLlamada = llamadaInicial.solicitante || {};
+
+  const solicitanteFullName = getEntityFullName(solicitante) || getEntityFullName(solicitanteDesdeLlamada) || getEntityFullName(prospectoBase.solicitante || {});
+  const prospectoFullName = getEntityFullName(prospecto) || getEntityFullName(prospectoDesdeLlamada) || getEntityFullName(prospectoBase);
+
+  const solicitanteParts = splitNameParts(solicitanteFullName);
+  const prospectoParts = splitNameParts(prospectoFullName);
+
+  const fechaLlamada = incomingState.detalleExpediente?.seguimientos?.[0]?.fechaHoraProgramada || '';
+
+  return {
+    fuenteReferencia: solicitante.fuenteReferencia || '',
+    fuenteReferenciaOtro: '',
+    nombreSolicitante: solicitanteFullName || '',
+    solicitanteNombres: solicitante.nombres || solicitanteParts.nombres || '',
+    solicitanteApellidoPaterno: solicitante.apellidoPaterno || solicitanteParts.apellidoPaterno || '',
+    solicitanteApellidoMaterno: solicitante.apellidoMaterno || solicitanteParts.apellidoMaterno || '',
+    lugarVisita: solicitante.lugarVisita || '',
+    domicilioSolicitante: buildStructuredAddress({
+      calle: solicitante.direccionCalle,
+      noExt: solicitante.direccionNoExt,
+      noInt: solicitante.direccionNoInt,
+      colonia: solicitante.direccionColonia,
+      municipioDelegacion: solicitante.direccionMunicipioDelegacion,
+      cp: solicitante.direccionCp,
+      ciudadEstado: solicitante.direccionCiudadEstado,
+    }) ? `${solicitante.direccionCalle || ''} ${solicitante.direccionNoExt || ''}`.trim() : '',
+    solicitanteDireccionCalle: solicitante.direccionCalle || '',
+    solicitanteDireccionNoExt: solicitante.direccionNoExt || '',
+    solicitanteDireccionNoInt: solicitante.direccionNoInt || '',
+    solicitanteDireccionColonia: solicitante.direccionColonia || '',
+    solicitanteDireccionMunicipioDelegacion: solicitante.direccionMunicipioDelegacion || '',
+    solicitanteDireccionCp: solicitante.direccionCp || '',
+    solicitanteDireccionCiudadEstado: solicitante.direccionCiudadEstado || '',
+    telefonoSolicitante: solicitante.telefono || '',
+    celularSolicitante: solicitante.celular || '',
+    dedicacionSolicitante: solicitante.dedicacion || '',
+    parentesco: solicitante.parentesco || '',
+    nombrePaciente: prospectoFullName || prospectoBase.nombreCompleto || '',
+    pacienteNombres: prospecto.nombres || prospectoParts.nombres || '',
+    pacienteApellidoPaterno: prospecto.apellidoPaterno || prospectoParts.apellidoPaterno || '',
+    pacienteApellidoMaterno: prospecto.apellidoMaterno || prospectoParts.apellidoMaterno || '',
+    origenPaciente: prospecto.origen || '',
+    edadPaciente: prospecto.edad ?? '',
+    estadoCivilPaciente: prospecto.estadoCivil || '',
+    hijosCount: prospecto.hijos ?? '',
+    escolaridadPaciente: prospecto.escolaridad || '',
+    domicilioPaciente: buildStructuredAddress({
+      calle: prospecto.direccionCalle,
+      noExt: prospecto.direccionNoExt,
+      noInt: prospecto.direccionNoInt,
+      colonia: prospecto.direccionColonia,
+      municipioDelegacion: prospecto.direccionMunicipioDelegacion,
+      cp: prospecto.direccionCp,
+      ciudadEstado: prospecto.direccionCiudadEstado,
+    }) ? `${prospecto.direccionCalle || ''} ${prospecto.direccionNoExt || ''}`.trim() : '',
+    prospectoDireccionCalle: prospecto.direccionCalle || '',
+    prospectoDireccionNoExt: prospecto.direccionNoExt || '',
+    prospectoDireccionNoInt: prospecto.direccionNoInt || '',
+    prospectoDireccionColonia: prospecto.direccionColonia || '',
+    prospectoDireccionMunicipioDelegacion: prospecto.direccionMunicipioDelegacion || '',
+    prospectoDireccionCp: prospecto.direccionCp || '',
+    prospectoDireccionCiudadEstado: prospecto.direccionCiudadEstado || '',
+    pacienteTelefonoCelular: prospecto.telefono || prospecto.telefonoContacto || '',
+    dedicacionPaciente: prospecto.dedicacion || '',
+    sustanciaConsumo: prospecto.sustanciaConsumo || '',
+    sustanciaEspecifica: prospecto.sustanciaEspecifica || '',
+    internamiento: prospecto.internamiento || '',
+    criterioInternamiento: prospecto.criterioInternamiento || '',
+    conclusionIntervencion: prospecto.conclusionIntervencion || '',
+    tratamientoAnterior: prospecto.tratamientoAnterior || '',
+    posibilidadesEconomicas: prospecto.posibilidadesEconomicas || '',
+    llamarPaciente: prospecto.llamarPaciente || llamadaInicial.llamarPaciente || '',
+    estadoSeguimiento: prospecto.estadoSeguimiento || llamadaInicial.estadoSeguimiento || '',
+    fechaLlamada: fechaLlamada || '',
+    fechaLlamadaPaciente: llamadaInicial.fechaLlamadaPaciente || '',
+    fechaEsperaLlamada: llamadaInicial.fechaEsperaLlamada || '',
+    fechaEsperaVisita: llamadaInicial.fechaEsperaVisita || '',
+    fechaPosibleIngreso: llamadaInicial.fechaPosibleIngreso || '',
+    acuerdo: llamadaInicial.motivoAccion || '',
+    fechaAtencion: getSystemDateValue(),
+    diaSemanana: getSystemDayValue(),
+  };
 };
 
 const requiredTextFields = {
@@ -194,7 +337,9 @@ const findFirstValidationIssue = (formData) => {
 
 const ValoracionDiagnostica = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [tab, setTab] = useState('solicitante');
+  const [modalMenorOpen, setModalMenorOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [notification, setNotification] = useState({ type: '', message: '' });
 
@@ -205,7 +350,11 @@ const ValoracionDiagnostica = () => {
       .join(' ');
   };
 
-  const [formData, setFormData] = useState({
+  const incomingState = useMemo(() => location.state || {}, [location.state]);
+  const isEditMode = Boolean(incomingState.pacienteId);
+  const minFechaHoraProgramacion = toLocalDateTimeValue(new Date());
+
+  const [formData, setFormData] = useState(() => ({
     ...structuredAddressDefaults,
     fechaAtencion: getSystemDateValue(),
     diaSemanana: getSystemDayValue(),
@@ -249,7 +398,10 @@ const ValoracionDiagnostica = () => {
     fechaPosibleIngreso: '',
     estadoSeguimiento: '',
     acuerdo: '',
-  });
+  }));
+
+  const edadPacienteNumero = Number(formData.edadPaciente);
+  const prospectoEsMenor = String(formData.edadPaciente || '').trim() !== '' && Number.isFinite(edadPacienteNumero) && edadPacienteNumero < 18;
 
   useEffect(() => {
     const userData = localStorage.getItem('marakame_user');
@@ -262,6 +414,30 @@ const ValoracionDiagnostica = () => {
       nombreQuienAtiende: nombreUsuario || 'Pendiente de login',
     }));
   }, []);
+
+  useEffect(() => {
+    const dataToHydrate = mapIncomingStateToFormData(incomingState);
+
+    if (Object.keys(incomingState || {}).length > 0) {
+      setTab('solicitante');
+      setFormData((prev) => ({
+        ...prev,
+        ...dataToHydrate,
+        nombreQuienAtiende: prev.nombreQuienAtiende,
+        fechaAtencion: prev.fechaAtencion,
+        diaSemanana: prev.diaSemanana,
+      }));
+    }
+  }, [incomingState]);
+
+  useEffect(() => {
+    if (prospectoEsMenor) {
+      setModalMenorOpen(true);
+      return;
+    }
+
+    setModalMenorOpen(false);
+  }, [prospectoEsMenor]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -298,13 +474,90 @@ const ValoracionDiagnostica = () => {
     }));
   };
 
+  const cerrarModalMenor = () => {
+    setModalMenorOpen(false);
+    setFormData((prev) => ({
+      ...prev,
+      edadPaciente: '',
+    }));
+    setTab('prospecto');
+  };
+
   const handleSavePaciente = async () => {
+    if (prospectoEsMenor) {
+      setModalMenorOpen(true);
+      setNotification({ type: 'error', message: 'No es posible registrar a un menor de edad.' });
+      setTab('prospecto');
+      return;
+    }
+
     const validationIssue = findFirstValidationIssue(formData);
     if (validationIssue) {
       setNotification({ type: 'error', message: `Completa el campo: ${validationIssue.label}.` });
       setTab(validationIssue.tab);
       return;
     }
+
+    const fechaCitaProgramada = formData.fechaLlamada || formData.fechaEsperaVisita || formData.fechaPosibleIngreso || formData.fechaLlamadaPaciente || null;
+
+    const updatePayload = {
+      nombre: formData.nombreSolicitante,
+      nombres: formData.solicitanteNombres,
+      apellidoPaterno: formData.solicitanteApellidoPaterno,
+      apellidoMaterno: formData.solicitanteApellidoMaterno,
+      edad: formData.edadPaciente ? Number(formData.edadPaciente) : null,
+      estadocivil: formData.estadoCivilPaciente,
+      hijos: formData.hijosCount ? Number(formData.hijosCount) : null,
+      escolaridad: formData.escolaridadPaciente,
+      origen: formData.origenPaciente,
+      direccionCalle: formData.prospectoDireccionCalle,
+      direccionNoExt: formData.prospectoDireccionNoExt,
+      direccionNoInt: formData.prospectoDireccionNoInt,
+      direccionColonia: formData.prospectoDireccionColonia,
+      direccionMunicipioDelegacion: formData.prospectoDireccionMunicipioDelegacion,
+      direccionCp: formData.prospectoDireccionCp,
+      direccionCiudadEstado: formData.prospectoDireccionCiudadEstado,
+      domicilio: formatStructuredAddress({
+        calle: formData.prospectoDireccionCalle,
+        noExt: formData.prospectoDireccionNoExt,
+        noInt: formData.prospectoDireccionNoInt,
+        colonia: formData.prospectoDireccionColonia,
+        municipioDelegacion: formData.prospectoDireccionMunicipioDelegacion,
+        cp: formData.prospectoDireccionCp,
+        ciudadEstado: formData.prospectoDireccionCiudadEstado,
+      }) || formData.domicilioPaciente,
+      telefono: formData.pacienteTelefonoCelular,
+      ocupacion: formData.dedicacionPaciente,
+      sustancia: formData.sustanciaConsumo,
+      solicitanteId: incomingState.solicitanteId || null,
+      llamarPaciente: formData.llamarPaciente,
+      estadoSeguimiento: formData.estadoSeguimiento,
+      fechaCita: fechaCitaProgramada,
+      motivoAccion: formData.acuerdo,
+      fechaNacimientoSolicitante: null,
+      sexoSolicitante: null,
+      fechaNacimientoPaciente: null,
+      sexoPaciente: null,
+      direccionCalleSolicitante: formData.solicitanteDireccionCalle,
+      direccionNoExtSolicitante: formData.solicitanteDireccionNoExt,
+      direccionNoIntSolicitante: formData.solicitanteDireccionNoInt,
+      direccionColoniaSolicitante: formData.solicitanteDireccionColonia,
+      direccionMunicipioDelegacionSolicitante: formData.solicitanteDireccionMunicipioDelegacion,
+      direccionCpSolicitante: formData.solicitanteDireccionCp,
+      direccionCiudadEstadoSolicitante: formData.solicitanteDireccionCiudadEstado,
+      telefonoCasaSolicitante: formData.telefonoSolicitante,
+      telefonoCelularSolicitante: formData.celularSolicitante,
+      cuentaConTarjetaSolicitante: '',
+      direccionCallePaciente: formData.prospectoDireccionCalle,
+      direccionNoExtPaciente: formData.prospectoDireccionNoExt,
+      direccionNoIntPaciente: formData.prospectoDireccionNoInt,
+      direccionColoniaPaciente: formData.prospectoDireccionColonia,
+      direccionMunicipioDelegacionPaciente: formData.prospectoDireccionMunicipioDelegacion,
+      direccionCpPaciente: formData.prospectoDireccionCp,
+      direccionCiudadEstadoPaciente: formData.prospectoDireccionCiudadEstado,
+      telefonoCasaPaciente: formData.pacienteTelefonoCelular,
+      telefonoCelularPaciente: formData.pacienteTelefonoCelular,
+    };
 
     const solicitantePayload = {
       nombre: formData.nombreSolicitante,
@@ -363,50 +616,67 @@ const ValoracionDiagnostica = () => {
       telefono: formData.pacienteTelefonoCelular,
       ocupacion: formData.dedicacionPaciente,
       sustancia: formData.sustanciaConsumo,
-      solicitanteId: null,
       llamarPaciente: formData.llamarPaciente,
       estadoSeguimiento: formData.estadoSeguimiento,
-      fechaCita: formData.fechaLlamada || formData.fechaEsperaVisita || formData.fechaPosibleIngreso || formData.fechaLlamadaPaciente || null,
+      fechaCita: fechaCitaProgramada,
       motivoAccion: formData.acuerdo,
     };
 
     try {
       setIsSaving(true);
-      const solicitanteResponse = await fetch(`${API_BASE}/solicitantes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(solicitantePayload),
-      });
+      if (isEditMode && incomingState.pacienteId) {
+        const response = await fetch(`${API_BASE}/pacientes/${incomingState.pacienteId}/llamada-inicial`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatePayload),
+        });
 
-      if (!solicitanteResponse.ok) {
-        const errorText = await solicitanteResponse.text();
-        throw new Error(errorText || 'No se pudo guardar el solicitante.');
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'No se pudo actualizar el paciente/prospecto.');
+        }
+
+        setNotification({ type: 'success', message: 'Valoración diagnóstica actualizada correctamente.' });
+      } else {
+        const solicitanteResponse = await fetch(`${API_BASE}/solicitantes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(solicitantePayload),
+        });
+
+        if (!solicitanteResponse.ok) {
+          const errorText = await solicitanteResponse.text();
+          throw new Error(errorText || 'No se pudo guardar el solicitante.');
+        }
+
+        const solicitanteGuardado = await solicitanteResponse.json();
+
+        const pacienteResponse = await fetch(`${API_BASE}/pacientes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ...pacientePayload, solicitanteId: solicitanteGuardado.id }),
+        });
+
+        if (!pacienteResponse.ok) {
+          const errorText = await pacienteResponse.text();
+          throw new Error(errorText || 'No se pudo guardar el paciente.');
+        }
+
+        setNotification({ type: 'success', message: 'Valoración diagnóstica guardada correctamente.' });
       }
 
-      const solicitanteGuardado = await solicitanteResponse.json();
-
-      const pacienteResponse = await fetch(`${API_BASE}/pacientes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...pacientePayload, solicitanteId: solicitanteGuardado.id }),
-      });
-
-      if (!pacienteResponse.ok) {
-        const errorText = await pacienteResponse.text();
-        throw new Error(errorText || 'No se pudo guardar el paciente.');
-      }
-
-      setNotification({ type: 'success', message: 'Valoración diagnóstica guardada correctamente.' });
       setTimeout(() => {
         navigate('/admisiones/expediente');
       }, 900);
     } catch (error) {
       console.error('Error al guardar valoracion diagnostica:', error);
-      setNotification({ type: 'error', message: 'No se pudo guardar la valoración. Verifica tu conexión e inténtalo de nuevo.' });
+      setNotification({ type: 'error', message: isEditMode ? 'No se pudo actualizar la valoración. Verifica tu conexión e inténtalo de nuevo.' : 'No se pudo guardar la valoración. Verifica tu conexión e inténtalo de nuevo.' });
     } finally {
       setIsSaving(false);
     }
@@ -427,6 +697,64 @@ const ValoracionDiagnostica = () => {
                 variant={notification.type || 'info'}
                 onClose={() => setNotification({ type: '', message: '' })}
               />
+
+              {modalMenorOpen ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+                  <div className="w-full max-w-2xl rounded-[32px] border border-amber-200 bg-white p-6 shadow-2xl shadow-slate-950/25 animate-in fade-in zoom-in-95 duration-200 md:p-8">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
+                        <AlertTriangle size={28} />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#7E1D3B]">Atención: Restricción de Ingreso por Edad</p>
+                        <h3 className="text-2xl font-black text-slate-900">No es posible continuar con este registro</h3>
+                        <p className="text-sm leading-6 text-slate-600">
+                          Por políticas institucionales, el Instituto Marakame solo brinda atención a personas mayores de 18 años. El registro no puede proceder.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5">
+                      <p className="text-sm font-bold uppercase tracking-[0.18em] text-amber-700">Alternativas de apoyo</p>
+                      <div className="mt-4 grid gap-4 md:grid-cols-3">
+                        <div className="rounded-2xl bg-white p-4 shadow-sm">
+                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">DIF Nayarit</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-800">Contacto para atención a menores</p>
+                        </div>
+                        <div className="rounded-2xl bg-white p-4 shadow-sm">
+                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Teléfono</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-800">(311) 129-51-00</p>
+                        </div>
+                        <div className="rounded-2xl bg-white p-4 shadow-sm">
+                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Correo / Dirección</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-800">atencion.ciudadana@dif-nayarit.gob.mx.</p>
+                          <p className="mt-1 text-sm text-slate-600"> Boulevard Luis Donaldo Colosio #93, Colonia Ciudad Industrial, Tepic, Nayarit.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotification({ type: '', message: '' });
+                          cerrarModalMenor();
+                        }}
+                        className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        Cerrar y limpiar edad
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate('/admisiones/expediente')}
+                        className="rounded-xl bg-[#7E1D3B] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#7E1D3B]/20 transition hover:bg-[#63162e]"
+                      >
+                        Volver a expediente
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               
 
         {/* Datos Generales */}
@@ -871,7 +1199,7 @@ const ValoracionDiagnostica = () => {
                         name="fechaLlamada"
                         value={formData.fechaLlamada}
                         onChange={handleInputChange}
-                        min={toLocalDateTimeValue(new Date())}
+                        min={minFechaHoraProgramacion}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
@@ -885,7 +1213,7 @@ const ValoracionDiagnostica = () => {
                         name="fechaEsperaVisita"
                         value={formData.fechaEsperaVisita}
                         onChange={handleInputChange}
-                        min={toLocalDateTimeValue(new Date())}
+                        min={minFechaHoraProgramacion}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
@@ -899,7 +1227,7 @@ const ValoracionDiagnostica = () => {
                         name="fechaPosibleIngreso"
                         value={formData.fechaPosibleIngreso}
                         onChange={handleInputChange}
-                        min={toLocalDateTimeValue(new Date())}
+                        min={minFechaHoraProgramacion}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
@@ -924,7 +1252,7 @@ const ValoracionDiagnostica = () => {
           <button
             type="button"
             onClick={handleSavePaciente}
-            disabled={isSaving}
+            disabled={isSaving || prospectoEsMenor}
             className="flex items-center gap-2 px-6 py-2.5 bg-[#7E1D3B] text-white rounded-xl font-semibold hover:bg-[#63162e] shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save size={18} /> {isSaving ? 'Guardando...' : 'Guardar '}

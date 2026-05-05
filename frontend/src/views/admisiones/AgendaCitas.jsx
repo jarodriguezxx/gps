@@ -38,13 +38,57 @@ const formatDia = (value) => {
 };
 
 const todayDateString = toLocalDateInputValue(new Date());
+const DIAS_SEMANA_CORTO = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+
+const TOLERANCIA_REAGENDACION_MINUTOS = 15;
+const MINIMO_ANTICIPACION_CITA_MINUTOS = 60;
 
 const getCitaNombre = (cita) => cita?.pacienteNombre || cita?.nombreCompleto || cita?.nombre || 'Sin nombre';
+
+const obtenerPacienteIdDesdeAgenda = (form, citas, llamadas) => {
+	if (form.pacienteId) {
+		return form.pacienteId;
+	}
+
+	const nombreBuscado = form.pacienteNombre.trim().toLowerCase();
+	if (!nombreBuscado) {
+		return null;
+	}
+
+	const coincidencia = [...citas, ...llamadas].find((item) => getCitaNombre(item).trim().toLowerCase() === nombreBuscado);
+	return coincidencia?.pacienteId || null;
+};
+
+const esHorarioPasadoParaHoy = (fecha, hora) => {
+	if (!fecha || !hora) {
+		return false;
+	}
+
+	const hoy = toLocalDateInputValue(new Date());
+	if (fecha !== hoy) {
+		return false;
+	}
+
+	const fechaHoraSeleccionada = new Date(`${fecha}T${hora}:00`);
+	if (Number.isNaN(fechaHoraSeleccionada.getTime())) {
+		return false;
+	}
+
+	const limiteMinimo = Date.now() + (MINIMO_ANTICIPACION_CITA_MINUTOS * 60 * 1000);
+	return fechaHoraSeleccionada.getTime() < limiteMinimo;
+};
+
+const sumarDias = (date, dias) => {
+	const copia = new Date(date);
+	copia.setDate(copia.getDate() + dias);
+	return copia;
+};
 
 const AgendaCitas = () => {
 	const [citas, setCitas] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
+	const [accionesEnProceso, setAccionesEnProceso] = useState({});
 	
 	const [searchQuery, setSearchQuery] = useState('');
 	const [agendaOpen, setAgendaOpen] = useState(false);
@@ -56,11 +100,13 @@ const AgendaCitas = () => {
 	const [agendaMensajeTipo, setAgendaMensajeTipo] = useState('success');
 	const [registroMensaje, setRegistroMensaje] = useState('');
 	const [registroMensajeTipo, setRegistroMensajeTipo] = useState('success');
+	const [avisoReagendacion, setAvisoReagendacion] = useState('');
 	const [tabActiva, setTabActiva] = useState('citas'); // 'citas' o 'llamadas'
 	const [llamadas, setLlamadas] = useState([]);
 	const [filtroVista, setFiltroVista] = useState('hoy');
 	const [filtroFechaPersonalizada, setFiltroFechaPersonalizada] = useState(todayDateString);
 	const [form, setForm] = useState({
+		pacienteId: '',
 		pacienteNombre: '',
 		fecha: '',
 		hora: '09:00',
@@ -75,24 +121,189 @@ const AgendaCitas = () => {
 		proximas: '',
 	});
 
-	useEffect(() => {
-		const cargarDatos = async () => {
-        try {
-            setLoading(true);
+	const cargarDatos = async () => {
+		try {
+			setLoading(true);
+			setError('');
 			const response = await fetch(`${API_BASE}/seguimientos/tablas`);
-            if (!response.ok) throw new Error('Error al cargar datos');
-            const data = await response.json();
-            
-            setCitas(Array.isArray(data?.citas) ? data.citas : []);
-            setLlamadas(Array.isArray(data?.llamadas) ? data.llamadas : []); // Nueva tabla
+			if (!response.ok) throw new Error('Error al cargar datos');
+			const data = await response.json();
+
+			setCitas(Array.isArray(data?.citas) ? data.citas : []);
+			setLlamadas(Array.isArray(data?.llamadas) ? data.llamadas : []);
 		} catch {
-				setError('No se pudo conectar con el backend.');
-        } finally {
-            setLoading(false);
-        }
-    };
-    cargarDatos();
-}, []);
+			setError('No se pudo conectar con el backend.');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const agendaHoraInvalida = useMemo(() => esHorarioPasadoParaHoy(form.fecha, form.hora), [form.fecha, form.hora]);
+	const pacienteIdAgenda = useMemo(() => obtenerPacienteIdDesdeAgenda(form, citas, llamadas), [form, citas, llamadas]);
+	const agendaListaParaGuardar = Boolean(form.pacienteNombre.trim() && form.fecha && form.hora && pacienteIdAgenda && !agendaHoraInvalida);
+
+	const pacientesAgenda = useMemo(() => {
+		const mapa = new Map();
+		[...citas, ...llamadas].forEach((item) => {
+			const nombre = getCitaNombre(item).trim();
+			if (!nombre) {
+				return;
+			}
+			const key = String(item.pacienteId || nombre.toLowerCase());
+			if (!mapa.has(key)) {
+				mapa.set(key, {
+					pacienteId: item.pacienteId || '',
+					nombre,
+					telefono: item.pacienteTelefono || '--',
+				});
+			}
+		});
+		return Array.from(mapa.values());
+	}, [citas, llamadas]);
+
+	const pacientesSugeridosAgenda = useMemo(() => {
+		const query = form.pacienteNombre.trim().toLowerCase();
+		if (!query) {
+			return pacientesAgenda.slice(0, 6);
+		}
+		return pacientesAgenda
+			.filter((paciente) => paciente.nombre.toLowerCase().includes(query))
+			.slice(0, 6);
+	}, [form.pacienteNombre, pacientesAgenda]);
+
+	const pacienteSeleccionadoAgenda = useMemo(() => {
+		if (form.pacienteId) {
+			return pacientesAgenda.find((paciente) => String(paciente.pacienteId) === String(form.pacienteId)) || null;
+		}
+
+		const nombre = form.pacienteNombre.trim().toLowerCase();
+		if (!nombre) {
+			return null;
+		}
+		return pacientesAgenda.find((paciente) => paciente.nombre.trim().toLowerCase() === nombre) || null;
+	}, [form.pacienteId, form.pacienteNombre, pacientesAgenda]);
+
+	const calendarioMesActual = useMemo(() => {
+		const base = new Date();
+		const year = base.getFullYear();
+		const month = base.getMonth();
+
+		const primerDiaMes = new Date(year, month, 1);
+		const ultimoDiaMes = new Date(year, month + 1, 0);
+		const diasEnMes = ultimoDiaMes.getDate();
+
+		const diaSemanaInicio = (primerDiaMes.getDay() + 6) % 7;
+		const celdas = [];
+
+		for (let i = 0; i < diaSemanaInicio; i += 1) {
+			celdas.push({
+				tipo: 'vacio',
+				key: `empty-${i}`,
+			});
+		}
+
+		for (let dia = 1; dia <= diasEnMes; dia += 1) {
+			const fecha = new Date(year, month, dia);
+			const fechaString = toLocalDateInputValue(fecha);
+			const esPasada = fechaString < todayDateString;
+			const esSeleccionada = form.fecha === fechaString;
+			const esHoy = fechaString === todayDateString;
+
+			celdas.push({
+				tipo: 'dia',
+				key: fechaString,
+				dia,
+				fechaString,
+				esPasada,
+				esSeleccionada,
+				esHoy,
+			});
+		}
+
+		return {
+			nombreMes: primerDiaMes.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }),
+			celdas,
+		};
+	}, [form.fecha]);
+
+	const horariosAgenda = useMemo(() => {
+		const horas = [];
+		for (let h = 7; h <= 20; h += 1) {
+			horas.push(`${String(h).padStart(2, '0')}:00`);
+			horas.push(`${String(h).padStart(2, '0')}:30`);
+		}
+		return horas;
+	}, []);
+
+	const esHoraNoDisponible = (hora) => {
+		if (!form.fecha) {
+			return true;
+		}
+		if (form.fecha !== todayDateString) {
+			return false;
+		}
+		const fechaHora = new Date(`${form.fecha}T${hora}:00`);
+		if (Number.isNaN(fechaHora.getTime())) {
+			return true;
+		}
+		return fechaHora.getTime() < Date.now();
+	};
+
+	const seleccionarPacienteAgenda = (paciente) => {
+		setForm((prev) => ({
+			...prev,
+			pacienteId: paciente.pacienteId || '',
+			pacienteNombre: paciente.nombre,
+		}));
+	};
+
+	const seleccionarDiaAgenda = (fechaString) => {
+		if (fechaString < todayDateString) {
+			return;
+		}
+		setForm((prev) => {
+			let horaSiguiente = prev.hora;
+			if (!horaSiguiente || (fechaString === todayDateString && esHorarioPasadoParaHoy(fechaString, horaSiguiente))) {
+				horaSiguiente = horariosAgenda.find((hora) => !esHoraNoDisponible(hora)) || '';
+			}
+
+			return {
+				...prev,
+				fecha: fechaString,
+				hora: horaSiguiente,
+			};
+		});
+	};
+
+	const seleccionarHoraAgenda = (hora) => {
+		if (esHoraNoDisponible(hora)) {
+			return;
+		}
+		setForm((prev) => ({ ...prev, hora }));
+	};
+
+	const esCitaVencida = (cita) => {
+		if (!cita?.fechaHoraProgramada) {
+			return false;
+		}
+
+		const fechaProgramada = new Date(cita.fechaHoraProgramada).getTime();
+		if (Number.isNaN(fechaProgramada)) {
+			return false;
+		}
+
+		const estado = String(cita.estadoAsistencia || cita.estadoSeguimiento || '').toLowerCase();
+		if (!estado.includes('pend')) {
+			return false;
+		}
+
+		const toleranciaEnMs = TOLERANCIA_REAGENDACION_MINUTOS * 60 * 1000;
+		return Date.now() > fechaProgramada + toleranciaEnMs;
+	};
+
+	useEffect(() => {
+		cargarDatos();
+	}, []);
 
 	const resumen = useMemo(() => ({
 		total: citas.length,
@@ -136,6 +347,40 @@ const AgendaCitas = () => {
 	const abrirAgenda = () => {
 		setAgendaMensaje('');
 		setAgendaMensajeTipo('success');
+		setAvisoReagendacion('');
+		setCitaSeleccionada(null);
+		setForm({
+			pacienteId: '',
+			pacienteNombre: '',
+			fecha: '',
+			hora: '09:00',
+			tipoCita: 'Entrevista',
+			profesional: 'Admisiones',
+			motivo: 'Cita agendada desde agenda de citas',
+			notas: '',
+		});
+		setAgendaOpen(true);
+	};
+
+	const abrirReagendacion = (cita) => {
+		const fechaProgramada = cita?.fechaHoraProgramada ? new Date(cita.fechaHoraProgramada) : new Date();
+		const nuevaFecha = sumarDias(fechaProgramada, 1);
+		const pad = (valor) => String(valor).padStart(2, '0');
+
+		setForm({
+			pacienteId: cita?.pacienteId || '',
+			pacienteNombre: getCitaNombre(cita),
+			fecha: `${nuevaFecha.getFullYear()}-${pad(nuevaFecha.getMonth() + 1)}-${pad(nuevaFecha.getDate())}`,
+			hora: fechaProgramada instanceof Date && !Number.isNaN(fechaProgramada.getTime()) ? `${pad(fechaProgramada.getHours())}:${pad(fechaProgramada.getMinutes())}` : '09:00',
+			tipoCita: cita?.tipoAccion || 'Entrevista',
+			profesional: cita?.profesionalNombre || cita?.responsableNombre || 'Admisiones',
+			motivo: 'Re-agendación por inasistencia previa',
+			notas: 'Cita vencida, requiere nueva programación.',
+		});
+		setSearchQuery(getCitaNombre(cita));
+		setAgendaMensaje('La cita vencida quedó lista para re agendar. Revisa la nueva fecha y guarda.');
+		setAgendaMensajeTipo('info');
+		setAvisoReagendacion(`Re-agendación preparada para ${getCitaNombre(cita)}.`);
 		setAgendaOpen(true);
 	};
 
@@ -143,9 +388,11 @@ const AgendaCitas = () => {
 		setAgendaOpen(false);
 		setAgendaMensaje('');
 		setAgendaMensajeTipo('success');
+		setAvisoReagendacion('');
 		setFiltroVista('hoy');
 		setFiltroFechaPersonalizada(todayDateString);
 		setForm({
+			pacienteId: '',
 			pacienteNombre: '',
 			fecha: '',
 			hora: '09:00',
@@ -160,6 +407,7 @@ const AgendaCitas = () => {
 		setCitaSeleccionada(cita);
 		setRegistroMensaje('');
 		setRegistroMensajeTipo('success');
+		setAvisoReagendacion('');
 		setFormRegistro({
 			diagnosticoVisual: '',
 			observaciones: '',
@@ -182,7 +430,11 @@ const AgendaCitas = () => {
 
 	const handleFormChange = (event) => {
 		const { name, value } = event.target;
-		setForm((prev) => ({ ...prev, [name]: value }));
+		setForm((prev) => ({
+			...prev,
+			[name]: value,
+			...(name === 'pacienteNombre' ? { pacienteId: '' } : null),
+		}));
 	};
 
 	const handleFormRegistroChange = (event) => {
@@ -197,27 +449,47 @@ const AgendaCitas = () => {
 			return;
 		}
 
+		if (agendaHoraInvalida) {
+			setAgendaMensaje('No puedes agendar una cita en un horario que ya pasó');
+			setAgendaMensajeTipo('error');
+			return;
+		}
+
+		const pacienteId = obtenerPacienteIdDesdeAgenda(form, citas, llamadas);
+		if (!pacienteId) {
+			setAgendaMensaje('No se encontró un paciente válido para guardar la cita en el backend.');
+			setAgendaMensajeTipo('error');
+			return;
+		}
+
 		const fechaHoraProgramada = `${form.fecha}T${form.hora}:00`;
-		const nuevaCitaLocal = {
-			id: Date.now(),
-			pacienteNombre: form.pacienteNombre.trim(),
-			fechaHoraProgramada,
-			tipoAccion: form.tipoCita,
-			profesionalNombre: form.profesional,
-			motivo: form.motivo,
-			estadoSeguimiento: 'Pendiente',
-		};
 
 		try {
 			setSavingAgenda(true);
-			setCitas((prev) => [nuevaCitaLocal, ...prev]);
-			setAgendaMensaje('Cita agendada correctamente.');
-			setAgendaMensajeTipo('success');
+			const response = await fetch(`${API_BASE}/seguimientos/citas`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					pacienteId,
+					fechaHoraProgramada,
+					tipoCita: form.tipoCita,
+					motivo: form.motivo,
+				}),
+			});
+
+			const data = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				throw new Error(data?.error || 'No se pudo guardar la cita.');
+			}
+
+			await cargarDatos();
 			setSearchQuery(form.pacienteNombre.trim());
 			cerrarAgenda();
 		} catch (saveError) {
 			console.error('Error al guardar agenda:', saveError);
-			setAgendaMensaje('No se pudo guardar la cita.');
+			setAgendaMensaje(saveError instanceof Error ? saveError.message : 'No se pudo guardar la cita.');
 			setAgendaMensajeTipo('error');
 		} finally {
 			setSavingAgenda(false);
@@ -231,40 +503,93 @@ const AgendaCitas = () => {
 			return;
 		}
 
+		if (!citaSeleccionada?.id) {
+			setRegistroMensaje('No hay una cita seleccionada para registrar la llegada.');
+			setRegistroMensajeTipo('error');
+			return;
+		}
+
+		const citaIdSeleccionada = citaSeleccionada.id;
+
 		try {
 			setSavingRegistro(true);
-			setCitas((prev) =>
-				prev.map((cita) =>
-					cita.id === citaSeleccionada.id
-						? {
-								...cita,
-								estadoSeguimiento: 'Llegó',
-								estadoAsistencia: 'Llegó',
-								diagnosticoVisual: formRegistro.diagnosticoVisual,
-								observacionesRegistro: formRegistro.observaciones,
-								proximasCitas: formRegistro.proximas,
-						  }
-						: cita,
-				),
-			);
+			setAccionesEnProceso((prev) => ({ ...prev, [`${citaIdSeleccionada}-llego`]: true }));
+			const response = await fetch(`${API_BASE}/seguimientos/${citaIdSeleccionada}/asistencia`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					estadoAsistencia: 'Llegó',
+					diagnosticoVisual: formRegistro.diagnosticoVisual.trim(),
+				}),
+			});
+
+			const data = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				throw new Error(data?.error || 'No se pudo guardar el registro.');
+			}
+
+			await cargarDatos();
 			setRegistroMensaje('Llegada registrada correctamente.');
 			setRegistroMensajeTipo('success');
 			cerrarRegistro();
 		} catch (saveError) {
 			console.error('Error al guardar registro:', saveError);
-			setRegistroMensaje('No se pudo guardar el registro.');
+			setRegistroMensaje(saveError instanceof Error ? saveError.message : 'No se pudo guardar el registro.');
 			setRegistroMensajeTipo('error');
 		} finally {
+			setAccionesEnProceso((prev) => {
+				const siguiente = { ...prev };
+				delete siguiente[`${citaIdSeleccionada}-llego`];
+				return siguiente;
+			});
 			setSavingRegistro(false);
 		}
 	};
 
 	const marcarNoPresento = async (citaId) => {
-		setCitas((prev) =>
-			prev.map((cita) =>
-				cita.id === citaId ? { ...cita, estadoSeguimiento: 'No se presentó', estadoAsistencia: 'No se presentó' } : cita,
-			),
-		);
+		const citaObjetivo = citas.find((cita) => cita.id === citaId) || null;
+		if (!citaObjetivo) {
+			setRegistroMensaje('No se encontró la cita seleccionada.');
+			setRegistroMensajeTipo('error');
+			return;
+		}
+
+		try {
+			setAccionesEnProceso((prev) => ({ ...prev, [`${citaId}-no-presento`]: true }));
+			const response = await fetch(`${API_BASE}/seguimientos/${citaId}/asistencia`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					estadoAsistencia: 'No se presentó',
+					diagnosticoVisual: '',
+				}),
+			});
+
+			const data = await response.json().catch(() => ({}));
+
+			if (!response.ok) {
+				const errorText = data?.error || 'No se pudo registrar la inasistencia.';
+				throw new Error(errorText);
+			}
+
+			await cargarDatos();
+			setAvisoReagendacion(`Se generó un aviso de re-agendación para ${getCitaNombre(citaObjetivo)}. El caso quedó como prioridad alta.`);
+			abrirReagendacion(citaObjetivo);
+		} catch (error) {
+			console.error('Error al registrar no se presentó:', error);
+			setRegistroMensaje('No se pudo actualizar la asistencia de la cita.');
+			setRegistroMensajeTipo('error');
+		} finally {
+			setAccionesEnProceso((prev) => {
+				const siguiente = { ...prev };
+				delete siguiente[`${citaId}-no-presento`];
+				return siguiente;
+			});
+		}
 	};
 
 	return (
@@ -426,6 +751,25 @@ const AgendaCitas = () => {
 									) : null}
 								</div>
 
+								{avisoReagendacion ? (
+									<div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+										<div className="flex items-start justify-between gap-3">
+											<div>
+												<p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">Aviso de re agendación</p>
+												<p className="mt-1">{avisoReagendacion}</p>
+											</div>
+											<button
+												type="button"
+												onClick={() => setAvisoReagendacion('')}
+												className="rounded-full p-1 text-amber-700 transition hover:bg-amber-100"
+												aria-label="Cerrar aviso de re agendación"
+											>
+												<X size={16} />
+											</button>
+										</div>
+									</div>
+								) : null}
+
 								<div>
 									{tabActiva === 'citas' && (
 										<div>
@@ -462,12 +806,22 @@ const AgendaCitas = () => {
 															const estadoLower = estado.toLowerCase();
 															const estadoClass = estadoLower.includes('lleg') ? 'bg-emerald-100 text-emerald-800' : estadoLower.includes('no se presentó') ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
 															const esNoPresento = estadoLower.includes('no se presentó');
+															const estaVencida = esCitaVencida(cita);
 
 															return (
 																<tr key={cita.id} className="border-b border-slate-100 align-middle">
 																	<td className="px-3 py-3 font-medium text-slate-700 capitalize">{formatDia(cita.fechaHoraProgramada)}</td>
 																	<td className="px-3 py-3 font-medium text-slate-700">{formatFecha(cita.fechaHoraProgramada)}</td>
-																	<td className="px-3 py-3 font-medium text-slate-700">{formatHora(cita.fechaHoraProgramada)}</td>
+																	<td className="px-3 py-3 font-medium text-slate-700">
+																		<div className="flex flex-wrap items-center gap-2">
+																			<span>{formatHora(cita.fechaHoraProgramada)}</span>
+																			{String(cita.estadoSeguimiento || cita.estadoAsistencia || '').toLowerCase().includes('pend') && estaVencida ? (
+																				<span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-700">
+																					Vencida
+																				</span>
+																			) : null}
+																		</div>
+																	</td>
 																	<td className="px-3 py-3 font-semibold text-slate-900">{getCitaNombre(cita)}</td>
 																	<td className="px-3 py-3 text-slate-700">{cita.tipoAccion || 'Entrevista'}</td>
 																	<td className="px-3 py-3 text-slate-700">{cita.profesionalNombre || cita.responsableNombre || 'Admisiones'}</td>
@@ -486,18 +840,30 @@ const AgendaCitas = () => {
 																				<button
 																					type="button"
 																					onClick={() => abrirRegistro(cita)}
-																					className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
+																					disabled={Boolean(accionesEnProceso[`${cita.id}-llego`])}
+																					className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
 																				>
-																					<Eye size={14} />
-																					Llegó
+																					{accionesEnProceso[`${cita.id}-llego`] ? <LoaderCircle size={14} className="animate-spin" /> : <Eye size={14} />}
+																					{accionesEnProceso[`${cita.id}-llego`] ? 'Guardando...' : 'Llegó'}
 																				</button>
 																				<button
 																					type="button"
 																					onClick={() => marcarNoPresento(cita.id)}
-																					className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800 transition hover:bg-rose-100"
+																					disabled={Boolean(accionesEnProceso[`${cita.id}-no-presento`])}
+																					className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
 																				>
-																					No se presentó
+																					{accionesEnProceso[`${cita.id}-no-presento`] ? 'Procesando...' : 'No se presentó'}
 																				</button>
+																				{estaVencida ? (
+																					<button
+																						type="button"
+																						onClick={() => abrirReagendacion(cita)}
+																						className="inline-flex items-center gap-1 rounded-md border border-[#F59E0B] bg-[#F59E0B]/10 px-3 py-2 text-xs font-semibold text-[#B45309] transition hover:bg-[#F59E0B]/20"
+																					>
+																						<Plus size={14} />
+																						Re agendar
+																					</button>
+																				) : null}
 																			</div>
 																		)}
 																	</td>
@@ -573,81 +939,169 @@ const AgendaCitas = () => {
 			</div>
 
 			{agendaOpen ? (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-					<div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.35)]">
-						<div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 md:px-6">
+				<div className="fixed inset-0 z-50 flex animate-in fade-in items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm duration-200">
+					<div className="flex max-h-[92vh] w-full max-w-5xl animate-in zoom-in-95 fade-in flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.35)] duration-200">
+						<div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 md:px-7">
 							<div>
 								<p className="text-xs font-bold uppercase tracking-[0.3em] text-[#7E1D3B]">Agenda de Citas</p>
-								<h3 className="text-2xl font-black text-slate-900 md:text-3xl">Agendar cita</h3>
-								<p className="mt-1 text-sm text-slate-500">Captura los datos de la nueva cita antes de guardarla.</p>
+								<h3 className="text-2xl font-black text-slate-900 md:text-3xl">Programar cita</h3>
+								<p className="mt-1 text-sm text-slate-500">Selecciona paciente, fecha y horario disponible.</p>
 							</div>
 							<button onClick={cerrarAgenda} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-[#7E1D3B] hover:text-[#7E1D3B]">
 								<X size={20} />
 							</button>
 						</div>
 
-						<div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 md:px-6">
-							<div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
-								<p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Paciente</p>
-								<div className="mt-3 grid gap-3 sm:grid-cols-2">
-									<div className="sm:col-span-2">
-										<label className="mb-1 block text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Nombre del paciente</label>
+						<div className="grid flex-1 gap-4 overflow-y-auto px-5 py-5 md:grid-cols-[320px_1fr] md:px-7">
+							<section className="space-y-4 rounded-[32px] border border-slate-200 bg-slate-50 p-4">
+								<div>
+									<p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Paciente</p>
+									<div className="relative mt-3">
+										<Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
 										<input
 											type="text"
 											name="pacienteNombre"
 											value={form.pacienteNombre}
 											onChange={handleFormChange}
-											placeholder="Escribe el nombre del paciente"
-											className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+											placeholder="Buscar nombre..."
+											className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
 										/>
 									</div>
-									<div>
-										<label className="mb-1 block text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Fecha</label>
-										<input name="fecha" type="date" value={form.fecha} onChange={handleFormChange} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
-									</div>
-									<div>
-										<label className="mb-1 block text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Hora</label>
-										<input name="hora" type="time" value={form.hora} onChange={handleFormChange} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
-									</div>
-								</div>
-							</div>
 
-							<div className="rounded-[28px] border border-slate-200 bg-white p-4">
-								<p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Detalles</p>
-								<div className="mt-3 grid gap-3">
-									<div>
-										<label className="mb-1 block text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Tipo de cita</label>
-										<select name="tipoCita" value={form.tipoCita} onChange={handleFormChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15">
-											<option value="Entrevista">Entrevista</option>
-											<option value="Valoración">Valoración</option>
-											<option value="Seguimiento">Seguimiento</option>
-											<option value="Llamada">Llamada</option>
-										</select>
-									</div>
-									<div>
-										<label className="mb-1 block text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Profesional</label>
-										<input name="profesional" value={form.profesional} onChange={handleFormChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
-									</div>
-									<div>
-										<label className="mb-1 block text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Motivo</label>
-										<textarea name="motivo" value={form.motivo} onChange={handleFormChange} rows={3} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
-									</div>
-									<div>
-										<label className="mb-1 block text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Notas</label>
-										<textarea name="notas" value={form.notas} onChange={handleFormChange} rows={3} placeholder="Indicaciones adicionales" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
-									</div>
+									{pacientesSugeridosAgenda.length > 0 ? (
+										<div className="mt-3 space-y-2 rounded-2xl border border-slate-200 bg-white p-2">
+											{pacientesSugeridosAgenda.map((paciente) => (
+												<button
+													key={`${paciente.pacienteId || paciente.nombre}-agenda-sugerencia`}
+													type="button"
+													onClick={() => seleccionarPacienteAgenda(paciente)}
+													className="flex w-full items-start justify-between rounded-xl px-3 py-2 text-left transition hover:bg-slate-100"
+												>
+													<span className="text-sm font-semibold text-slate-800">{paciente.nombre}</span>
+													<span className="text-xs text-slate-500">{paciente.telefono}</span>
+												</button>
+											))}
+										</div>
+									) : null}
 								</div>
-							</div>
+
+								<div className="rounded-2xl border border-slate-200 bg-white p-4">
+									<p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Paciente seleccionado</p>
+									{pacienteSeleccionadoAgenda ? (
+										<div className="mt-3 space-y-1">
+											<p className="text-base font-bold text-slate-900">{pacienteSeleccionadoAgenda.nombre}</p>
+											<p className="text-sm text-slate-500">Tel. {pacienteSeleccionadoAgenda.telefono || '--'}</p>
+											<p className="text-xs text-slate-400">ID: {pacienteSeleccionadoAgenda.pacienteId || 'No disponible'}</p>
+										</div>
+									) : (
+										<p className="mt-3 text-sm text-slate-500">Selecciona un paciente de la lista para continuar.</p>
+									)}
+								</div>
+
+								<div className="rounded-2xl border border-slate-200 bg-white p-4">
+									<p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Tipo de cita</p>
+									<select
+										name="tipoCita"
+										value={form.tipoCita}
+										onChange={handleFormChange}
+										className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+									>
+										<option value="Entrevista">Entrevista</option>
+										<option value="Valoración">Valoración</option>
+										<option value="Seguimiento">Seguimiento</option>
+										<option value="Llamada">Llamada</option>
+									</select>
+								</div>
+							</section>
+
+							<section className="space-y-4 rounded-[32px] border border-slate-200 bg-white p-4">
+								<div className="flex items-center justify-between">
+									<p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Calendario</p>
+									<h4 className="text-lg font-black capitalize text-slate-900">{calendarioMesActual.nombreMes}</h4>
+								</div>
+
+								<div className="grid grid-cols-7 gap-2">
+									{DIAS_SEMANA_CORTO.map((diaSemana) => (
+										<div key={`agenda-dia-${diaSemana}`} className="py-1 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+											{diaSemana}
+										</div>
+									))}
+
+									{calendarioMesActual.celdas.map((celda) => {
+										if (celda.tipo === 'vacio') {
+											return <div key={celda.key} className="h-[62px]" />;
+										}
+
+										const baseClass = 'h-[62px] rounded-2xl border px-2 py-2 text-left transition';
+										const className = celda.esPasada
+											? `${baseClass} cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400`
+											: celda.esSeleccionada
+												? `${baseClass} border-[#7E1D3B] bg-[#7E1D3B] text-white shadow-sm`
+												: `${baseClass} border-slate-200 bg-slate-50 text-slate-800 hover:border-[#7E1D3B]/50 hover:bg-rose-50`;
+
+										return (
+											<button
+												key={celda.key}
+												type="button"
+												disabled={celda.esPasada}
+												onClick={() => seleccionarDiaAgenda(celda.fechaString)}
+												className={className}
+											>
+												<div className="text-lg font-black">{celda.dia}</div>
+												{celda.esPasada ? (
+													<div className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em]">PASADA</div>
+												) : celda.esHoy ? (
+													<div className={`mt-1 text-[10px] font-bold uppercase tracking-[0.2em] ${celda.esSeleccionada ? 'text-white/85' : 'text-[#7E1D3B]'}`}>
+														HOY
+													</div>
+												) : null}
+											</button>
+										);
+									})}
+								</div>
+
+								{form.fecha ? (
+									<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+										<div className="flex items-center justify-between gap-3">
+											<p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Horario disponible</p>
+											<p className="text-sm font-semibold text-slate-700">{formatFecha(`${form.fecha}T00:00:00`)}</p>
+										</div>
+										<div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+											{horariosAgenda.map((hora) => {
+												const bloqueada = esHoraNoDisponible(hora);
+												const activa = form.hora === hora;
+												return (
+													<button
+														key={`agenda-hora-${hora}`}
+														type="button"
+														disabled={bloqueada}
+														onClick={() => seleccionarHoraAgenda(hora)}
+														className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+															bloqueada
+																? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+																: activa
+																	? 'border-[#7E1D3B] bg-[#7E1D3B] text-white'
+																	: 'border-slate-200 bg-white text-slate-700 hover:border-[#7E1D3B]/40 hover:bg-rose-50'
+														}`}
+													>
+														{hora}
+													</button>
+												);
+											})}
+										</div>
+										{agendaHoraInvalida ? <p className="mt-3 text-xs font-medium text-rose-600">No puedes agendar una cita en un horario que ya pasó</p> : null}
+									</div>
+								) : (
+									<div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+										Selecciona un día disponible para habilitar horarios.
+									</div>
+								)}
+							</section>
 						</div>
 
-						<div className="flex items-center justify-between gap-3 border-t border-slate-200 px-5 py-4 md:px-6">
-							<div className="text-sm text-slate-500">
-								{savingAgenda ? 'Guardando cita...' : 'La cita se guardará en la agenda operativa.'}
-							</div>
-							<div className="flex gap-2">
-								<button type="button" onClick={cerrarAgenda} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancelar</button>
-								<button type="button" onClick={guardarAgenda} className="rounded-2xl bg-[#7E1D3B] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#63162e]">Guardar cita</button>
-							</div>
+						<div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4 md:px-7">
+							<button type="button" onClick={cerrarAgenda} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancelar</button>
+							<button type="button" onClick={guardarAgenda} disabled={!agendaListaParaGuardar || savingAgenda} className="rounded-2xl bg-[#7E1D3B] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#63162e] disabled:cursor-not-allowed disabled:opacity-60">{savingAgenda ? 'Guardando...' : 'Guardar cita'}</button>
 						</div>
 
 						{agendaMensaje ? (
@@ -660,8 +1114,8 @@ const AgendaCitas = () => {
 		) : null}
 
 		{registroOpen ? (
-			<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-				<div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.35)]">
+			<div className="fixed inset-0 z-50 flex animate-in fade-in items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm duration-200">
+				<div className="flex max-h-[92vh] w-full max-w-2xl animate-in zoom-in-95 fade-in flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.35)] duration-200">
 					<div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 md:px-6">
 						<div>
 							<p className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-600">Registro de llegada</p>

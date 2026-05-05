@@ -1179,7 +1179,7 @@ const ExpedienteAdmisiones = () => {
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <p className="text-base font-black text-slate-900">Valoración Diagnóstica Inicial</p>
+                                <p className="text-base font-black text-slate-900">Llamada incial </p>
                                 {!diagnosticoReadOnlyData?.tieneSnapshot ? (
                                     <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">
                                         <X size={10} /> Incompleto
@@ -1209,6 +1209,10 @@ const ExpedienteAdmisiones = () => {
                             onClick={() => navigate('/admisiones/valoracion-diagnostica', {
                                 state: {
                                     pacienteId: prospectoSeleccionado?.id,
+		solicitanteId: prospectoSeleccionado?.solicitante?.id || detalleExpediente?.llamadaInicial?.solicitante?.id || null,
+									prospecto: prospectoSeleccionado || null,
+									detalleExpediente: detalleExpediente || null,
+									diagnosticoReadOnlyData: diagnosticoReadOnlyData || null,
                                     llamadaInicial: detalleExpediente?.llamadaInicial || null,
                                 },
                             })}
@@ -1477,6 +1481,10 @@ const ExpedienteAdmisiones = () => {
 									<button type="button" onClick={() => navigate('/admisiones/valoracion-diagnostica', {
 										state: {
 											pacienteId: prospectoSeleccionado?.id,
+											solicitanteId: prospectoSeleccionado?.solicitante?.id || detalleExpediente?.llamadaInicial?.solicitante?.id || null,
+											prospecto: prospectoSeleccionado || null,
+											detalleExpediente: detalleExpediente || null,
+											diagnosticoReadOnlyData: diagnosticoReadOnlyData || null,
 											llamadaInicial: detalleExpediente?.llamadaInicial || null,
 										},
 									})} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Abrir valoración diagnóstica</button>
@@ -1629,6 +1637,7 @@ const ExpedienteAdmisiones = () => {
 									onClick={() => navigate('/admisiones/valoracion-diagnostica', {
 										state: {
 											pacienteId: prospectoSeleccionado?.id,
+											solicitanteId: prospectoSeleccionado?.solicitante?.id || detalleExpediente?.llamadaInicial?.solicitante?.id || null,
 											llamadaInicial: detalleExpediente?.llamadaInicial || null,
 										},
 									})}
