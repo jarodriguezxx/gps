@@ -218,7 +218,7 @@ public class RequisicionService {
                 || (req.getTamanio() != TamanioCompra.MENOR && req.getTamanio() != TamanioCompra.MAYOR))
             throw new IllegalStateException("estado-invalido");
 
-        if (adjuntoRepository.findByRequisicionIdAndTipo(id, "FACTURA").size() >= 5)
+        if (adjuntoRepository.findByRequisicionIdAndTipo(id, "FACTURA").size() >= 1)
             throw new IllegalStateException("maximo-facturas");
 
         Path dir = Paths.get(cotizacionesDir);
@@ -239,5 +239,21 @@ public class RequisicionService {
 
     public List<AdjuntoRequisicion> listarAdjuntosPorTipo(UUID id, String tipo) {
         return adjuntoRepository.findByRequisicionIdAndTipo(id, tipo);
+    }
+
+    @Transactional
+    public Requisicion actualizarTamanio(UUID id, TamanioCompra tamanio) {
+        Requisicion req = repository.findById(id)
+                .orElseThrow(NoSuchElementException::new);
+        req.setTamanio(tamanio);
+        return repository.save(req);
+    }
+
+    public AdjuntoRequisicion obtenerAdjunto(UUID requisicionId, UUID adjuntoId) {
+        AdjuntoRequisicion adjunto = adjuntoRepository.findById(adjuntoId)
+                .orElseThrow(NoSuchElementException::new);
+        if (!adjunto.getRequisicion().getId().equals(requisicionId))
+            throw new NoSuchElementException();
+        return adjunto;
     }
 }

@@ -1,13 +1,16 @@
 import React, { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { Requisicion, Estado } from "../../types/requisicion";
 import { ui, colors } from "../../config/theme";
 
-interface Props {
+interface OutletCtx {
+  rol: string;
   requisiciones: Requisicion[];
+  refrescar: () => Promise<void>;
 }
 
-const Historial = ({ requisiciones }: Props) => {
+const Historial = () => {
+  const { requisiciones } = useOutletContext<OutletCtx>();
   const navigate = useNavigate();
   const { rol } = useParams<{ rol: string }>();
 
