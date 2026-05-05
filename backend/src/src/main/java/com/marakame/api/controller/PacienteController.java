@@ -175,6 +175,19 @@ public class PacienteController {
     // 4. GENERACIÓN Y DESCARGA DE PDFs
     // ==========================================
 
+    @GetMapping("/{id}/estudio-socioeconomico/pdf")
+    public ResponseEntity<?> listarPdfsEstudio(@PathVariable Long id) {
+        try {
+            Map<String, Object> detalle = pacienteService.obtenerDetalleExpediente(id);
+            Object documentos = detalle.get("documentos");
+            return ResponseEntity.ok(documentos == null ? List.of() : documentos);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al listar PDFs: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/{id}/estudio-socioeconomico/pdf")
     public ResponseEntity<?> generarPdfEstudio(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         try {

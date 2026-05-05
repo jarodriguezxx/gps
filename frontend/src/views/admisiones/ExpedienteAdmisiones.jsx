@@ -579,6 +579,8 @@ const ExpedienteAdmisiones = () => {
 	
 	// --- MODIFICACIÓN 2: Estado para controlar si el médico ya guardó la valoración ---
 	const [tieneValoracionMedica, setTieneValoracionMedica] = useState(false);
+	const [estudioPdfExists, setEstudioPdfExists] = useState(null);
+	const [estudioDescargaUrl, setEstudioDescargaUrl] = useState(null);
 	
 	const [datosRecibo, setDatosRecibo] = useState({
 		nombrePagador: '',
@@ -651,6 +653,49 @@ const ExpedienteAdmisiones = () => {
 		setReciboPersistido(null);
 		return [];
 	};
+
+	useEffect(() => {
+		let mounted = true;
+		if (!prospectoSeleccionado?.id) {
+			setEstudioPdfExists(null);
+			return () => { mounted = false; };
+		}
+		(async () => {
+			try {
+				const res = await fetch(`${API_BASE}/pacientes/${prospectoSeleccionado.id}/estudio-socioeconomico/pdf`, {
+					method: 'GET',
+					headers: { 'Accept': 'application/json' },
+				});
+				if (!mounted) return;
+				if (!res.ok) {
+					if (res.status === 404) {
+						setEstudioPdfExists(false);
+						setEstudioDescargaUrl(null);
+						return;
+					}
+					setEstudioPdfExists(false);
+					setEstudioDescargaUrl(null);
+					return;
+				}
+				const docs = await res.json();
+				if (Array.isArray(docs) && docs.length > 0) {
+					setEstudioPdfExists(true);
+					const first = docs[0];
+					setEstudioDescargaUrl(first.descargaUrl ? `${API_HOST}${first.descargaUrl}` : null);
+				} else {
+					setEstudioPdfExists(false);
+					setEstudioDescargaUrl(null);
+				}
+			} catch (err) {
+				console.error('Error comprobando estudio socioeconómico PDF', err);
+				if (mounted) {
+					setEstudioPdfExists(false);
+					setEstudioDescargaUrl(null);
+				}
+			}
+		})();
+		return () => { mounted = false; };
+	}, [prospectoSeleccionado?.id]);
 
 	const seleccionarProspecto = async (prospecto, opciones = {}) => {
 		const { abrirConsulta = false, tabConsulta = 'solicitante' } = opciones;
@@ -1227,7 +1272,7 @@ const ExpedienteAdmisiones = () => {
 				<div className={`rounded-[28px] border p-5 transition-colors md:p-6 ${badgeEstadoRecibo === 'PENDIENTE' ? 'border-[#7E1D3B]/20 bg-[#7E1D3B]/5' : 'border-emerald-100 bg-emerald-50/50'}`}>
 							{estadoPacienteActual === 'DENEGADO' ? (
 								<div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
-									Este expediente fue denegado. No se permite subir ni generar recibos de pago.
+									La valoración diagnóstica fue denegada. No se permite subir ni generar recibos de pago.
 								</div>
 							) : null}
 					<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -1317,8 +1362,43 @@ const ExpedienteAdmisiones = () => {
 					)}
 				</div>
 
-                {/* 2. LISTADO DE DOCUMENTOS PDF Y REGISTROS DINÁMICOS */}
-                <div className="grid gap-3">
+				{/* 2. LISTADO DE DOCUMENTOS PDF Y REGISTROS DINÁMICOS */}
+
+				{/* Tarjeta: Estudio Socioeconómico Digital */}
+				{prospectoSeleccionado && (
+					<div className="group flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+						<div className="flex items-center gap-4">
+							<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7E1D3B]/10 text-[#7E1D3B]">
+								<Briefcase size={20} />
+							</div>
+							<div>
+								<p className="text-sm font-bold text-slate-900">Estudio Socioeconómico Digital</p>
+								<p className="text-xs text-slate-500">Registro del estudio socioeconómico y versión PDF.</p>
+							</div>
+						</div>
+
+						<div className="flex gap-2 opacity-100">
+							{estudioPdfExists && estudioDescargaUrl ? (
+								<a href={estudioDescargaUrl} target="_blank" rel="noreferrer" title="Descargar PDF" className="rounded-lg p-2 text-[#7E1D3B] hover:bg-slate-50">
+									<ArrowRight size={18} />
+								</a>
+							) : estudioPdfExists && !estudioDescargaUrl ? (
+								// indicador genérico si backend reporta existencia pero no hay URL
+								<span className="rounded-lg p-2 text-slate-500">PDF disponible</span>
+							) : (
+								<button
+									type="button"
+									onClick={() => navigate('/admisiones/estudio-socioeconomico', { state: { pacienteId: prospectoSeleccionado?.id, datosBase: prospectoSeleccionado || null, solicitante: prospectoSeleccionado?.solicitante || detalleExpediente?.llamadaInicial?.solicitante || null } })}
+									className="rounded-xl bg-[#7E1D3B] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#63162e]"
+								>
+									Realizar Estudio Ahora
+								</button>
+							)}
+						</div>
+					</div>
+				)}
+
+				<div className="grid gap-3">
                     {documentosProspecto.length > 0 ? (
                         documentosProspecto.map((doc, idx) => (
                             <div key={`${doc.nombre}-${idx}`} className="group flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
@@ -1477,7 +1557,19 @@ const ExpedienteAdmisiones = () => {
 								<Sparkles className="text-[#7E1D3B]" size={22} />
 							</div>
 							<div className="grid gap-3 md:grid-cols-3">
-								<button type="button" onClick={() => navigate('/admisiones/estudio-socioeconomico')} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Abrir estudio socioeconómico</button>
+								<button
+									type="button"
+									onClick={() => navigate('/admisiones/estudio-socioeconomico', {
+										state: {
+											pacienteId: prospectoSeleccionado?.id,
+											datosBase: prospectoSeleccionado || null,
+											solicitante: prospectoSeleccionado?.solicitante || detalleExpediente?.llamadaInicial?.solicitante || null,
+										},
+									})}
+									className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12"
+								>
+									Abrir estudio socioeconómico
+								</button>
 									<button type="button" onClick={() => navigate('/admisiones/valoracion-diagnostica', {
 										state: {
 											pacienteId: prospectoSeleccionado?.id,

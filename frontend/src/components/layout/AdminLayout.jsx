@@ -64,7 +64,7 @@ const admisionesNavItems = [
   { label: 'Expediente', icon: Folder, key: 'expediente', path: '/admisiones/expediente' },
   { label: 'Agenda de Citas', icon: CalendarDays, key: 'agenda', path: '/admisiones/agenda-citas' },
   { label: 'Seguimiento Telefónico', icon: PhoneCall, key: 'seguimiento', path: '/admisiones/seguimiento-telefonico' },
-  { label: 'Estudio Socioeconómico', icon: FileText, key: 'estudio', path: '/admisiones/estudio-socioeconomico' },
+  // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
 ];
 
 export const AdmisionesSidebar = () => {

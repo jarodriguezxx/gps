@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight, AlertTriangle, FileText, FileX, Phone, Calculator, DollarSign } from 'lucide-react';
 import { AdminHeader, AdminMainTitle } from '../../components/layout/AdminLayout';
 import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
@@ -7,6 +7,18 @@ import { API_BASE, API_HOST } from '../../config/api';
 
 const EstudioSocioeconomico = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Protegemos la ruta: solo accesible si se recibe pacienteId desde navigation state
+  useEffect(() => {
+    const navState = location && location.state ? location.state : null;
+    if (!navState || !navState.pacienteId) {
+      setFeedback({ type: 'error', message: 'Acceso denegado: Selecciona un prospecto desde el expediente para realizar el estudio' });
+      // redirigir al expediente después de un breve lapso para que el toast se muestre
+      setTimeout(() => navigate('/admisiones/expediente'), 700);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Estado para controlar qué pestaña está activa
   const [activeTab, setActiveTab] = useState('solicitante');
   const [isDirty, setIsDirty] = useState(false);
@@ -973,6 +985,33 @@ const EstudioSocioeconomico = () => {
 
     cargarCitasRegistradas();
   }, []);
+
+
+  // Si venimos desde Expediente con state (pacienteId / datosBase), seleccionar al paciente automáticamente
+  useEffect(() => {
+    try {
+      const navState = location && location.state ? location.state : null;
+      if (!navState || !navState.pacienteId) return;
+
+      // Si aún se están cargando las citas, esperar hasta que termine (efecto volverá a evaluar)
+      if (cargandoCitasRegistradas) return;
+      if (errorCitasRegistradas) return; // no intentar si hay error validando citas
+
+      const datosBase = navState.datosBase || null;
+
+      if (datosBase) {
+        // seleccionarPaciente hace las validaciones necesarias (cita, etc.)
+        seleccionarPaciente(datosBase);
+      } else {
+        // Si no tenemos objeto completo, intentar buscar en la lista ya cargada
+        const encontrado = pacientesBase.find((p) => String(p.id) === String(navState.pacienteId));
+        if (encontrado) seleccionarPaciente(encontrado);
+      }
+    } catch (err) {
+      console.error('Error sincronizando paciente desde navegación', err);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location?.state, cargandoCitasRegistradas, errorCitasRegistradas]);
 
   useEffect(() => {
     const nombre = busquedaPaciente.trim();
@@ -2047,24 +2086,51 @@ const EstudioSocioeconomico = () => {
         
         {/* --- BUSCADOR DE SOLICITANTE --- */}
         <section className="mb-8">
-          <div className="relative group z-20">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#7E1D3B] transition-colors" size={20}/>
-            <input 
-              type="text" 
-              value={busquedaPaciente}
-              onChange={(e) => setBusquedaPaciente(e.target.value)}
-              onFocus={() => {
-                if (busquedaPaciente.trim().length >= 2) {
-                  setMostrarResultados(true);
-                }
-              }}
-              onBlur={() => {
-                window.setTimeout(() => setMostrarResultados(false), 120);
-              }}
-              onKeyDown={handleBusquedaPacienteKeyDown}
-              placeholder="Escribe el nombre del paciente (minimo 2 letras)..." 
-              className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-[#7E1D3B]/20 focus:border-[#7E1D3B] transition-all text-sm hover:shadow-md"
-            />
+          {pacienteSeleccionadoId ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <User className="text-[#7E1D3B]" />
+                <div>
+                  <p className="text-sm font-bold text-slate-900">Paciente en proceso</p>
+                  <p className="text-xs text-slate-500">{formData.pacienteNombre || busquedaPaciente || '—'}</p>
+                </div>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // permitir cambiar el paciente si el usuario lo desea
+                    setPacienteSeleccionadoId(null);
+                    setBusquedaPaciente('');
+                    setFormData((prev) => ({ ...prev, nombreSolicitante: '', solicitanteNombres: '', solicitanteApellidoPaterno: '', solicitanteApellidoMaterno: '', pacienteNombre: '', pacienteNombres: '', pacienteApellidoPaterno: '', pacienteApellidoMaterno: '' }));
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  Cambiar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="relative group z-20">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#7E1D3B] transition-colors" size={20}/>
+              <input 
+                type="text" 
+                value={busquedaPaciente}
+                onChange={(e) => setBusquedaPaciente(e.target.value)}
+                onFocus={() => {
+                  if (busquedaPaciente.trim().length >= 2) {
+                    setMostrarResultados(true);
+                  }
+                }}
+                onBlur={() => {
+                  window.setTimeout(() => setMostrarResultados(false), 120);
+                }}
+                onKeyDown={handleBusquedaPacienteKeyDown}
+                placeholder="Escribe el nombre del paciente (minimo 2 letras)..." 
+                className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-[#7E1D3B]/20 focus:border-[#7E1D3B] transition-all text-sm hover:shadow-md"
+              />
+            </div>
+          )}
             {mostrarResultados && busquedaPaciente.trim().length >= 2 && (
               <div className="absolute left-0 right-0 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
                 <div className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -2116,7 +2182,6 @@ const EstudioSocioeconomico = () => {
                 )}
               </div>
             )}
-          </div>
 
           {!errorPacientes && busquedaPaciente.trim().length < 2 && (
             <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
