@@ -4,7 +4,7 @@ import {
   HeartPulse, Clipboard, CheckCircle2, FileText, 
   ArrowLeft, Activity, History as HistoryIcon, Stethoscope,
   Download, AlertTriangle, Users, ClipboardList, FileBarChart, 
-  UserPlus, Calendar, Phone, Droplet
+  UserPlus, Calendar, Phone, Droplet, FilePlus, X
 } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import marakameLogo from '../../assets/marakame.jpeg'; 
@@ -27,19 +27,25 @@ const DetalleExpediente = () => {
   const [data, setData] = useState(null);
   const [valoracion, setValoracion] = useState(null);
   const [historiaMedica, setHistoriaMedica] = useState(null); 
+  const [notasEvolucion, setNotasEvolucion] = useState([]); // <-- Nuevo estado para notas
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
   const [pestañaActiva, setPestañaActiva] = useState('historial');
   const [activeNav, setActiveNav] = useState('expedientes'); 
 
+  // Estados para el Modal de Nueva Nota
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [textoEvolucion, setTextoEvolucion] = useState('');
+  const [guardandoNota, setGuardandoNota] = useState(false);
+
   const fetchExpediente = async () => {
     try {
       setLoading(true);
+      // Cargar Datos Generales del Paciente
       const response = await fetch(`http://localhost:4000/api/pacientes/${id}/expediente`);
       if (!response.ok) throw new Error('Expediente no encontrado.');
-      const result = await response.json();
-      setData(result);
+      setData(await response.json());
       setError(null);
 
       // Cargar Valoración
@@ -52,6 +58,12 @@ const DetalleExpediente = () => {
       try {
         const histRes = await fetch(`http://localhost:4000/api/historia-medica/paciente/${id}`);
         if (histRes.ok) setHistoriaMedica(await histRes.json());
+      } catch (err) {}
+
+      // Cargar Notas de Evolución (¡LA INTEGRACIÓN FALTANTE!)
+      try {
+        const notasRes = await fetch(`http://localhost:4000/api/notas-evolucion/paciente/${id}`);
+        if (notasRes.ok) setNotasEvolucion(await notasRes.json());
       } catch (err) {}
 
     } catch (err) {
@@ -68,7 +80,41 @@ const DetalleExpediente = () => {
     navigate(item.path); 
   };
 
+  // Función para guardar nota desde el expediente
+  const guardarNota = async () => {
+    if (!textoEvolucion.trim()) return alert("La nota no puede estar vacía");
+    setGuardandoNota(true);
+
+    const nuevaNota = {
+      pacienteId: id,
+      medicoAsignado: "Jefe Médico",
+      evolucionCuadroClinico: textoEvolucion
+    };
+
+    try {
+      const response = await fetch('http://localhost:4000/api/notas-evolucion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nuevaNota)
+      });
+
+      if (response.ok) {
+        const notaGuardada = await response.json();
+        setNotasEvolucion([notaGuardada, ...notasEvolucion]); // Actualiza la lista al instante
+        setModalAbierto(false);
+        setTextoEvolucion('');
+      } else {
+        alert("Error al guardar la nota");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setGuardandoNota(false);
+    }
+  };
+
   const descargarHistoriaMedicaPDF = () => {
+    // Código de descarga PDF original...
     if (!historiaMedica || !historiaMedica.datosClinicosJson) return;
     const formData = JSON.parse(historiaMedica.datosClinicosJson);
     const html = `
@@ -121,10 +167,10 @@ const DetalleExpediente = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
+    <div className="min-h-screen bg-slate-100 text-slate-900 relative">
       <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
 
-        {/* ── Header Principal ── */}
+        {/* Header Principal */}
         <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
           <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
             <div className="flex items-center gap-3">
@@ -147,7 +193,7 @@ const DetalleExpediente = () => {
           </div>
 
           <div className="grid gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6">
-            {/* ── Sidebar ── */}
+            {/* Sidebar */}
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
               {navItems.map(({ label, icon, key, path }) => (
                 <button key={key} onClick={() => handleNavClick({ key, path })}
@@ -160,7 +206,7 @@ const DetalleExpediente = () => {
               ))}
             </aside>
 
-            {/* ── Main Content ── */}
+            {/* Contenido Principal */}
             <main className="space-y-5">
               {loading ? (
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-16 text-center text-slate-500 text-sm">
@@ -226,7 +272,7 @@ const DetalleExpediente = () => {
                     </div>
                   </div>
 
-                  {/* Pestañas (Estilo "Monstruo") */}
+                  {/* Pestañas */}
                   <div className="px-6 pb-6">
                     <div className="flex bg-slate-50 rounded-xl shadow-sm border border-slate-200 p-1.5 overflow-x-auto">
                       <button 
@@ -247,12 +293,23 @@ const DetalleExpediente = () => {
                   {/* Contenedor Inferior */}
                   <div className="bg-slate-50/50 border-t border-slate-200 p-6 min-h-[400px]">
                     
-                    {/* TAB: HISTORIAL (Estilo Línea de Tiempo) */}
+                    {/* TAB: HISTORIAL */}
                     {pestañaActiva === 'historial' && (
                       <div className="max-w-4xl mx-auto space-y-6">
-                        {data?.notasEvolucion && data.notasEvolucion.length > 0 ? (
+                        
+                        {/* Botón para crear nota desde el Expediente */}
+                        <div className="flex justify-end mb-6">
+                          <button 
+                            onClick={() => setModalAbierto(true)} 
+                            className="flex items-center gap-2 bg-[#7E1D3B] text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest shadow-sm hover:bg-[#63162e] transition-colors"
+                          >
+                            <FilePlus size={16} /> Añadir Nota de Evolución
+                          </button>
+                        </div>
+
+                        {notasEvolucion && notasEvolucion.length > 0 ? (
                           <div className="relative border-l-2 border-slate-200 ml-4 space-y-8 pb-4">
-                            {data.notasEvolucion.map((nota, idx) => (
+                            {notasEvolucion.map((nota) => (
                               <div key={nota.id} className="relative pl-8">
                                 {/* Punto del Timeline */}
                                 <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full bg-[#7E1D3B] border-4 border-slate-50"></div>
@@ -260,7 +317,7 @@ const DetalleExpediente = () => {
                                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
                                   <div className="flex flex-wrap justify-between items-center border-b border-slate-100 pb-3 mb-3 gap-2">
                                     <span className="bg-[#7E1D3B]/10 text-[#7E1D3B] px-3 py-1 rounded-md text-[11px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                                      <Calendar size={12}/> {new Date(nota.fechaRegistro).toLocaleDateString()}
+                                      <Calendar size={12}/> {new Date(nota.fechaRegistro).toLocaleDateString()} a las {new Date(nota.fechaRegistro).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                     </span>
                                     <span className="text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-3 py-1 rounded-md flex items-center gap-1.5">
                                       <Stethoscope size={12}/> {nota.medicoAsignado}
@@ -278,13 +335,13 @@ const DetalleExpediente = () => {
                           <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center shadow-sm">
                             <ClipboardList size={40} className="mx-auto text-slate-300 mb-4" />
                             <h3 className="text-lg font-black text-slate-700 mb-1">Sin Notas Clínicas</h3>
-                            <p className="text-sm font-medium text-slate-500">Aún no se han registrado notas de evolución diaria para este paciente.</p>
+                            <p className="text-sm font-medium text-slate-500">Aún no se han registrado notas de evolución para este paciente.</p>
                           </div>
                         )}
                       </div>
                     )}
 
-                    {/* TAB: DOCUMENTOS (Estilo Tarjetas Modernas) */}
+                    {/* TAB: DOCUMENTOS */}
                     {pestañaActiva === 'docs' && (
                       <div className="max-w-4xl mx-auto space-y-4">
                         
@@ -351,6 +408,57 @@ const DetalleExpediente = () => {
           </div>
         </header>
       </div>
+
+      {/* --- MODAL PARA NUEVA NOTA DE EVOLUCIÓN DESDE EL EXPEDIENTE --- */}
+      {modalAbierto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
+            <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <div className="flex items-center gap-2">
+                <FilePlus size={18} className="text-[#7E1D3B]" />
+                <h3 className="font-black text-slate-800 uppercase tracking-widest text-sm">Nueva Nota de Evolución</h3>
+              </div>
+              <button onClick={() => setModalAbierto(false)} className="text-slate-400 hover:text-rose-500 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6">
+               <p className="text-xs font-bold text-slate-500 mb-4 uppercase tracking-wider">
+                 Paciente: <span className="text-[#7E1D3B] ml-1">{data?.paciente?.nombreCompleto}</span>
+               </p>
+               
+               <label className="block text-[11px] font-black text-slate-700 uppercase tracking-widest mb-2">
+                 Evolución y Cuadro Clínico
+               </label>
+               <textarea
+                 className="w-full border border-slate-200 bg-slate-50 rounded-xl p-4 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30 focus:border-[#7E1D3B]/50 transition-all shadow-inner"
+                 rows="6"
+                 placeholder="Describa el estado actual del paciente, signos vitales, avances o retrocesos..."
+                 value={textoEvolucion}
+                 onChange={(e) => setTextoEvolucion(e.target.value)}
+               ></textarea>
+            </div>
+            
+            <div className="p-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
+               <button 
+                 onClick={() => setModalAbierto(false)} 
+                 className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
+               >
+                 Cancelar
+               </button>
+               <button 
+                 onClick={guardarNota} 
+                 disabled={guardandoNota}
+                 className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#7E1D3B] hover:bg-[#63162e] transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+               >
+                 {guardandoNota ? 'Guardando...' : 'Guardar y Anexar'}
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
