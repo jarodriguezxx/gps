@@ -26,6 +26,14 @@ import HistoriaMedica from './views/medico/HistoriaMedica';
 import NuevaEvolucion from './views/medico/NuevaEvolucion';
 import ControlMonitoreo from './views/medico/ControlMonitoreo';
 
+//Nutriólogo
+import InicioNutricion from './views/nutriologo/InicioNutricion';
+import PacientesNutricion from './views/nutriologo/PacientesNutricion'; 
+import EvaluacionNutricional from './views/nutriologo/EvaluacionNutricional.jsx';
+import ExpedientesNutricion from './views/nutriologo/ExpedientesNutricion';
+import ReportesNutricion from './views/nutriologo/ReportesNutricion';
+import VistaExpedienteNutricion from './views/nutriologo/VistaExpedienteNutricion';
+
 // Recursos Humanos
 import AltaPersonal from './views/rh/AltaPersonal';
 import BajaPersonal from './views/rh/BajaPersonal';
@@ -73,6 +81,10 @@ const quickViews = [
   { label: 'Medico - Historia '  ,   path: '/medico/historia-medica' },
   { label: 'Medico - Nueva ',        path: '/medico/nueva-evolucion/1' },
   { label: 'Medico - Monitoreo',     path: '/medico/monitoreo/1' },
+  { label: 'Nutriólogo - Inicio',    path: '/nutriologo/inicio' },
+  { label: 'Nutriólogo - Pacientes', path: '/nutriologo/pacientes' },
+  { label: 'Nutriólogo  Evaluación', path: '/nutriologo/evaluacion/1' },
+  { label: 'Nutri - Expedientes',    path: '/nutriologo/expedientes' },
   { label: 'RH - Alta',              path: '/rh/alta-personal' },
   { label: 'RH - Baja',              path: '/rh/baja-personal' },
   { label: 'RH - Catálogo',          path: '/rh/catalogo-roles' },
@@ -182,6 +194,12 @@ function App() {
         <Route path="/medico/nueva-evolucion/:id"              element={<PrivateRoute><NuevaEvolucion /></PrivateRoute>} />
         <Route path="/medico/monitoreo/:id"                    element={<PrivateRoute><ControlMonitoreo /></PrivateRoute>} />
 
+        <Route path="/nutriologo/pacientes"                    element={<PrivateRoute><PacientesNutricion /></PrivateRoute>} />
+        <Route path="/nutriologo/inicio"                       element={<PrivateRoute><InicioNutricion /></PrivateRoute>} />
+        <Route path="/nutriologo/evaluacion/:id"               element={<PrivateRoute><EvaluacionNutricional /></PrivateRoute>} />
+        <Route path="/nutriologo/expedientes"                  element={<PrivateRoute><ExpedientesNutricion /></PrivateRoute>} />
+        <Route path="/nutriologo/reportes"                     element={<PrivateRoute><ReportesNutricion /></PrivateRoute>} />
+        <Route path="/nutriologo/vista-expediente/:id"         element={<PrivateRoute><VistaExpedienteNutricion /></PrivateRoute>} />
         {/* Recursos Humanos */}
         <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
         <Route path="/rh/baja-personal"                        element={<PrivateRoute><BajaPersonal /></PrivateRoute>} />
