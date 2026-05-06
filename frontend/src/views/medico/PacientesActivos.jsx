@@ -147,6 +147,9 @@ const PacientesActivos = () => {
                                 <button onClick={() => navigate(`/medico/expedientes/${p.id}`)} className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 text-xs font-bold transition-colors flex items-center gap-1.5">
                                   <ClipboardList size={14} /> Expediente
                                 </button>
+                                <button onClick={() => navigate(`/medico/monitoreo/${p.id}`)} className="px-3 py-2 bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm border border-sky-200">
+                                  <Activity size={14} /> Monitoreo
+                                </button>
                                 {/* Botón directo a la nueva pantalla */}
                                 <button onClick={() => navigate(`/medico/nueva-evolucion/${p.id}`)} className="px-3 py-2 bg-[#7E1D3B] text-white rounded-lg hover:bg-[#63162e] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm">
                                   <FilePlus size={14} /> Evolución

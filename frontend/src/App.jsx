@@ -23,6 +23,7 @@ import ValoracionMedica from './views/medico/ValoracionMedica';
 import Prospectos from './views/medico/Prospectos';
 import HistoriaMedica from './views/medico/HistoriaMedica';
 import NuevaEvolucion from './views/medico/NuevaEvolucion';
+import ControlMonitoreo from './views/medico/ControlMonitoreo';
 
 // Recursos Humanos
 import AltaPersonal from './views/rh/AltaPersonal';
@@ -70,6 +71,7 @@ const quickViews = [
   { label: 'Médico - Prospectos',    path: '/medico/prospectos' },
   { label: 'Medico - Historia '  ,   path: '/medico/historia-medica' },
   { label: 'Medico - Nueva ',        path: '/medico/nueva-evolucion/1' },
+  { label: 'Medico - Monitoreo',     path: '/medico/monitoreo/1' },
   { label: 'RH - Alta',              path: '/rh/alta-personal' },
   { label: 'RH - Baja',              path: '/rh/baja-personal' },
   { label: 'RH - Catálogo',          path: '/rh/catalogo-roles' },
@@ -188,8 +190,9 @@ function App() {
         <Route path="/medico/expedientes/:id"                  element={<PrivateRoute><DetalleExpediente /></PrivateRoute>} />
         <Route path="/medico/prospectos"                       element={<PrivateRoute><Prospectos /></PrivateRoute>} />
         <Route path="/medico/valoracion/:id"                   element={<PrivateRoute><ValoracionMedica /></PrivateRoute>} />
-        <Route path="/medico/historia-medica"              element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
-        <Route path="/medico/nueva-evolucion/:id"      element={<PrivateRoute><NuevaEvolucion /></PrivateRoute>} />
+        <Route path="/medico/historia-medica"                  element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
+        <Route path="/medico/nueva-evolucion/:id"              element={<PrivateRoute><NuevaEvolucion /></PrivateRoute>} />
+        <Route path="/medico/monitoreo/:id"                    element={<PrivateRoute><ControlMonitoreo /></PrivateRoute>} />
 
         {/* Recursos Humanos */}
         <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
