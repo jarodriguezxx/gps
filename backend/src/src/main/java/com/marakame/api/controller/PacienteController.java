@@ -61,6 +61,15 @@ public class PacienteController {
         }
     }
 
+    @GetMapping("/validacion-pagos")
+    public ResponseEntity<?> obtenerPacientesPendientesValidacionPago() {
+        try {
+            return ResponseEntity.ok(pacienteService.obtenerPacientesPendientesValidacionPago());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al obtener validaciones pendientes: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/{id}/recibos")
     public ResponseEntity<?> registrarReciboPendiente(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         try {
@@ -117,6 +126,47 @@ public class PacienteController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al registrar el rechazo: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/iniciar-pago")
+    public ResponseEntity<?> iniciarPago(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        try {
+            String folioRecibo = payload.get("folioRecibo");
+            if (folioRecibo == null || folioRecibo.isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "folioRecibo es requerido"));
+            }
+            Paciente paciente = pacienteService.iniciarPagoPaciente(id, folioRecibo);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "mensaje", "Pago iniciado correctamente",
+                "pacienteId", paciente.getId(),
+                "folioRecibo", paciente.getFolioRecibo(),
+                "pagoValidado", paciente.getPagoValidado(),
+                "fechaRegistroRecibo", paciente.getFechaRegistroRecibo()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al iniciar pago: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/validar-pago")
+    public ResponseEntity<?> validarPago(@PathVariable Long id) {
+        try {
+            Paciente paciente = pacienteService.validarPagoPaciente(id);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "mensaje", "Pago validado correctamente",
+                "pacienteId", paciente.getId(),
+                "folioRecibo", paciente.getFolioRecibo(),
+                "fechaValidacion", paciente.getFechaValidacion()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al validar pago: " + e.getMessage()));
         }
     }
 

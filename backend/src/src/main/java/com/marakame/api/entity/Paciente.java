@@ -100,6 +100,18 @@ public class Paciente {
     @Column(name = "fecha_ingreso")
     private LocalDateTime fechaIngreso;
 
+    @Column(name = "pago_validado")
+    private Boolean pagoValidado = false;
+
+    @Column(name = "fecha_validacion_pago")
+    private LocalDateTime fechaValidacion;
+
+    @Column(name = "folio_recibo")
+    private String folioRecibo;
+
+    @Column(name = "fecha_registro_recibo")
+    private LocalDateTime fechaRegistroRecibo;
+
     @ManyToOne
     @JoinColumn(name = "solicitante_id")
     private Solicitante solicitante;
@@ -326,5 +338,37 @@ public class Paciente {
 
     public void setFechaIngreso(LocalDateTime fechaIngreso) {
         this.fechaIngreso = fechaIngreso;
+    }
+
+    public Boolean getPagoValidado() {
+        return pagoValidado;
+    }
+
+    public void setPagoValidado(Boolean pagoValidado) {
+        this.pagoValidado = pagoValidado;
+    }
+
+    public LocalDateTime getFechaValidacion() {
+        return fechaValidacion;
+    }
+
+    public void setFechaValidacion(LocalDateTime fechaValidacion) {
+        this.fechaValidacion = fechaValidacion;
+    }
+
+    public String getFolioRecibo() {
+        return folioRecibo;
+    }
+
+    public void setFolioRecibo(String folioRecibo) {
+        this.folioRecibo = folioRecibo;
+    }
+
+    public LocalDateTime getFechaRegistroRecibo() {
+        return fechaRegistroRecibo;
+    }
+
+    public void setFechaRegistroRecibo(LocalDateTime fechaRegistroRecibo) {
+        this.fechaRegistroRecibo = fechaRegistroRecibo;
     }
 }

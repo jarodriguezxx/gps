@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { API_BASE } from './config/api.ts';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
@@ -38,6 +38,7 @@ import FacturaElectronica from './views/financiero/FacturaElectronica';
 import ComprobantesFiscales from './views/financiero/ComprobantesFiscales';
 import RequisicionesAlmacen from './views/financiero/RequisicionesAlmacen';
 import DepositoBancario from './views/financiero/DepositoBancario';
+import ValidacionPagos from './views/financiero/ValidacionPagos';
 
 // Recursos Materiales
 import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
@@ -80,6 +81,7 @@ const quickViews = [
   { label: 'Fin - Comprobantes',     path: '/financiero/comprobantes-fiscales' },
   { label: 'Fin - Requisiciones',    path: '/financiero/requisiciones-almacen' },
   { label: 'Fin - Depósito',         path: '/financiero/deposito-bancario' },
+  { label: 'Fin - Validación',       path: '/financiero/validacion-pagos' },
   { label: 'Rec. Materiales',        path: '/rec-materiales/rec-materiales' },
   { label: 'Rec. Proveedores',       path: '/rec-materiales/rec-materiales/proveedores' },
   { label: 'Rec. Historial',         path: '/rec-materiales/rec-materiales/historial' },
@@ -190,6 +192,7 @@ function App() {
         <Route path="/financiero/requisiciones-almacen"        element={<PrivateRoute><RequisicionesAlmacen /></PrivateRoute>} />
         <Route path="/financiero/gestionar-correcciones"       element={<PrivateRoute><GestionarCorreciones /></PrivateRoute>} />
         <Route path="/financiero/deposito-bancario"            element={<PrivateRoute><DepositoBancario /></PrivateRoute>} />
+        <Route path="/financiero/validacion-pagos"             element={<PrivateRoute><ValidacionPagos /></PrivateRoute>} />
 
 {/* Rutas para Recursos Materiales y Compras/Inventario */}
         <Route path='/materiales/:rol' element={<RecMaterialesDashboard/>}>

@@ -99,9 +99,10 @@ public class SeguimientoController {
         }
 
         boolean tieneLlamadaInicial = seguimientoRepository.existsByPaciente_IdAndTipoAccionContainingIgnoreCase(request.pacienteId(), "llamada");
-        if (!tieneLlamadaInicial) {
+        boolean tieneHistorialSeguimiento = seguimientoRepository.existsByPaciente_Id(request.pacienteId());
+        if (!tieneLlamadaInicial && !tieneHistorialSeguimiento) {
             return new ResponseEntity<>(Map.of(
-                "error", "El paciente no tiene llamada inicial registrada."
+                "error", "El paciente no tiene historial de seguimiento o llamada inicial registrada."
             ), HttpStatus.CONFLICT);
         }
 

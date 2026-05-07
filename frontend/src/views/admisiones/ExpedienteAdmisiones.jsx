@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowRight, FileText, FileX, AlertTriangle, Search, Sparkles, X, Download, Upload, CheckCircle2, Paperclip, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
@@ -29,6 +29,7 @@ const getRecibosStorageKey = (pacienteId) => `admisiones-recibos-${pacienteId}`;
 const normalizarReciboApi = (recibo) => ({
 	id: recibo.id,
 	nombre: recibo.tokenGenerado || recibo.numeroRecibo || `Recibo ${recibo.id}`,
+	numeroRecibo: recibo.numeroRecibo || recibo.tokenGenerado || '',
 	fecha: formatDateValue(recibo.fechaValidacion || recibo.fechaPago || recibo.createdAt),
 	tipo: 'Recibo de pago',
 	url: recibo.archivoReciboUrl || '',
@@ -62,11 +63,8 @@ const getTimelineTone = (seguimiento) => {
 	return 'slate';
 };
 
-// --- MODIFICACIÓN 1: Agregamos tieneValoracionMedica como parámetro ---
 const buildDocumentosProspecto = (prospecto, detalleExpediente, tieneValoracionMedica) => {
-	if (!prospecto) {
-		return [];
-	}
+	if (!prospecto) return [];
 
 	const documentosBackend = Array.isArray(detalleExpediente?.documentos) ? detalleExpediente.documentos : [];
 	const estadoPaciente = String(prospecto?.estadoPaciente || '').toUpperCase();
@@ -90,10 +88,6 @@ const buildDocumentosProspecto = (prospecto, detalleExpediente, tieneValoracionM
 
 	const tieneSolicitante = !!prospecto.solicitante;
 	const tieneDatosBasicos = hasValue(prospecto.nombreCompleto) && (hasValue(prospecto.telefonoContacto) || hasValue(prospecto.telefonoCasa));
-	
-	// --- MODIFICACIÓN 1: Dependemos del backend para saber si hay valoración clínica ---
-	const tieneDatosClinicos = tieneValoracionMedica;
-
 	const documentosBase = [
 		{
 			nombre: 'Expediente base',
@@ -114,9 +108,9 @@ const buildDocumentosProspecto = (prospecto, detalleExpediente, tieneValoracionM
 		{
 			nombre: 'Valoración diagnóstica',
 			tipo: 'Registro clínico',
-			estado: tieneDatosClinicos ? 'Adjunto' : 'Pendiente',
-			detalle: tieneDatosClinicos
-				? `Valoración completada por el médico asignado.`
+			estado: tieneValoracionMedica ? 'Adjunto' : 'Pendiente',
+			detalle: tieneValoracionMedica
+				? 'Valoración completada por el médico asignado.'
 				: 'Aún no hay datos clínicos suficientes para valoración.',
 		},
 	];
@@ -125,9 +119,7 @@ const buildDocumentosProspecto = (prospecto, detalleExpediente, tieneValoracionM
 };
 
 const buildNotasProspecto = (prospecto, detalleExpediente, prospectoSeleccionado) => {
-	if (!prospecto) {
-		return [];
-	}
+	if (!prospecto) return [];
 
 	const notas = [];
 	const nombre = getNombreProspecto(prospecto) || 'Prospecto sin nombre';
@@ -183,16 +175,15 @@ const buildNotasProspecto = (prospecto, detalleExpediente, prospectoSeleccionado
 		});
 	}
 
-	const notasAdministrativasGuardadas = (Array.isArray(detalleExpediente?.notasAdministrativas) ? detalleExpediente.notasAdministrativas : [])
-		.map((nota) => ({
-			id: `adm-admin-${nota.id}`,
-			texto: nota.observaciones || 'Nota administrativa sin contenido.',
-			fecha: nota.fechaRegistro || null,
-			autor: nota.autor || 'TRABAJO SOCIAL - RECHAZO',
-			tipo: 'sistema',
-			categoria: 'rechazo',
-			estadoNuevo: nota.estadoNuevo || '',
-		}));
+	const notasAdministrativasGuardadas = (Array.isArray(detalleExpediente?.notasAdministrativas) ? detalleExpediente.notasAdministrativas : []).map((nota) => ({
+		id: `adm-admin-${nota.id}`,
+		texto: nota.observaciones || 'Nota administrativa sin contenido.',
+		fecha: nota.fechaRegistro || null,
+		autor: nota.autor || 'TRABAJO SOCIAL - RECHAZO',
+		tipo: 'sistema',
+		categoria: 'rechazo',
+		estadoNuevo: nota.estadoNuevo || '',
+	}));
 
 	const notasAdmisionesGuardadas = (Array.isArray(detalleExpediente?.notasEvolucion) ? detalleExpediente.notasEvolucion : [])
 		.filter((nota) => String(nota?.medicoAsignado || '').toUpperCase().includes('ADMISION'))
@@ -205,7 +196,6 @@ const buildNotasProspecto = (prospecto, detalleExpediente, prospectoSeleccionado
 		}));
 
 	const unificadas = [...notasAdministrativasGuardadas, ...notasAdmisionesGuardadas, ...notas];
-
 	unificadas.sort((a, b) => {
 		const da = a.fecha ? new Date(a.fecha).getTime() : 0;
 		const db = b.fecha ? new Date(b.fecha).getTime() : 0;
@@ -229,6 +219,7 @@ const buildTimeline = (detalleExpediente) => {
 	const seguimientos = Array.isArray(detalleExpediente?.seguimientos) ? detalleExpediente.seguimientos : [];
 	const notasAdmisiones = (Array.isArray(detalleExpediente?.notasEvolucion) ? detalleExpediente.notasEvolucion : [])
 		.filter((nota) => String(nota?.medicoAsignado || '').toUpperCase().includes('ADMISION'));
+	const expediente = detalleExpediente?.expediente || {};
 
 	const eventosSeguimiento = seguimientos.map((item) => ({
 		id: item.id,
@@ -254,7 +245,25 @@ const buildTimeline = (detalleExpediente) => {
 		tipoEvento: 'nota',
 	}));
 
-	return [...eventosSeguimiento, ...eventosNotas].sort((a, b) => {
+	const eventoApertura = expediente?.fechaApertura ? [{
+		id: `expediente-${expediente.id || 'nuevo'}`,
+		fecha: expediente.fechaApertura,
+		titulo: 'Apertura de expediente',
+		estado: expediente.estado || 'ACTIVO',
+		detalle: expediente.numero ? `Folio ${expediente.numero}` : 'Registro inicial del expediente.',
+		origen: 'SISTEMA',
+		tone: 'slate',
+		diagnosticoVisual: null,
+		tipoEvento: 'expediente',
+	}] : [];
+
+	const eventos = [...eventosSeguimiento, ...eventosNotas];
+
+	if (eventos.length === 0) {
+		return eventoApertura;
+	}
+
+	return eventos.sort((a, b) => {
 		const da = a.fecha ? new Date(a.fecha).getTime() : 0;
 		const db = b.fecha ? new Date(b.fecha).getTime() : 0;
 		return db - da;
@@ -563,6 +572,7 @@ const generarReciboHTML = (datos) => {
 const ExpedienteAdmisiones = () => {
 	const navigate = useNavigate();
 	const { id: expedienteIdParam } = useParams();
+	const location = useLocation();
 	const [tab, setTab] = useState('general');
 	const [busquedaExpediente, setBusquedaExpediente] = useState('');
 	const [, setResultadosBusqueda] = useState([]);
@@ -571,11 +581,15 @@ const ExpedienteAdmisiones = () => {
 	const [, setIndiceResaltado] = useState(-1);
 	const [prospectoSeleccionado, setProspectoSeleccionado] = useState(null);
 	const [detalleExpediente, setDetalleExpediente] = useState(null);
+	const [seguimientosExpediente, setSeguimientosExpediente] = useState([]);
 	const [, setCargandoDetalleExpediente] = useState(false);
 	const [, setErrorDetalleExpediente] = useState('');
 	const [modalLlamadaInicialAbierto, setModalLlamadaInicialAbierto] = useState(false);
 	const [diagnosticoTab, setDiagnosticoTab] = useState('solicitante');
 	const [modalReciboAbierto, setModalReciboAbierto] = useState(false);
+	const [modalRechazoAbierto, setModalRechazoAbierto] = useState(false);
+	const [generandoRecibo, setGenerandoRecibo] = useState(false);
+	const [folioReciboActual, setFolioReciboActual] = useState('');
 	
 	// --- MODIFICACIÓN 2: Estado para controlar si el médico ya guardó la valoración ---
 	const [tieneValoracionMedica, setTieneValoracionMedica] = useState(false);
@@ -610,6 +624,8 @@ const ExpedienteAdmisiones = () => {
 	const [cargandoRecibo, setCargandoRecibo] = useState(false);
 	const [tokenGenerado, setTokenGenerado] = useState(null);
 	const [generandoToken, setGenerandoToken] = useState(false);
+	const [motivoRechazo, setMotivoRechazo] = useState('');
+	const [procesandoRechazo, setProcesandoRechazo] = useState(false);
 	const [, setExpedienteModo] = useState('prospecto');
 	const [, setExpedienteExpandidoId] = useState(null);
 	const [notaAdmisiones, setNotaAdmisiones] = useState('');
@@ -627,6 +643,7 @@ const ExpedienteAdmisiones = () => {
 				if (normalizados.length > 0) {
 					setRecibosSubidos(normalizados);
 					setReciboPersistido(normalizados.find((item) => String(item.estadoPago || '').toUpperCase() === 'VALIDADO') || normalizados[0]);
+					setFolioReciboActual(normalizados[0]?.numeroRecibo || normalizados[0]?.tokenGenerado || '');
 					window.localStorage.setItem(storageKey, JSON.stringify(normalizados));
 					return normalizados;
 				}
@@ -642,6 +659,7 @@ const ExpedienteAdmisiones = () => {
 				if (Array.isArray(localRecibos) && localRecibos.length > 0) {
 					setRecibosSubidos(localRecibos);
 					setReciboPersistido(localRecibos.find((item) => item._localOnly) || localRecibos[0]);
+					setFolioReciboActual(localRecibos[0]?.numeroRecibo || localRecibos[0]?.nombre || '');
 					return localRecibos;
 				}
 			} catch (error) {
@@ -651,8 +669,45 @@ const ExpedienteAdmisiones = () => {
 
 		setRecibosSubidos([]);
 		setReciboPersistido(null);
+		setFolioReciboActual('');
 		return [];
 	};
+
+	// Cargar paciente preseleccionado si venimos del estudio socioeconómico
+	// Solo se ejecuta si NO hay expedienteIdParam (prioridad a ruta)
+	useEffect(() => {
+		if (expedienteIdParam) {
+			// Si hay ID en la ruta, el otro useEffect se encarga
+			return;
+		}
+
+		if (location.state?.pacienteIdPreseleccionado) {
+			const pacienteId = location.state.pacienteIdPreseleccionado;
+			const controller = new AbortController();
+
+			const cargarPacientePreseleccionado = async () => {
+				try {
+					const response = await fetch(`${API_BASE}/pacientes/${pacienteId}`, {
+						signal: controller.signal,
+					});
+
+					if (response.ok) {
+						const paciente = await response.json();
+						seleccionarProspecto(paciente);
+					} else {
+						console.error('Paciente no encontrado:', pacienteId);
+					}
+				} catch (error) {
+					if (error.name !== 'AbortError') {
+						console.error('Error al cargar paciente preseleccionado:', error);
+					}
+				}
+			};
+
+			cargarPacientePreseleccionado();
+			return () => controller.abort();
+		}
+	}, [location.state?.pacienteIdPreseleccionado, expedienteIdParam]);
 
 	useEffect(() => {
 		let mounted = true;
@@ -750,24 +805,79 @@ const ExpedienteAdmisiones = () => {
 	};
 
 	const descargarRecibo = () => {
-		const html = generarReciboHTML(datosRecibo);
-		const element = document.createElement('div');
-		element.innerHTML = html;
-		
-		const opt = {
-			margin: 5,
-			filename: `recibo-${datosRecibo.nombrePaciente}-${new Date().getTime().toString().slice(-4)}.pdf`,
-			image: { type: 'jpeg', quality: 0.98 },
-			html2canvas: { scale: 2 },
-			jsPDF: { orientation: 'portrait', unit: 'mm', format: 'letter' }
+		if (!prospectoSeleccionado?.id) return;
+
+		const crearRecibo = async () => {
+			setGenerandoRecibo(true);
+			try {
+				const numeroRecibo = folioReciboActual || `REC-${prospectoSeleccionado.id}-${Date.now()}`;
+
+				// PASO 1: Iniciar el pago en el backend
+				const iniciarResponse = await fetch(`${API_BASE}/pacientes/${prospectoSeleccionado.id}/iniciar-pago`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ folioRecibo: numeroRecibo }),
+				});
+
+				if (!iniciarResponse.ok) {
+					const errorData = await iniciarResponse.json().catch(() => ({}));
+					throw new Error(errorData.error || 'No se pudo iniciar el proceso de pago');
+				}
+
+				// PASO 2: Registrar el recibo
+				const response = await fetch(`${API_BASE}/pacientes/${prospectoSeleccionado.id}/recibos`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						numeroRecibo,
+						montoPago: datosRecibo.montoPago || 0,
+						montoPrograma: datosRecibo.montoPrograma || 0,
+						concepto: datosRecibo.concepto,
+						nombrePagador: datosRecibo.nombrePagador,
+						rfc: datosRecibo.rfc || '',
+						archivoReciboUrl: '',
+					}),
+				});
+
+				if (!response.ok) {
+					const errorData = await response.json().catch(() => ({}));
+					throw new Error(errorData.error || 'No se pudo registrar el recibo');
+				}
+
+				const creado = await response.json();
+				const folioGenerado = creado?.numeroRecibo || creado?.tokenGenerado || numeroRecibo;
+				setFolioReciboActual(folioGenerado);
+				const normalizado = normalizarReciboApi(creado);
+				setRecibosSubidos([normalizado]);
+				setReciboPersistido(normalizado);
+				window.localStorage.setItem(getRecibosStorageKey(prospectoSeleccionado.id), JSON.stringify([normalizado]));
+
+				const html = generarReciboHTML({ ...datosRecibo, folioRecibo: folioGenerado });
+				const element = document.createElement('div');
+				element.innerHTML = html;
+				const opt = {
+					margin: 5,
+					filename: `recibo-${folioGenerado}.pdf`,
+					image: { type: 'jpeg', quality: 0.98 },
+					html2canvas: { scale: 2 },
+					jsPDF: { orientation: 'portrait', unit: 'mm', format: 'letter' }
+				};
+				await html2pdf().set(opt).from(element).save();
+				setToast({ type: 'success', message: 'Recibo generado y registrado como pendiente de validación.' });
+			} catch (error) {
+				console.error('Error al generar recibo:', error);
+				setToast({ type: 'error', message: error.message || 'No se pudo generar el recibo.' });
+			} finally {
+				setGenerandoRecibo(false);
+			}
 		};
-		
-		html2pdf().set(opt).from(element).save();
+
+		crearRecibo();
 	};
 
 	const manejarCargaRecibo = async (event) => {
 		const archivos = event.target.files;
-		if (!archivos || archivos.length === 0 || !prospectoSeleccionado?.id || reciboBloqueado) return;
+		if (!archivos || archivos.length === 0 || !prospectoSeleccionado?.id || !pagoValidadoFinanzas) return;
 		const archivo = archivos[0];
 		setCargandoRecibo(true);
 
@@ -785,7 +895,7 @@ const ExpedienteAdmisiones = () => {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					numeroRecibo: datosRecibo.clavePaciente || `REC-${prospectoSeleccionado.id}`,
+					numeroRecibo: folioReciboActual || datosRecibo.clavePaciente || `REC-${prospectoSeleccionado.id}`,
 					archivoReciboUrl: archivoDataUrl,
 					montoPago: datosRecibo.montoPago || 0,
 					montoPrograma: datosRecibo.montoPrograma || 0,
@@ -804,6 +914,7 @@ const ExpedienteAdmisiones = () => {
 			const normalizado = normalizarReciboApi(creado);
 			setRecibosSubidos([normalizado]);
 			setReciboPersistido(normalizado);
+			setFolioReciboActual(normalizado.numeroRecibo || normalizado.tokenGenerado || folioReciboActual);
 			window.localStorage.setItem(getRecibosStorageKey(prospectoSeleccionado.id), JSON.stringify([normalizado]));
 		} catch (error) {
 			console.error('Error al subir recibo:', error);
@@ -818,6 +929,7 @@ const ExpedienteAdmisiones = () => {
 			};
 			setRecibosSubidos([localRecibo]);
 			setReciboPersistido(localRecibo);
+			setFolioReciboActual(localRecibo.nombre || folioReciboActual);
 			window.localStorage.setItem(getRecibosStorageKey(prospectoSeleccionado.id), JSON.stringify([localRecibo]));
 		} finally {
 			setCargandoRecibo(false);
@@ -882,6 +994,63 @@ const ExpedienteAdmisiones = () => {
 			setToast({ type: 'error', message: `No se pudo generar el token: ${error.message}` });
 		} finally {
 			setGenerandoToken(false);
+		}
+	};
+
+	const registrarRechazoAdministrativo = async () => {
+		if (!prospectoSeleccionado?.id) {
+			setToast({ type: 'error', message: 'Selecciona un prospecto antes de registrar el rechazo.' });
+			return;
+		}
+
+		const observaciones = motivoRechazo.trim();
+		if (!observaciones) {
+			setToast({ type: 'error', message: 'Escribe el motivo del rechazo para continuar.' });
+			return;
+		}
+
+		setProcesandoRechazo(true);
+		try {
+			const response = await fetch(`${API_BASE}/pacientes/${prospectoSeleccionado.id}/rechazo-administrativo`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					estado: 'RECHAZADO_ECONOMICO',
+					observaciones,
+				}),
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.error || 'No se pudo registrar el rechazo administrativo');
+			}
+
+			const data = await response.json();
+			const notaAdministrativa = data?.notaAdministrativa || null;
+
+			setProspectoSeleccionado(prev => (prev ? {
+				...prev,
+				estadoPaciente: 'DENEGADO',
+			} : prev));
+			setDetalleExpediente(prev => {
+				if (!prev) return prev;
+				const notasAdministrativasPrevias = Array.isArray(prev.notasAdministrativas) ? prev.notasAdministrativas : [];
+				return {
+					...prev,
+					notasAdministrativas: notaAdministrativa ? [...notasAdministrativasPrevias, notaAdministrativa] : notasAdministrativasPrevias,
+				};
+			});
+
+			setModalRechazoAbierto(false);
+			setMotivoRechazo('');
+			setToast({ type: 'success', message: 'El rechazo administrativo se registró correctamente.' });
+		} catch (error) {
+			console.error('Error al registrar rechazo administrativo:', error);
+			setToast({ type: 'error', message: error.message || 'No se pudo registrar el rechazo administrativo.' });
+		} finally {
+			setProcesandoRechazo(false);
 		}
 	};
 
@@ -1034,7 +1203,11 @@ const ExpedienteAdmisiones = () => {
 				setResultadosBusqueda(resultados);
 
 				if (resultados.length === 1) {
-					seleccionarProspecto(resultados[0]);
+					const unico = resultados[0];
+					// Evitar bucle: si el resultado único ya es el mismo paciente seleccionado, no re-disparar la selección
+					if (String(unico?.id || '') !== String(prospectoSeleccionado?.id || '')) {
+						seleccionarProspecto(unico);
+					}
 					setIndiceResaltado(0);
 				} else {
 					setIndiceResaltado(resultados.length > 0 ? 0 : -1);
@@ -1051,7 +1224,7 @@ const ExpedienteAdmisiones = () => {
 
 		buscarProspectos();
 		return () => controller.abort();
-	}, [busquedaExpediente]);
+	}, [busquedaExpediente, prospectoSeleccionado?.id]);
 
 	// --- MODIFICACIÓN 3: Actualizamos el UseEffect que carga el detalle ---
 	useEffect(() => {
@@ -1060,6 +1233,7 @@ const ExpedienteAdmisiones = () => {
 
 		if (!pacienteId) {
 			setDetalleExpediente(null);
+			setSeguimientosExpediente([]);
 			setErrorDetalleExpediente('');
 			setCargandoDetalleExpediente(false);
 			setTieneValoracionMedica(false); // Reseteamos la bandera
@@ -1084,21 +1258,53 @@ const ExpedienteAdmisiones = () => {
 				const data = await response.json();
 				setDetalleExpediente(data);
 
+				try {
+					const seguimientosRes = await fetch(`${API_BASE}/seguimientos/tablas`, {
+						signal: controller.signal,
+					});
+
+					if (seguimientosRes.ok) {
+						const tablas = await seguimientosRes.json();
+						const todosLosSeguimientos = [
+							...(Array.isArray(tablas?.citas) ? tablas.citas : []),
+							...(Array.isArray(tablas?.llamadas) ? tablas.llamadas : []),
+						];
+						setSeguimientosExpediente(todosLosSeguimientos.filter((item) => String(item?.pacienteId || '') === String(pacienteId)));
+					} else {
+						setSeguimientosExpediente([]);
+					}
+				} catch (seguimientosError) {
+					if (seguimientosError.name !== 'AbortError') {
+						setSeguimientosExpediente([]);
+					}
+				}
+
 				// 2. PREGUNTAR AL BACKEND SI EL MÉDICO YA HIZO LA VALORACIÓN
-				const valoracionRes = await fetch(`${API_BASE}/valoraciones/paciente/${pacienteId}`, {
-					signal: controller.signal,
-				});
-				
-				if (valoracionRes.ok) {
-					setTieneValoracionMedica(true); // Sí existe la valoración
-				} else {
-					setTieneValoracionMedica(false); // No existe
+				try {
+					const valoracionRes = await fetch(`${API_BASE}/valoraciones/paciente/${pacienteId}`, {
+						signal: controller.signal,
+					});
+					
+					if (valoracionRes.ok) {
+						setTieneValoracionMedica(true); // Sí existe la valoración
+					} else if (valoracionRes.status === 404) {
+						// Endpoint no existe o no hay valoración
+						setTieneValoracionMedica(false);
+					} else {
+						setTieneValoracionMedica(false);
+					}
+				} catch (valoracionError) {
+					// Si hay error de red, asumimos que no hay valoración
+					if (valoracionError.name !== 'AbortError') {
+						setTieneValoracionMedica(false);
+					}
 				}
 
 			} catch (error) {
 				if (error.name !== 'AbortError') {
 					console.error('Error al cargar detalle de expediente:', error);
 					setDetalleExpediente(null);
+					setSeguimientosExpediente([]);
 					setErrorDetalleExpediente('No se pudo cargar el detalle del expediente del prospecto.');
 				}
 			} finally {
@@ -1134,23 +1340,32 @@ const ExpedienteAdmisiones = () => {
 	}, [prospectoSeleccionado]);
 
 	const estadoPacienteActual = useMemo(() => String(prospectoSeleccionado?.estadoPaciente || '').toUpperCase(), [prospectoSeleccionado?.estadoPaciente]);
+	const pagoValidadoFinanzas = useMemo(() => Boolean(prospectoSeleccionado?.pagoValidado), [prospectoSeleccionado?.pagoValidado]);
 	const tieneReciboAdjunto = useMemo(() => recibosSubidos.length > 0, [recibosSubidos]);
-	const reciboBloqueado = useMemo(
-		() => estadoPacienteActual === 'INGRESADO' || estadoPacienteActual === 'DENEGADO' || tieneReciboAdjunto,
-		[estadoPacienteActual, tieneReciboAdjunto]
+	const tieneReciboValidado = useMemo(
+		() => recibosSubidos.some((recibo) => String(recibo.estadoPago || '').toUpperCase() === 'VALIDADO'),
+		[recibosSubidos]
 	);
-	const puedeValidarIngresoOficial = useMemo(() => estadoPacienteActual === 'PROSPECTO' && tieneReciboAdjunto, [estadoPacienteActual, tieneReciboAdjunto]);
+	const puedeValidarIngresoOficial = useMemo(() => estadoPacienteActual === 'PROSPECTO' && pagoValidadoFinanzas && tieneReciboValidado && tieneValoracionMedica, [estadoPacienteActual, pagoValidadoFinanzas, tieneReciboValidado, tieneValoracionMedica]);
 	const badgeEstadoRecibo = useMemo(() => {
 		if (estadoPacienteActual === 'DENEGADO') return 'DENEGADO';
 		if (estadoPacienteActual === 'INGRESADO') return 'INGRESADO';
-		if (tieneReciboAdjunto) return 'VALIDADO';
+		if (!pagoValidadoFinanzas) return 'PENDIENTE';
+		if (tieneReciboValidado) return 'VALIDADO';
+		if (tieneReciboAdjunto) return 'PENDIENTE VALIDACIÓN';
 		return 'PENDIENTE';
-	}, [estadoPacienteActual, tieneReciboAdjunto]);
+	}, [estadoPacienteActual, pagoValidadoFinanzas, tieneReciboAdjunto, tieneReciboValidado]);
 
 	// --- MODIFICACIÓN 4: Pasamos tieneValoracionMedica al useMemo ---
 	const documentosProspecto = useMemo(() => buildDocumentosProspecto(prospectoSeleccionado, detalleExpediente, tieneValoracionMedica), [prospectoSeleccionado, detalleExpediente, tieneValoracionMedica]);
 	const notasProspecto = useMemo(() => buildNotasProspecto(prospectoSeleccionado, detalleExpediente, prospectoSeleccionado), [prospectoSeleccionado, detalleExpediente]);
-	const timelineProspecto = useMemo(() => buildTimeline(detalleExpediente, prospectoSeleccionado), [detalleExpediente, prospectoSeleccionado]);
+	const timelineProspecto = useMemo(() => buildTimeline({
+		...detalleExpediente,
+		seguimientos: [
+			...(Array.isArray(detalleExpediente?.seguimientos) ? detalleExpediente.seguimientos : []),
+			...seguimientosExpediente,
+		],
+	}), [detalleExpediente, seguimientosExpediente]);
 	const diagnosticoReadOnlyData = useMemo(
 		() => buildDiagnosticoReadOnlyData(prospectoSeleccionado, detalleExpediente),
 		[prospectoSeleccionado, detalleExpediente]
@@ -1274,6 +1489,10 @@ const ExpedienteAdmisiones = () => {
 								<div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
 									La valoración diagnóstica fue denegada. No se permite subir ni generar recibos de pago.
 								</div>
+							) : !pagoValidadoFinanzas ? (
+								<div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+									Esperando validación de Finanzas.
+								</div>
 							) : null}
 					<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 						<div className="flex items-start gap-4 flex-1">
@@ -1328,22 +1547,22 @@ const ExpedienteAdmisiones = () => {
 							<button
 								type="button"
 								onClick={() => {
-									if (!reciboBloqueado) setModalReciboAbierto(true);
+									if (prospectoSeleccionado?.id) setModalReciboAbierto(true);
 								}}
-								disabled={reciboBloqueado}
+								disabled={!prospectoSeleccionado?.id || estadoPacienteActual === 'DENEGADO' || generandoRecibo}
 								className="rounded-xl border border-[#7E1D3B]/30 bg-white px-4 py-2 text-xs font-bold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/5 flex items-center gap-2 whitespace-nowrap disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 disabled:hover:bg-white"
 							>
 								<Download size={14} />
-								Generar
+								{generandoRecibo ? 'Generando...' : 'Generar'}
 							</button>
-							<label className="rounded-xl bg-[#7E1D3B] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#63162e] flex items-center gap-2 cursor-pointer whitespace-nowrap">
+							<label className={`rounded-xl px-4 py-2 text-xs font-bold shadow-sm transition flex items-center gap-2 whitespace-nowrap ${!pagoValidadoFinanzas ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-[#7E1D3B] text-white hover:bg-[#63162e] cursor-pointer'}`}>
 								<Upload size={14} />
 								Subir firmado
 								<input
 									type="file"
 									accept=".pdf,.jpg,.jpeg,.png"
 									onChange={manejarCargaRecibo}
-									disabled={cargandoRecibo || reciboBloqueado}
+									disabled={cargandoRecibo || !pagoValidadoFinanzas}
 									className="hidden"
 								/>
 							</label>
@@ -1556,7 +1775,7 @@ const ExpedienteAdmisiones = () => {
 								</div>
 								<Sparkles className="text-[#7E1D3B]" size={22} />
 							</div>
-							<div className="grid gap-3 md:grid-cols-3">
+							<div className="grid gap-3 md:grid-cols-4">
 								<button
 									type="button"
 									onClick={() => navigate('/admisiones/estudio-socioeconomico', {
@@ -1580,6 +1799,14 @@ const ExpedienteAdmisiones = () => {
 											llamadaInicial: detalleExpediente?.llamadaInicial || null,
 										},
 									})} className="rounded-2xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-4 text-left text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">Abrir valoración diagnóstica</button>
+									<button
+										type="button"
+										onClick={() => setModalRechazoAbierto(true)}
+										disabled={estadoPacienteActual === 'INGRESADO' || estadoPacienteActual === 'DENEGADO'}
+										className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-left text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+									>
+										Registrar rechazo
+									</button>
 								<button type="button" onClick={() => navigate('/admisiones')} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Volver a inicio de admisiones</button>
 							</div>
 						</section>
@@ -1736,6 +1963,60 @@ const ExpedienteAdmisiones = () => {
 									className="rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#63162e]"
 								>
 									Actualizar
+								</button>
+							</div>
+						</div>
+					</div>
+				) : null}
+
+				{modalRechazoAbierto ? (
+					<div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+						<div className="w-full max-w-2xl rounded-[32px] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.35)]">
+							<div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 md:px-6">
+								<div>
+									<p className="text-xs font-bold uppercase tracking-[0.3em] text-rose-600">Rechazo administrativo</p>
+									<h3 className="text-2xl font-black text-slate-900 md:text-3xl">Especifica el motivo del rechazo</h3>
+									<p className="mt-1 text-sm text-slate-500">Este cambio dejará el expediente como denegado y registrará una nota administrativa.</p>
+								</div>
+								<button onClick={() => setModalRechazoAbierto(false)} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-rose-300 hover:text-rose-600">
+									<X size={20} />
+								</button>
+							</div>
+
+							<div className="space-y-4 px-5 py-5 md:px-6">
+								<div className="rounded-2xl border border-rose-100 bg-rose-50/60 p-4 text-sm text-rose-900">
+									<p className="font-bold uppercase tracking-[0.16em]">Paciente</p>
+									<p className="mt-1 font-semibold">{getNombreProspecto(prospectoSeleccionado) || 'Sin nombre'}</p>
+									<p className="text-xs text-rose-700">Clave: {prospectoSeleccionado?.clavePaciente || '--'} • Estado actual: {formatEstadoPacienteDisplay(prospectoSeleccionado?.estadoPaciente)}</p>
+								</div>
+
+								<div>
+									<label className="mb-2 block text-sm font-bold text-slate-700">Motivo del rechazo</label>
+									<textarea
+										value={motivoRechazo}
+										onChange={(event) => setMotivoRechazo(event.target.value)}
+										rows={6}
+										placeholder="Explica por qué se rechaza el ingreso: insuficiencia económica, falta de cupo, documentación incompleta, etc."
+										className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-rose-300 focus:ring-4 focus:ring-rose-100"
+									/>
+								</div>
+							</div>
+
+							<div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 md:flex-row md:justify-end md:px-6">
+								<button
+									type="button"
+									onClick={() => setModalRechazoAbierto(false)}
+									className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+								>
+									Cancelar
+								</button>
+								<button
+									type="button"
+									onClick={registrarRechazoAdministrativo}
+									disabled={procesandoRechazo || !motivoRechazo.trim()}
+									className="rounded-2xl border border-rose-300 bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-300"
+								>
+									{procesandoRechazo ? 'Registrando rechazo...' : 'Confirmar rechazo'}
 								</button>
 							</div>
 						</div>
@@ -2135,25 +2416,25 @@ const ExpedienteAdmisiones = () => {
 									Cancelar
 								</button>
 								<div className="flex gap-2 flex-wrap">
-									<label className="flex items-center gap-2 rounded-xl border border-cyan-300 bg-cyan-50 px-4 py-2.5 text-sm font-semibold text-cyan-700 cursor-pointer hover:bg-cyan-100 transition">
+									<label className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${pagoValidadoFinanzas ? 'border-cyan-300 bg-cyan-50 text-cyan-700 cursor-pointer hover:bg-cyan-100' : 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
 										<Upload size={16} />
 										Subir recibo firmado
 										<input
 											type="file"
 											accept=".pdf,.jpg,.jpeg,.png"
 											onChange={manejarCargaRecibo}
-											disabled={cargandoRecibo}
+											disabled={cargandoRecibo || !pagoValidadoFinanzas}
 											className="hidden"
 										/>
 									</label>
 									<button
 										type="button"
 										onClick={descargarRecibo}
-										disabled={!datosRecibo.nombrePagador || datosRecibo.montoPago + datosRecibo.montoPrograma === 0}
+										disabled={generandoRecibo || !datosRecibo.nombrePagador || datosRecibo.montoPago + datosRecibo.montoPrograma === 0}
 										className="flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#63162e] disabled:opacity-50 disabled:cursor-not-allowed"
 									>
 										<Download size={16} />
-										Descargar PDF
+										{generandoRecibo ? 'Generando...' : 'Descargar PDF'}
 									</button>
 								</div>
 							</div>

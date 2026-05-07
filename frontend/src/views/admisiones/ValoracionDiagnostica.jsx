@@ -14,13 +14,13 @@ const structuredAddressDefaults = {
   solicitanteDireccionMunicipioDelegacion: '',
   solicitanteDireccionCp: '',
   solicitanteDireccionCiudadEstado: '',
-  prospectoDireccionCalle: '',
-  prospectoDireccionNoExt: '',
-  prospectoDireccionNoInt: '',
-  prospectoDireccionColonia: '',
-  prospectoDireccionMunicipioDelegacion: '',
-  prospectoDireccionCp: '',
-  prospectoDireccionCiudadEstado: '',
+  pacienteDireccionCalle: '',
+  pacienteDireccionNoExt: '',
+  pacienteDireccionNoInt: '',
+  pacienteDireccionColonia: '',
+  pacienteDireccionMunicipioDelegacion: '',
+  pacienteDireccionCp: '',
+  pacienteDireccionCiudadEstado: '',
 };
 
 const formatStructuredAddress = (address) => {
@@ -37,9 +37,9 @@ const formatStructuredAddress = (address) => {
   return parts.join(', ');
 };
 
-const toLocalDateTimeValue = (date) => {
+const toLocalDateValue = (date) => {
   const pad = (value) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
 const isPastLocalDateTime = (value) => {
@@ -182,13 +182,13 @@ const mapIncomingStateToFormData = (incomingState = {}) => {
       cp: prospecto.direccionCp,
       ciudadEstado: prospecto.direccionCiudadEstado,
     }) ? `${prospecto.direccionCalle || ''} ${prospecto.direccionNoExt || ''}`.trim() : '',
-    prospectoDireccionCalle: prospecto.direccionCalle || '',
-    prospectoDireccionNoExt: prospecto.direccionNoExt || '',
-    prospectoDireccionNoInt: prospecto.direccionNoInt || '',
-    prospectoDireccionColonia: prospecto.direccionColonia || '',
-    prospectoDireccionMunicipioDelegacion: prospecto.direccionMunicipioDelegacion || '',
-    prospectoDireccionCp: prospecto.direccionCp || '',
-    prospectoDireccionCiudadEstado: prospecto.direccionCiudadEstado || '',
+    pacienteDireccionCalle: prospecto.direccionCalle || '',
+    pacienteDireccionNoExt: prospecto.direccionNoExt || '',
+    pacienteDireccionNoInt: prospecto.direccionNoInt || '',
+    pacienteDireccionColonia: prospecto.direccionColonia || '',
+    pacienteDireccionMunicipioDelegacion: prospecto.direccionMunicipioDelegacion || '',
+    pacienteDireccionCp: prospecto.direccionCp || '',
+    pacienteDireccionCiudadEstado: prospecto.direccionCiudadEstado || '',
     pacienteTelefonoCelular: prospecto.telefono || prospecto.telefonoContacto || '',
     dedicacionPaciente: prospecto.dedicacion || '',
     sustanciaConsumo: prospecto.sustanciaConsumo || '',
@@ -234,12 +234,12 @@ const requiredTextFields = {
     { name: 'hijosCount', label: 'Cuántos hijos tiene' },
     { name: 'escolaridadPaciente', label: 'Escolaridad' },
     { name: 'origenPaciente', label: 'Origen' },
-    { name: 'prospectoDireccionCalle', label: 'Calle del prospecto' },
-    { name: 'prospectoDireccionNoExt', label: 'No. Ext. del prospecto' },
-    { name: 'prospectoDireccionColonia', label: 'Colonia del prospecto' },
-    { name: 'prospectoDireccionMunicipioDelegacion', label: 'Mpio. o delegación del prospecto' },
-    { name: 'prospectoDireccionCp', label: 'C.P. del prospecto' },
-    { name: 'prospectoDireccionCiudadEstado', label: 'Ciudad o estado del prospecto' },
+    { name: 'pacienteDireccionCalle', label: 'Calle del prospecto' },
+    { name: 'pacienteDireccionNoExt', label: 'No. Ext. del prospecto' },
+    { name: 'pacienteDireccionColonia', label: 'Colonia del prospecto' },
+    { name: 'pacienteDireccionMunicipioDelegacion', label: 'Mpio. o delegación del prospecto' },
+    { name: 'pacienteDireccionCp', label: 'C.P. del prospecto' },
+    { name: 'pacienteDireccionCiudadEstado', label: 'Ciudad o estado del prospecto' },
     { name: 'pacienteTelefonoCelular', label: 'Teléfono de contacto del prospecto' },
     { name: 'dedicacionPaciente', label: 'Ocupación' },
     { name: 'sustanciaConsumo', label: 'Sustancia de consumo' },
@@ -352,7 +352,7 @@ const ValoracionDiagnostica = () => {
 
   const incomingState = useMemo(() => location.state || {}, [location.state]);
   const isEditMode = Boolean(incomingState.pacienteId);
-  const minFechaHoraProgramacion = toLocalDateTimeValue(new Date());
+  const minFechaHoraProgramacion = toLocalDateValue(new Date());
 
   const [formData, setFormData] = useState(() => ({
     ...structuredAddressDefaults,
@@ -510,21 +510,21 @@ const ValoracionDiagnostica = () => {
       hijos: formData.hijosCount ? Number(formData.hijosCount) : null,
       escolaridad: formData.escolaridadPaciente,
       origen: formData.origenPaciente,
-      direccionCalle: formData.prospectoDireccionCalle,
-      direccionNoExt: formData.prospectoDireccionNoExt,
-      direccionNoInt: formData.prospectoDireccionNoInt,
-      direccionColonia: formData.prospectoDireccionColonia,
-      direccionMunicipioDelegacion: formData.prospectoDireccionMunicipioDelegacion,
-      direccionCp: formData.prospectoDireccionCp,
-      direccionCiudadEstado: formData.prospectoDireccionCiudadEstado,
+      direccionCalle: formData.pacienteDireccionCalle,
+      direccionNoExt: formData.pacienteDireccionNoExt,
+      direccionNoInt: formData.pacienteDireccionNoInt,
+      direccionColonia: formData.pacienteDireccionColonia,
+      direccionMunicipioDelegacion: formData.pacienteDireccionMunicipioDelegacion,
+      direccionCp: formData.pacienteDireccionCp,
+      direccionCiudadEstado: formData.pacienteDireccionCiudadEstado,
       domicilio: formatStructuredAddress({
-        calle: formData.prospectoDireccionCalle,
-        noExt: formData.prospectoDireccionNoExt,
-        noInt: formData.prospectoDireccionNoInt,
-        colonia: formData.prospectoDireccionColonia,
-        municipioDelegacion: formData.prospectoDireccionMunicipioDelegacion,
-        cp: formData.prospectoDireccionCp,
-        ciudadEstado: formData.prospectoDireccionCiudadEstado,
+        calle: formData.pacienteDireccionCalle,
+        noExt: formData.pacienteDireccionNoExt,
+        noInt: formData.pacienteDireccionNoInt,
+        colonia: formData.pacienteDireccionColonia,
+        municipioDelegacion: formData.pacienteDireccionMunicipioDelegacion,
+        cp: formData.pacienteDireccionCp,
+        ciudadEstado: formData.pacienteDireccionCiudadEstado,
       }) || formData.domicilioPaciente,
       telefono: formData.pacienteTelefonoCelular,
       ocupacion: formData.dedicacionPaciente,
@@ -548,13 +548,15 @@ const ValoracionDiagnostica = () => {
       telefonoCasaSolicitante: formData.telefonoSolicitante,
       telefonoCelularSolicitante: formData.celularSolicitante,
       cuentaConTarjetaSolicitante: '',
-      direccionCallePaciente: formData.prospectoDireccionCalle,
-      direccionNoExtPaciente: formData.prospectoDireccionNoExt,
-      direccionNoIntPaciente: formData.prospectoDireccionNoInt,
-      direccionColoniaPaciente: formData.prospectoDireccionColonia,
-      direccionMunicipioDelegacionPaciente: formData.prospectoDireccionMunicipioDelegacion,
-      direccionCpPaciente: formData.prospectoDireccionCp,
-      direccionCiudadEstadoPaciente: formData.prospectoDireccionCiudadEstado,
+      domicilioParticular: formatStructuredAddress({
+        calle: formData.pacienteDireccionCalle,
+        noExt: formData.pacienteDireccionNoExt,
+        noInt: formData.pacienteDireccionNoInt,
+        colonia: formData.pacienteDireccionColonia,
+        municipioDelegacion: formData.pacienteDireccionMunicipioDelegacion,
+        cp: formData.pacienteDireccionCp,
+        ciudadEstado: formData.pacienteDireccionCiudadEstado,
+      }) || formData.domicilioPaciente,
       telefonoCasaPaciente: formData.pacienteTelefonoCelular,
       telefonoCelularPaciente: formData.pacienteTelefonoCelular,
     };
@@ -597,21 +599,21 @@ const ValoracionDiagnostica = () => {
       hijos: formData.hijosCount ? Number(formData.hijosCount) : null,
       escolaridad: formData.escolaridadPaciente,
       origen: formData.origenPaciente,
-      direccionCalle: formData.prospectoDireccionCalle,
-      direccionNoExt: formData.prospectoDireccionNoExt,
-      direccionNoInt: formData.prospectoDireccionNoInt,
-      direccionColonia: formData.prospectoDireccionColonia,
-      direccionMunicipioDelegacion: formData.prospectoDireccionMunicipioDelegacion,
-      direccionCp: formData.prospectoDireccionCp,
-      direccionCiudadEstado: formData.prospectoDireccionCiudadEstado,
+      direccionCalle: formData.pacienteDireccionCalle,
+      direccionNoExt: formData.pacienteDireccionNoExt,
+      direccionNoInt: formData.pacienteDireccionNoInt,
+      direccionColonia: formData.pacienteDireccionColonia,
+      direccionMunicipioDelegacion: formData.pacienteDireccionMunicipioDelegacion,
+      direccionCp: formData.pacienteDireccionCp,
+      direccionCiudadEstado: formData.pacienteDireccionCiudadEstado,
       domicilio: formatStructuredAddress({
-        calle: formData.prospectoDireccionCalle,
-        noExt: formData.prospectoDireccionNoExt,
-        noInt: formData.prospectoDireccionNoInt,
-        colonia: formData.prospectoDireccionColonia,
-        municipioDelegacion: formData.prospectoDireccionMunicipioDelegacion,
-        cp: formData.prospectoDireccionCp,
-        ciudadEstado: formData.prospectoDireccionCiudadEstado,
+        calle: formData.pacienteDireccionCalle,
+        noExt: formData.pacienteDireccionNoExt,
+        noInt: formData.pacienteDireccionNoInt,
+        colonia: formData.pacienteDireccionColonia,
+        municipioDelegacion: formData.pacienteDireccionMunicipioDelegacion,
+        cp: formData.pacienteDireccionCp,
+        ciudadEstado: formData.pacienteDireccionCiudadEstado,
       }) || formData.domicilioPaciente,
       telefono: formData.pacienteTelefonoCelular,
       ocupacion: formData.dedicacionPaciente,
@@ -1023,7 +1025,7 @@ const ValoracionDiagnostica = () => {
                 />
                 <AddressSection
                   title="Dirección actual"
-                  prefix="prospectoDireccion"
+                  prefix="pacienteDireccion"
                   values={formData}
                   onChange={handleInputChange}
                 />
