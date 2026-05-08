@@ -34,6 +34,12 @@ import ExpedientesNutricion from './views/nutriologo/ExpedientesNutricion';
 import ReportesNutricion from './views/nutriologo/ReportesNutricion';
 import VistaExpedienteNutricion from './views/nutriologo/VistaExpedienteNutricion';
 
+//Clínico
+import InicioJefeClinico from './views/clinico/InicioJefeClinico';
+import GestorDocumentosClinicos from './views/clinico/GestorDocumentosClinicos';
+import InicioTerapeuta from './views/clinico/InicioTerapeuta';
+import PacientesClinico from './views/clinico/PacientesClinico';
+
 // Recursos Humanos
 import AltaPersonal from './views/rh/AltaPersonal';
 import BajaPersonal from './views/rh/BajaPersonal';
@@ -85,6 +91,13 @@ const quickViews = [
   { label: 'Nutriólogo - Pacientes', path: '/nutriologo/pacientes' },
   { label: 'Nutriólogo  Evaluación', path: '/nutriologo/evaluacion/1' },
   { label: 'Nutri - Expedientes',    path: '/nutriologo/expedientes' },
+  { label: "Clínico - Inicio",       path: '/clinico/inicio-jefe-clinico' },
+  { label: "Clinico - Gestor",       path: '/clinico/gestor' },
+  { label: "Clínico - Pacientes",    path: '/clinico/pacientes' },
+  { label: "Clínico - Psicología",   path: '/clinico/psicologia/1' },
+  { label: "Clínico - Consejería",   path: '/clinico/consejeria/1' },
+  { label: "Clínico - Familia",      path: '/clinico/familia/1' },
+  { label: "Clínico - Terapeuta",    path: '/clinico/inicio-terapeuta' },
   { label: 'RH - Alta',              path: '/rh/alta-personal' },
   { label: 'RH - Baja',              path: '/rh/baja-personal' },
   { label: 'RH - Catálogo',          path: '/rh/catalogo-roles' },
@@ -200,6 +213,17 @@ function App() {
         <Route path="/nutriologo/expedientes"                  element={<PrivateRoute><ExpedientesNutricion /></PrivateRoute>} />
         <Route path="/nutriologo/reportes"                     element={<PrivateRoute><ReportesNutricion /></PrivateRoute>} />
         <Route path="/nutriologo/vista-expediente/:id"         element={<PrivateRoute><VistaExpedienteNutricion /></PrivateRoute>} />
+
+         {/* Clínico */}
+        <Route path="/clinico"                                element={<Navigate to="/clinico/inicio-jefe-clinico" replace />} />
+        <Route path="/clinico/inicio-jefe-clinico"            element={<PrivateRoute><InicioJefeClinico /></PrivateRoute>} />
+        <Route path="/clinico/pacientes"                      element={<PrivateRoute><PacientesClinico /></PrivateRoute>} />
+        <Route path="/clinico/inicio-terapeuta"               element={<PrivateRoute><InicioTerapeuta /></PrivateRoute>} />
+        <Route path="/clinico/psicologia/:id"                 element={<PrivateRoute><GestorDocumentosClinicos rolActivo="psicologia" /></PrivateRoute>} />
+        <Route path="/clinico/consejeria/:id"                 element={<PrivateRoute><GestorDocumentosClinicos rolActivo="consejeria" /></PrivateRoute>} />
+        <Route path="/clinico/familia/:id"                    element={<PrivateRoute><GestorDocumentosClinicos rolActivo="familia" /></PrivateRoute>} />
+        <Route path="/clinico/gestor"                         element={<PrivateRoute><GestorDocumentosClinicos rolActivo="general" /></PrivateRoute>} />
+
         {/* Recursos Humanos */}
         <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
         <Route path="/rh/baja-personal"                        element={<PrivateRoute><BajaPersonal /></PrivateRoute>} />
