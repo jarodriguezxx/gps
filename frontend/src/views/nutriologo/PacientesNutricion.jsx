@@ -1,0 +1,166 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Activity, Users, ClipboardList, FileBarChart, Apple, Search, CheckCircle2 } from 'lucide-react';
+import marakameLogo from '../../assets/marakame.jpeg';
+
+const navItems = [
+  { label: 'Inicio Nutrición',      icon: Activity,       key: 'inicio',      path: '/nutriologo/inicio' },
+  { label: 'Pacientes Activos',     icon: Users,          key: 'pacientes',   path: '/nutriologo/pacientes' },
+  { label: 'Expedientes Nutrición', icon: ClipboardList,  key: 'expedientes', path: '/nutriologo/expedientes' },
+  { label: 'Reportes',              icon: FileBarChart,   key: 'reportes',    path: '/nutriologo/reportes' },
+];
+
+const PacientesNutricion = () => {
+  const navigate = useNavigate();
+  const [activeNav, setActiveNav] = useState('pacientes');
+  const [pacientes, setPacientes] = useState([]);
+  const [busqueda, setBusqueda] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const cargarPacientes = async () => {
+      try {
+        const resPacientes = await fetch('http://localhost:4000/api/pacientes');
+        if (resPacientes.ok) {
+          const todos = await resPacientes.json();
+          // Filtramos solo los ingresados
+          const ingresados = todos.filter(p => (p.estadoPaciente || p.estado || '').toUpperCase() === 'INGRESADO');
+          
+          const pacientesConEstado = [];
+          
+          // Revisamos uno por uno si ya tienen evaluación nutricional
+          for (let p of ingresados) {
+            try {
+              const resNutri = await fetch(`http://localhost:4000/api/nutricion/${p.id}`);
+              const dataNutri = await resNutri.json();
+              
+              pacientesConEstado.push({
+                ...p,
+                // Si la BD devuelve un ID, significa que ya existe su expediente
+                yaEvaluado: !!(dataNutri && dataNutri.id) 
+              });
+            } catch (error) {
+              pacientesConEstado.push({ ...p, yaEvaluado: false });
+            }
+          }
+          
+          setPacientes(pacientesConEstado);
+        }
+      } catch (error) {
+        console.error("Error al cargar pacientes:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarPacientes();
+  }, []);
+
+  const handleNavClick = (item) => { setActiveNav(item.key); navigate(item.path); };
+  const filtrados = pacientes.filter(p => p.nombreCompleto?.toLowerCase().includes(busqueda.toLowerCase()));
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-900 relative">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
+        <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
+          <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+            <div className="flex items-center gap-3">
+              <img src={marakameLogo} alt="Logo Marakame" className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
+                <h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema de Gestión Clínica</h1>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo Nutrición Clínica</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 self-end md:self-auto">
+              <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center">
+                <Apple size={18} className="text-[#7E1D3B]" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Sesión activa</p>
+                <p className="font-semibold text-slate-700">Nutriología</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6">
+            <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+              {navItems.map(({ label, icon: Icon, key, path }) => (
+                <button key={key} onClick={() => handleNavClick({ key, path })}
+                  className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition flex items-center gap-2.5 text-left ${
+                    activeNav === key ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
+                  }`}>
+                  <Icon size={16} className="shrink-0" />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </aside>
+
+            <main className="space-y-5">
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                <div className="flex flex-col md:flex-row md:items-center justify-between p-5 border-b border-slate-200 gap-4 bg-slate-50/50">
+                  <div className="flex items-center gap-2">
+                    <div className="h-5 w-1 rounded-full bg-[#7E1D3B]" />
+                    <div>
+                      <h2 className="text-base font-black uppercase tracking-[0.2em] text-slate-700">Pacientes Activos en Piso</h2>
+                      <p className="text-xs text-slate-500 mt-0.5">Gestione las evaluaciones nutricionales del día</p>
+                    </div>
+                  </div>
+                  <div className="relative flex-1 md:max-w-md">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input type="text" placeholder="Buscar paciente..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="w-full pl-9 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30" />
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-black uppercase tracking-[0.15em] text-slate-500">
+                        <th className="px-6 py-4">Folio</th>
+                        <th className="px-6 py-4">Paciente</th>
+                        <th className="px-6 py-4 text-right">Acción Clínica</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {loading ? (
+                        <tr><td colSpan="3" className="py-12 text-center text-slate-500 text-sm">Cargando pacientes...</td></tr>
+                      ) : filtrados.length === 0 ? (
+                        <tr><td colSpan="3" className="py-12 text-center text-slate-500 text-sm">No hay pacientes activos.</td></tr>
+                      ) : (
+                        filtrados.map(p => (
+                          <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4"><span className="font-bold text-[#7E1D3B] text-sm">MK-{p.id.toString().padStart(4, '0')}</span></td>
+                            <td className="px-6 py-4">
+                              <p className="font-bold text-slate-800 text-sm">{p.nombreCompleto}</p>
+                              <p className="text-[11px] text-slate-500 mt-0.5">{p.edad ? `${p.edad} años` : 'Edad S/E'}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-end gap-2">
+                                {/* Lógica del botón: Cambia de estilo y ruta si ya está evaluado */}
+                                {p.yaEvaluado ? (
+                                  <button onClick={() => navigate(`/nutriologo/vista-expediente/${p.id}`)} className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 text-xs font-bold transition-colors flex items-center gap-1.5 border border-emerald-200 shadow-sm">
+                                    <CheckCircle2 size={14} /> Evaluación Hecha
+                                  </button>
+                                ) : (
+                                  <button onClick={() => navigate(`/nutriologo/evaluacion/${p.id}`)} className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 text-xs font-bold transition-colors flex items-center gap-1.5 border border-slate-200 shadow-sm">
+                                    <Apple size={14} /> Evaluar Paciente
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </main>
+          </div>
+        </header>
+      </div>
+    </div>
+  );
+};
+
+export default PacientesNutricion;

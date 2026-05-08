@@ -258,7 +258,7 @@ useEffect(() => {
                         <span className="text-sm font-bold text-slate-700 uppercase">Toma en Ayuno</span>
                       </label>
                     </div>
-                    <button onClick={confirmarPlanGlucosa} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-colors">Fijar Plan en BD</button>
+                    <button onClick={confirmarPlanGlucosa} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-colors">Asignar Plan</button>
                   </div>
                 ) : (
                   <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-5 flex items-start justify-between gap-4">
@@ -360,7 +360,7 @@ useEffect(() => {
                       <label className={labelClass}>Hora de la Toma *</label>
                       <input type="time" value={planTA.hora} onChange={e => setPlanTA({...planTA, hora: e.target.value})} className={inputClass} />
                     </div>
-                    <button onClick={confirmarPlanTA} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-colors">Fijar Plan en BD</button>
+                    <button onClick={confirmarPlanTA} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-colors">Asignar Plan</button>
                   </div>
                 ) : (
                   <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-5 flex items-start justify-between gap-4">
