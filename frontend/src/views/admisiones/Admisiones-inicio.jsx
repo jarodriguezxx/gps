@@ -3,33 +3,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ArrowRight, Bell, CalendarDays, CheckCircle2, Clock3, ChevronLeft, ChevronRight, Search, X, FileText, Briefcase, Phone } from 'lucide-react';
-import { AdminHeader, AdmisionesSidebar, AdminMainTitle, AdminErrorAlert, AdminSuccessAlert } from '../../components/layout/AdminLayout';
+import { AdminHeader, AdmisionesSidebar, AdminMainTitle } from '../../components/layout/AdminLayout';
 import AdmisionesInicioDashboard from '../../components/admisiones/AdmisionesInicioDashboard';
-
-const estadoClasses = {
-	Confirmada: 'bg-emerald-100 text-emerald-800',
-	'Llamada hecha': 'bg-emerald-100 text-emerald-800',
-	'No hubo respuesta': 'bg-rose-100 text-rose-800',
-	'Llegó': 'bg-emerald-100 text-emerald-800',
-	'llego': 'bg-emerald-100 text-emerald-800',
-	'No se presentó': 'bg-rose-100 text-rose-800',
-	'no se presento': 'bg-rose-100 text-rose-800',
-	'Llamó': 'bg-emerald-100 text-emerald-800',
-	'llamo': 'bg-emerald-100 text-emerald-800',
-	'No contestó llamada': 'bg-rose-100 text-rose-800',
-	'no contesto llamada': 'bg-rose-100 text-rose-800',
-	'En proceso': 'bg-amber-100 text-amber-900',
-	Pendiente: 'bg-slate-200 text-slate-700',
-	'Convertido a cita': 'bg-emerald-100 text-emerald-800',
-	'No contestó': 'bg-rose-100 text-rose-800',
-	'espera llamada': 'bg-amber-100 text-amber-900',
-	'espera visita': 'bg-sky-100 text-sky-800',
-	'posible ingreso': 'bg-emerald-100 text-emerald-800',
-	'Llamada programada por nosotros': 'bg-violet-100 text-violet-800',
-	'llamada programada por nosotros': 'bg-violet-100 text-violet-800',
-	'Llamada solicitada por el paciente': 'bg-cyan-100 text-cyan-800',
-	'llamada solicitada por el paciente': 'bg-cyan-100 text-cyan-800',
-};
+import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
+import { API_BASE } from '../../config/api';
 
 const diasSemanaCalendario = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
@@ -37,14 +14,26 @@ const padNumero = (valor) => String(valor).padStart(2, '0');
 
 const toInputDate = (date) => `${date.getFullYear()}-${padNumero(date.getMonth() + 1)}-${padNumero(date.getDate())}`;
 
-const formatAgendaDate = (value) => {
-	if (!value) return '--';
-	const date = new Date(`${value}T00:00:00`);
-	if (Number.isNaN(date.getTime())) return '--';
-	return date.toLocaleDateString('es-MX', { weekday: 'long', day: '2-digit', month: 'long' });
-};
-
 const todayDateString = toInputDate(new Date());
+const MINIMO_ANTICIPACION_CITA_MINUTOS = 60;
+
+const esHorarioPasadoParaHoy = (fecha, hora) => {
+	if (!fecha || !hora) {
+		return false;
+	}
+
+	if (fecha !== todayDateString) {
+		return false;
+	}
+
+	const fechaHoraSeleccionada = new Date(`${fecha}T${hora}:00`);
+	if (Number.isNaN(fechaHoraSeleccionada.getTime())) {
+		return false;
+	}
+
+	const limiteMinimo = Date.now() + (MINIMO_ANTICIPACION_CITA_MINUTOS * 60 * 1000);
+	return fechaHoraSeleccionada.getTime() < limiteMinimo;
+};
 
 
 const AdmisionesInicio = () => {
@@ -66,35 +55,17 @@ const AdmisionesInicio = () => {
 	const [agendaTipo, setAgendaTipo] = useState('Entrevista');
 	const [agendaMensaje, setAgendaMensaje] = useState('');
 	const [agendaMensajeTipo, setAgendaMensajeTipo] = useState('success');
-	const [accionMensaje, setAccionMensaje] = useState('');
-	const [accionMensajeTipo, setAccionMensajeTipo] = useState('success');
-	const [actualizandoSeguimientoId, setActualizandoSeguimientoId] = useState(null);
-	const [diagnosticoModalAbierto, setDiagnosticoModalAbierto] = useState(false);
-	const [citaDiagnosticoObjetivoId, setCitaDiagnosticoObjetivoId] = useState(null);
-	const [diagnosticoVisualTexto, setDiagnosticoVisualTexto] = useState('');
-	const [diagnosticoVisualError, setDiagnosticoVisualError] = useState('');
 	const [mesCalendario, setMesCalendario] = useState(() => {
 		const hoy = new Date();
 		return { year: hoy.getFullYear(), month: hoy.getMonth() };
 	});
 
 	const formatEstado = (estado = '') => estado.replaceAll('_', ' ').trim();
-	const estadoClass = (estado = '') => {
-		const normalizado = formatEstado(estado);
-		return estadoClasses[normalizado] || estadoClasses[normalizado.toLowerCase()] || 'bg-slate-200 text-slate-700';
-	};
 	const formatFecha = (fechaIso) => {
 		if (!fechaIso) return '--';
 		const date = new Date(fechaIso);
 		if (Number.isNaN(date.getTime())) return '--';
 		return date.toLocaleDateString('es-MX');
-	};
-
-	const formatHora = (fechaIso) => {
-		if (!fechaIso) return '--:--';
-		const date = new Date(fechaIso);
-		if (Number.isNaN(date.getTime())) return '--:--';
-		return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
 	};
 
 	const calendarioMesLabel = new Date(mesCalendario.year, mesCalendario.month, 1).toLocaleDateString('es-MX', {
@@ -122,10 +93,34 @@ const AdmisionesInicio = () => {
 		return cells;
 	}, [mesCalendario]);
 
-	const agendaResumen = useMemo(() => ({
-		total: citasHoy.length,
-		proxima: citasHoy[0] || null,
-	}), [citasHoy]);
+	const horariosAgenda = useMemo(() => {
+		const horas = [];
+		for (let h = 7; h <= 20; h += 1) {
+			horas.push(`${String(h).padStart(2, '0')}:00`);
+			horas.push(`${String(h).padStart(2, '0')}:30`);
+		}
+		return horas;
+	}, []);
+
+	const agendaHoraInvalida = useMemo(() => esHorarioPasadoParaHoy(agendaFecha, agendaHora), [agendaFecha, agendaHora]);
+	const agendaListaParaGuardar = Boolean(pacienteAgendaSeleccionado && agendaFecha && agendaHora && !agendaHoraInvalida);
+
+	const esHoraNoDisponible = (hora) => {
+		if (!agendaFecha) {
+			return true;
+		}
+
+		if (agendaFecha !== todayDateString) {
+			return false;
+		}
+
+		const fechaHora = new Date(`${agendaFecha}T${hora}:00`);
+		if (Number.isNaN(fechaHora.getTime())) {
+			return true;
+		}
+
+		return fechaHora.getTime() < Date.now();
+	};
 
 	const puedeIrMesAnterior = mesCalendario.year > new Date().getFullYear() || (mesCalendario.year === new Date().getFullYear() && mesCalendario.month > new Date().getMonth());
 
@@ -133,7 +128,7 @@ const AdmisionesInicio = () => {
 		try {
 			setLoadingTablas(true);
 			setErrorTablas('');
-			const response = await fetch('http://localhost:4000/api/seguimientos/tablas');
+			const response = await fetch(`${API_BASE}/seguimientos/tablas`);
 
 			if (!response.ok) {
 				const errorText = await response.text();
@@ -172,7 +167,7 @@ const AdmisionesInicio = () => {
 			try {
 				setCargandoPacientesAgenda(true);
 				setErrorPacientesAgenda('');
-				const response = await fetch(`http://localhost:4000/api/pacientes/busqueda?query=${encodeURIComponent(nombre)}`, {
+				const response = await fetch(`${API_BASE}/pacientes/busqueda?query=${encodeURIComponent(nombre)}`, {
 					signal: controller.signal,
 				});
 
@@ -243,7 +238,7 @@ const AdmisionesInicio = () => {
 
 			const estado = String(item?.estadoSeguimiento || item?.estadoAsistencia || '').toLowerCase();
 
-			if (estado.includes('no se presentó') || estado.includes('no contestó') || estado.includes('no hubo respuesta')) {
+			if (estado.includes('no se presentado') || estado.includes('no contestado') || estado.includes('no hubo respuesta')) {
 				return { etiqueta: 'Alta', clase: 'bg-rose-100 text-rose-800', orden: 0 };
 			}
 
@@ -264,7 +259,7 @@ const AdmisionesInicio = () => {
 		const obtenerSiguienteAccion = (item) => {
 			const estado = String(item?.estadoSeguimiento || item?.estadoAsistencia || '').toLowerCase();
 
-			if (estado.includes('no se presentó') || estado.includes('no contestó') || estado.includes('no hubo respuesta')) {
+			if (estado.includes('no se presentado') || estado.includes('no contestado') || estado.includes('no hubo respuesta')) {
 				return 'Reintentar contacto';
 			}
 
@@ -341,7 +336,18 @@ const AdmisionesInicio = () => {
 	const abrirAgenda = () => {
 		setAgendaMensaje('');
 		setAgendaMensajeTipo('success');
+		setBusquedaAgenda('');
+		setPacientesAgenda([]);
+		setPacienteAgendaSeleccionado(null);
+		setAgendaFecha(todayDateString);
+		setAgendaHora('09:00');
+		setAgendaTipo('Entrevista');
 		setAgendaAbierta(true);
+	};
+
+	const cerrarAgenda = () => {
+		setAgendaAbierta(false);
+		setMostrarAgendaResultados(false);
 	};
 
 	const seleccionarPacienteAgenda = (paciente) => {
@@ -367,6 +373,12 @@ const AdmisionesInicio = () => {
 			return;
 		}
 
+		if (agendaHoraInvalida) {
+			setAgendaMensaje('No puedes agendar una cita en un horario que ya pasó.');
+			setAgendaMensajeTipo('error');
+			return;
+		}
+
 		if (loadingTablas || errorTablas) {
 			setAgendaMensaje('No se puede validar llamada inicial en este momento. Revisa la conexión con el backend.');
 			setAgendaMensajeTipo('error');
@@ -381,7 +393,7 @@ const AdmisionesInicio = () => {
 
 		try {
 			const fechaHoraProgramada = `${agendaFecha}T${agendaHora}:00`;
-			const response = await fetch('http://localhost:4000/api/seguimientos/citas', {
+			const response = await fetch(`${API_BASE}/seguimientos/citas`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -408,6 +420,28 @@ const AdmisionesInicio = () => {
 			setAgendaMensaje('No se pudo guardar la cita en BD. Revisa backend o conexión.');
 			setAgendaMensajeTipo('error');
 		}
+	};
+
+	const seleccionarDiaAgenda = (value) => {
+		if (value < todayDateString) {
+			return;
+		}
+
+		setAgendaFecha(value);
+
+		if (value === todayDateString && esHorarioPasadoParaHoy(value, agendaHora)) {
+			const primeraHoraDisponible = horariosAgenda.find((hora) => !esHoraNoDisponible(hora));
+			if (primeraHoraDisponible) {
+				setAgendaHora(primeraHoraDisponible);
+			}
+		}
+	};
+
+	const seleccionarHoraAgenda = (hora) => {
+		if (esHoraNoDisponible(hora)) {
+			return;
+		}
+		setAgendaHora(hora);
 	};
 
 	const handleAgendaKeyDown = (event) => {
@@ -443,152 +477,6 @@ const AdmisionesInicio = () => {
 		}
 	};
 
-	const abrirModalDiagnostico = (citaId) => {
-		const cita = citasHoy.find((item) => item.id === citaId);
-		setCitaDiagnosticoObjetivoId(citaId);
-		setDiagnosticoVisualTexto(cita?.diagnosticoVisual || '');
-		setDiagnosticoVisualError('');
-		setDiagnosticoModalAbierto(true);
-	};
-
-	const cerrarModalDiagnostico = () => {
-		setDiagnosticoModalAbierto(false);
-		setCitaDiagnosticoObjetivoId(null);
-		setDiagnosticoVisualTexto('');
-		setDiagnosticoVisualError('');
-	};
-
-	const confirmarLlegadaConDiagnostico = async () => {
-		if (!String(diagnosticoVisualTexto || '').trim()) {
-			setDiagnosticoVisualError('Captura el diagnóstico visual para registrar llegada.');
-			return;
-		}
-
-		try {
-			const response = await fetch(`http://localhost:4000/api/seguimientos/${citaDiagnosticoObjetivoId}/asistencia`, {
-				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					estadoAsistencia: 'Llegó',
-					diagnosticoVisual: diagnosticoVisualTexto.trim(),
-				}),
-			});
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(errorText || 'No se pudo registrar la llegada.');
-			}
-
-			await cargarTablas();
-			cerrarModalDiagnostico();
-		} catch (error) {
-			console.error('Error al registrar llegada con diagnóstico visual:', error);
-			setDiagnosticoVisualError('No se pudo registrar la llegada. Revisa backend o conexión.');
-		}
-	};
-
-	const marcarNoPresentoCita = async (citaId) => {
-		try {
-			const response = await fetch(`http://localhost:4000/api/seguimientos/${citaId}/asistencia`, {
-				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					estadoAsistencia: 'No se presentó',
-					diagnosticoVisual: '',
-				}),
-			});
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(errorText || 'No se pudo registrar inasistencia.');
-			}
-
-			await cargarTablas();
-		} catch (error) {
-			console.error('Error al registrar no se presentó:', error);
-			setAccionMensaje('No se pudo actualizar asistencia de la cita.');
-			setAccionMensajeTipo('error');
-		}
-	};
-
-	const actualizarEstadoSeguimiento = async (id, nuevoEstado, tipoTabla) => {
-		if (actualizandoSeguimientoId) {
-			return;
-		}
-
-		try {
-			setActualizandoSeguimientoId(id);
-			setAccionMensaje('');
-			setAccionMensajeTipo('success');
-
-			const response = await fetch(`http://localhost:4000/api/seguimientos/${id}/estado`, {
-				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ estadoSeguimiento: nuevoEstado }),
-			});
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(errorText || 'No se pudo actualizar el estado.');
-			}
-
-			if (tipoTabla === 'citas') {
-				setCitasHoy((prev) => prev.map((item) => (item.id === id ? { ...item, estadoSeguimiento: nuevoEstado } : item)));
-			} else {
-				setSeguimiento((prev) => prev.map((item) => (item.id === id ? { ...item, estadoSeguimiento: nuevoEstado } : item)));
-			}
-
-			setAccionMensaje(`Estado actualizado: ${nuevoEstado}.`);
-			setAccionMensajeTipo('success');
-		} catch (error) {
-			console.error('Error al actualizar estado de seguimiento:', error);
-			setAccionMensaje('No se pudo actualizar el estado. Revisa backend o conexión.');
-			setAccionMensajeTipo('error');
-		} finally {
-			setActualizandoSeguimientoId(null);
-		}
-	};
-
-	const obtenerOrigenLlamada = (item) => {
-		const origenExplicito = String(item?.origenLlamada || '').toUpperCase();
-		if (origenExplicito === 'PROSPECTO' || origenExplicito === 'NOSOTROS') {
-			return origenExplicito;
-		}
-
-		const estado = String(item?.estadoSeguimiento || '').toLowerCase();
-		if (estado.includes('solicitada por el prospecto') || estado.includes('solicitada por el paciente')) {
-			return 'PROSPECTO';
-		}
-
-		if (estado.includes('programada por nosotros')) {
-			return 'NOSOTROS';
-		}
-
-		return 'NOSOTROS';
-	};
-
-	const obtenerAccionesLlamada = (item) => {
-		const origen = obtenerOrigenLlamada(item);
-
-		if (origen === 'PROSPECTO') {
-			return [
-				{ label: 'Llamó', estado: 'Llamó', clase: 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' },
-				{ label: 'No hubo respuesta', estado: 'No hubo respuesta', clase: 'border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100' },
-			];
-		}
-
-		return [
-			{ label: 'Llamada hecha', estado: 'Llamada hecha', clase: 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' },
-			{ label: 'No contestó', estado: 'No contestó', clase: 'border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100' },
-		];
-	};
-
 	return (
 		<div className="min-h-screen bg-slate-100 text-slate-900">
 			<div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
@@ -619,25 +507,31 @@ const AdmisionesInicio = () => {
 				</main>
 
 				{agendaAbierta ? (
-					<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-						<div className="flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.35)]">
+					<div className="fixed inset-0 z-50 flex animate-in fade-in items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm duration-200">
+						<div className="flex max-h-[92vh] w-full max-w-5xl animate-in zoom-in-95 fade-in flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.35)] duration-200">
 							<div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 md:px-6">
 								<div>
 									<p className="text-xs font-bold uppercase tracking-[0.3em] text-[#7E1D3B]">Agenda de admisiones</p>
-									<h3 className="text-2xl font-black text-slate-900 md:text-3xl">Programar cita </h3>
-									<p className="mt-1 text-sm text-slate-500">Busca al paciente y selecciona fecha y hora para programar la cita.</p>
+									<h3 className="text-2xl font-black text-slate-900 md:text-3xl">Programar cita</h3>
+									<p className="mt-1 text-sm text-slate-500">Selecciona paciente, fecha y horario disponible.</p>
 								</div>
-								<button onClick={() => setAgendaAbierta(false)} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-[#7E1D3B] hover:text-[#7E1D3B]">
+								<button onClick={cerrarAgenda} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-[#7E1D3B] hover:text-[#7E1D3B]">
 									<X size={20} />
 								</button>
 							</div>
 
-							<div className="grid flex-1 gap-5 overflow-y-auto px-5 py-5 md:px-6 lg:grid-cols-[1.05fr_1.6fr]">
-								<div className="space-y-4">
-									<div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
+							<div className="grid flex-1 gap-4 overflow-y-auto px-5 py-5 md:grid-cols-[320px_1fr] md:px-7">
+								<section className="space-y-4 rounded-[32px] border border-slate-200 bg-slate-50 p-4">
+									<AdmisionesToast
+										message={agendaMensaje}
+										variant={agendaMensajeTipo}
+										onClose={() => setAgendaMensaje('')}
+										title={agendaMensajeTipo === 'success' ? 'Agenda confirmada' : 'Aviso de agenda'}
+									/>
+									<div>
 										<p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Paciente</p>
 										<div className="relative mt-3">
-											<Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+											<Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
 											<input
 												type="text"
 												value={busquedaAgenda}
@@ -648,8 +542,8 @@ const AdmisionesInicio = () => {
 														setMostrarAgendaResultados(true);
 													}
 												}}
-												placeholder="Buscar nombre del paciente..."
-												className="w-full rounded-2xl border border-slate-200 bg-white py-4 pl-11 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+												placeholder="Buscar nombre..."
+												className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
 											/>
 											{mostrarAgendaResultados && busquedaAgenda.trim().length >= 2 ? (
 												<div className="absolute left-0 right-0 z-10 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.14)]">
@@ -681,168 +575,135 @@ const AdmisionesInicio = () => {
 												</div>
 											) : null}
 										</div>
-
-										<div className="rounded-[28px] border border-slate-200 bg-white p-4">
-											<p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Paciente seleccionado</p>
-											<div className="mt-3 rounded-2xl bg-slate-50 p-4">
-												{pacienteAgendaSeleccionado ? (
-													<>
-														<p className="text-xl font-black text-slate-900">{pacienteAgendaSeleccionado.nombreCompleto}</p>
-														<p className="mt-1 text-sm text-slate-500">{pacienteAgendaSeleccionado.solicitante?.nombre || 'Paciente vinculado a la llamada inicial'}</p>
-														<div className="mt-4 grid gap-2 text-sm text-slate-600">
-															<div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2">
-																<CalendarDays size={16} className="text-[#7E1D3B]" />
-																Llamada inicial previa confirmada
-															</div>
-															<div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2">
-																<Clock3 size={16} className="text-[#7E1D3B]" />
-																Listo para programar entrevista
-															</div>
-														</div>
-													</>
-												) : (
-													<p className="text-sm text-slate-500">Selecciona un paciente de la búsqueda.</p>
-												)}
-											</div>
-										</div>
 									</div>
-								</div>
 
-								<div className="space-y-4 rounded-[28px] border border-slate-200 bg-slate-50 p-4">
+									<div className="rounded-2xl border border-slate-200 bg-white p-4">
+										<p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Paciente seleccionado</p>
+										{pacienteAgendaSeleccionado ? (
+											<div className="mt-3 space-y-1">
+												<p className="text-base font-bold text-slate-900">{pacienteAgendaSeleccionado.nombreCompleto}</p>
+												<p className="text-sm text-slate-500">Solicitante: {pacienteAgendaSeleccionado.solicitante?.nombre || 'Sin nombre'}</p>
+												<p className="text-xs text-slate-400">Tel. {pacienteAgendaSeleccionado.telefonoContacto || pacienteAgendaSeleccionado.solicitante?.telefono || '--'}</p>
+											</div>
+										) : (
+											<p className="mt-3 text-sm text-slate-500">Selecciona un paciente de la búsqueda.</p>
+										)}
+									</div>
+
+									<div className="rounded-2xl border border-slate-200 bg-white p-4">
+										<p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Tipo de cita</p>
+										<select value={agendaTipo} onChange={(event) => setAgendaTipo(event.target.value)} className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15">
+											<option>Entrevista</option>
+											<option>Visita al instituto</option>
+											<option>post-tratamiento</option>
+											<option>familiar</option>
+											<option>Valoración inicial</option>
+										</select>
+									</div>
+								</section>
+
+								<section className="space-y-4 rounded-[32px] border border-slate-200 bg-white p-4">
 									<div className="flex flex-wrap items-center justify-between gap-3">
 										<div>
 											<p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Calendario</p>
-											<h4 className="text-2xl font-black capitalize text-slate-900">{calendarioMesLabel}</h4>
+											<h4 className="text-lg font-black capitalize text-slate-900">{calendarioMesLabel}</h4>
 										</div>
 										<div className="flex gap-2">
 											<button
+												type="button"
 												onClick={() => cambiarMes(-1)}
 												disabled={!puedeIrMesAnterior}
 												className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-[#7E1D3B] hover:text-[#7E1D3B] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:text-slate-600"
 											>
 												<ChevronLeft size={18} />
 											</button>
-											<button onClick={() => cambiarMes(1)} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-[#7E1D3B] hover:text-[#7E1D3B]"><ChevronRight size={18} /></button>
+											<button type="button" onClick={() => cambiarMes(1)} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-[#7E1D3B] hover:text-[#7E1D3B]"><ChevronRight size={18} /></button>
 										</div>
 									</div>
 
-									<div className="grid grid-cols-7 gap-2 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
-										{diasSemanaCalendario.map((dia) => (
-											<div key={dia} className="py-2">{dia}</div>
-										))}
-									</div>
-
 									<div className="grid grid-cols-7 gap-2">
+										{diasSemanaCalendario.map((dia) => (
+											<div key={dia} className="py-1 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{dia}</div>
+										))}
 										{celdasCalendario.map((celda, index) => {
 											if (!celda) {
-												return <div key={`empty-${index}`} className="h-20 rounded-2xl bg-white/55" />;
+												return <div key={`empty-${index}`} className="h-[62px]" />;
 											}
 
 											const activa = agendaFecha === celda.value;
-													const esFechaAnterior = celda.value < todayDateString;
+											const esFechaAnterior = celda.value < todayDateString;
+											const esHoy = celda.value === todayDateString;
+											const baseClass = 'h-[62px] rounded-2xl border px-2 py-2 text-left transition';
+											const className = esFechaAnterior
+												? `${baseClass} cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400`
+												: activa
+													? `${baseClass} border-[#7E1D3B] bg-[#7E1D3B] text-white shadow-sm`
+													: `${baseClass} border-slate-200 bg-slate-50 text-slate-800 hover:border-[#7E1D3B]/50 hover:bg-rose-50`;
 
 											return (
 												<button
 													key={celda.value}
 													type="button"
-														onClick={() => {
-															if (!esFechaAnterior) {
-																setAgendaFecha(celda.value);
-															}
-														}}
-														disabled={esFechaAnterior}
-														className={`flex h-20 flex-col justify-between rounded-2xl border p-3 text-left transition ${activa ? 'border-[#7E1D3B] bg-[#7E1D3B] text-white shadow-lg' : esFechaAnterior ? 'cursor-not-allowed border-dashed border-slate-200 bg-slate-100 text-slate-400' : 'border-slate-200 bg-white text-slate-700 hover:border-[#7E1D3B]/30 hover:bg-[#7E1D3B]/5'}`}
+													onClick={() => seleccionarDiaAgenda(celda.value)}
+													disabled={esFechaAnterior}
+													className={className}
 												>
-													<span className="text-sm font-black">{celda.day}</span>
-													<span className="text-[11px] uppercase tracking-[0.16em] opacity-80">{activa ? 'Seleccionado' : esFechaAnterior ? 'Pasada' : 'Disponible'}</span>
+													<div className="text-lg font-black">{celda.day}</div>
+													{esFechaAnterior ? (
+														<div className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em]">PASADA</div>
+													) : esHoy ? (
+														<div className={`mt-1 text-[10px] font-bold uppercase tracking-[0.2em] ${activa ? 'text-white/85' : 'text-[#7E1D3B]'}`}>
+															HOY
+														</div>
+													) : null}
 												</button>
 											);
 										})}
 									</div>
 
-									<div className="grid gap-3 md:grid-cols-2">
-										<label className="block space-y-2">
-											<span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Fecha de cita</span>
-											<input type="date" min={todayDateString} value={agendaFecha} onChange={(event) => setAgendaFecha(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
-										</label>
-										<label className="block space-y-2">
-											<span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Hora</span>
-											<input type="time" value={agendaHora} onChange={(event) => setAgendaHora(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15" />
-										</label>
-									</div>
-
-									<label className="block space-y-2">
-										<span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Tipo de cita</span>
-										<select value={agendaTipo} onChange={(event) => setAgendaTipo(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15">
-											<option>Entrevista</option>
-											<option>Visita al instituto</option>
-											<option>post-tratamiento</option>
-											<option>familiar</option>
-
-											<option>Valoración inicial</option>
-										</select>
-									</label>
-
-								</div>
+									{agendaFecha ? (
+										<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+											<div className="flex items-center justify-between gap-3">
+												<p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Horario disponible</p>
+												<p className="text-sm font-semibold text-slate-700">{new Date(`${agendaFecha}T00:00:00`).toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' })}</p>
+											</div>
+											<div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+												{horariosAgenda.map((hora) => {
+													const bloqueada = esHoraNoDisponible(hora);
+													const activa = agendaHora === hora;
+													return (
+														<button
+															key={`inicio-agenda-hora-${hora}`}
+															type="button"
+															disabled={bloqueada}
+															onClick={() => seleccionarHoraAgenda(hora)}
+															className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+																bloqueada
+																	? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+																	: activa
+																		? 'border-[#7E1D3B] bg-[#7E1D3B] text-white'
+																		: 'border-slate-200 bg-white text-slate-700 hover:border-[#7E1D3B]/40 hover:bg-rose-50'
+															}`}
+														>
+															{hora}
+														</button>
+													);
+												})}
+											</div>
+											{agendaHoraInvalida ? <p className="mt-3 text-xs font-medium text-rose-600">No puedes agendar una cita en un horario que ya pasó</p> : null}
+										</div>
+									) : null}
+								</section>
 							</div>
 
-							<div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200 px-5 py-4 md:px-6">
-								<div className="text-sm text-slate-500">
-									{agendaMensaje ? (
-										<span className={`rounded-full px-3 py-2 ${agendaMensajeTipo === 'error' ? 'bg-rose-50 text-rose-800' : 'bg-emerald-50 text-emerald-800'}`}>
-											{agendaMensaje}
-										</span>
-									) : <span></span>}
-								</div>
-								<div className="flex gap-2">
-									<button type="button" onClick={() => setAgendaAbierta(false)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Cancelar</button>
-									<button type="button" onClick={guardarAgenda} className="rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#63162e]">Guardar cita</button>
-								</div>
-							</div>
-						</div>
-					</div>
-				) : null}
-
-				{diagnosticoModalAbierto ? (
-					<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-						<div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.35)]">
-							<div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 md:px-6">
-								<div>
-									<p className="text-xs font-bold uppercase tracking-[0.3em] text-[#7E1D3B]">Control de llegada</p>
-									<h3 className="text-xl font-black text-slate-900">Registrar llegada con diagnóstico visual</h3>
-									<p className="mt-1 text-sm text-slate-500">Captura este dato al momento de confirmar que el paciente llegó.</p>
-								</div>
-								<button onClick={cerrarModalDiagnostico} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-[#7E1D3B] hover:text-[#7E1D3B]">
-									<X size={20} />
-								</button>
-							</div>
-							<div className="px-5 py-5 md:px-6">
-								<label className="block space-y-2">
-									<span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Diagnóstico visual</span>
-									<textarea
-										value={diagnosticoVisualTexto}
-										onChange={(event) => {
-											setDiagnosticoVisualTexto(event.target.value);
-											if (diagnosticoVisualError) {
-												setDiagnosticoVisualError('');
-											}
-										}}
-										rows={6}
-										className="w-full rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-										placeholder="Describe observaciones visuales relevantes al momento de llegada..."
-									/>
-								</label>
-								{diagnosticoVisualError ? (
-									<p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{diagnosticoVisualError}</p>
-								) : null}
-							</div>
-							<div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4 md:px-6">
-								<button type="button" onClick={cerrarModalDiagnostico} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Cancelar</button>
-								<button type="button" onClick={confirmarLlegadaConDiagnostico} className="rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#63162e]">Confirmar llegada</button>
+							<div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4 md:px-7">
+								<button type="button" onClick={cerrarAgenda} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancelar</button>
+								<button type="button" onClick={guardarAgenda} disabled={!agendaListaParaGuardar} className="rounded-2xl bg-[#7E1D3B] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#63162e] disabled:cursor-not-allowed disabled:opacity-60">Guardar cita</button>
 							</div>
 						</div>
 					</div>
 				) : null}
+
 			</div>
 		</div>
 	);

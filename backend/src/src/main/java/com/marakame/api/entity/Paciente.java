@@ -1,16 +1,17 @@
 package com.marakame.api.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "pacientes")
@@ -98,6 +99,18 @@ public class Paciente {
 
     @Column(name = "fecha_ingreso")
     private LocalDateTime fechaIngreso;
+
+    @Column(name = "pago_validado")
+    private Boolean pagoValidado = false;
+
+    @Column(name = "fecha_validacion_pago")
+    private LocalDateTime fechaValidacion;
+
+    @Column(name = "folio_recibo")
+    private String folioRecibo;
+
+    @Column(name = "fecha_registro_recibo")
+    private LocalDateTime fechaRegistroRecibo;
 
     @ManyToOne
     @JoinColumn(name = "solicitante_id")
@@ -325,5 +338,37 @@ public class Paciente {
 
     public void setFechaIngreso(LocalDateTime fechaIngreso) {
         this.fechaIngreso = fechaIngreso;
+    }
+
+    public Boolean getPagoValidado() {
+        return pagoValidado;
+    }
+
+    public void setPagoValidado(Boolean pagoValidado) {
+        this.pagoValidado = pagoValidado;
+    }
+
+    public LocalDateTime getFechaValidacion() {
+        return fechaValidacion;
+    }
+
+    public void setFechaValidacion(LocalDateTime fechaValidacion) {
+        this.fechaValidacion = fechaValidacion;
+    }
+
+    public String getFolioRecibo() {
+        return folioRecibo;
+    }
+
+    public void setFolioRecibo(String folioRecibo) {
+        this.folioRecibo = folioRecibo;
+    }
+
+    public LocalDateTime getFechaRegistroRecibo() {
+        return fechaRegistroRecibo;
+    }
+
+    public void setFechaRegistroRecibo(LocalDateTime fechaRegistroRecibo) {
+        this.fechaRegistroRecibo = fechaRegistroRecibo;
     }
 }
