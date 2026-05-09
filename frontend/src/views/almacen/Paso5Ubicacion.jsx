@@ -1,30 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Search, PackageSearch, Layers, CheckCircle2, Loader2, Archive } from 'lucide-react';
+import { MapPin, Archive, Stethoscope, Search, CheckCircle2, ArrowRight, Package, AlertCircle, Snowflake, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const Paso5Ubicacion = ({ setActiveTab }) => {
+const Paso5Ubicacion = () => {
   const [inventario, setInventario] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [guardando, setGuardando] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [busqueda, setBusqueda] = useState('');
   
-  const [filtro, setFiltro] = useState('');
-  const [articuloSeleccionado, setArticuloSeleccionado] = useState(null);
-  
-  // VARIABLES ACTUALIZADAS a los nombres de la nueva base de datos
-  const [zonaAlmacen, setZonaAlmacen] = useState('');
+  // Estados para la asignación
+  const [itemSeleccionado, setItemSeleccionado] = useState(null);
+  const [tipoAlmacen, setTipoAlmacen] = useState('General'); 
+  const [zona, setZona] = useState('');
   const [estante, setEstante] = useState('');
+  const [guardando, setGuardando] = useState(false);
+
+  // NUEVO: Estados para la paginación (6 items por página)
+  const [paginaActual, setPaginaActual] = useState(1);
+  const itemsPorPagina = 6;
+
+  // Opciones dinámicas según el almacén
+  const opcionesZonaGeneral = ['Pasillo A', 'Pasillo B', 'Pasillo C', 'Zona de Tarimas', 'Cuarto de Limpieza'];
+  const opcionesZonaMedica = ['Anaquel Principal', 'Red de Frío (Refrigerador)', 'Gaveta Controlados', 'Vitrina Curación'];
 
   const cargarInventario = async () => {
     try {
-      setCargando(true);
-      const response = await fetch('http://localhost:4000/api/almacen/inventario');
-      if (response.ok) {
-        const data = await response.json();
+      const res = await fetch('http://localhost:4000/api/almacen/inventario');
+      if (res.ok) {
+        const data = await res.json();
         setInventario(data);
       }
-    } catch (error) {
-      console.error("Error al cargar inventario:", error);
+    } catch (e) {
+      console.error("Error al cargar inventario:", e);
     } finally {
-      setCargando(false);
+      setLoading(false);
     }
   };
 
@@ -32,206 +39,271 @@ const Paso5Ubicacion = ({ setActiveTab }) => {
     cargarInventario();
   }, []);
 
-  const seleccionarArticulo = (item) => {
-    setArticuloSeleccionado(item);
-    setZonaAlmacen(item.zonaAlmacen || '');
-    setEstante(item.estante || '');
+  // 1. Primero filtramos todos los items según la búsqueda
+  const itemsFiltrados = inventario.filter(item => {
+    const texto = `${item.nombreArticulo} ${item.categoria}`.toLowerCase();
+    return texto.includes(busqueda.toLowerCase());
+  }).sort((a, b) => {
+    if (!a.zonaAlmacen && b.zonaAlmacen) return -1;
+    if (a.zonaAlmacen && !b.zonaAlmacen) return 1;
+    return 0;
+  });
+
+  // 2. Calculamos la paginación sobre los items filtrados
+  const totalPaginas = Math.ceil(itemsFiltrados.length / itemsPorPagina);
+  const indiceUltimoItem = paginaActual * itemsPorPagina;
+  const indicePrimerItem = indiceUltimoItem - itemsPorPagina;
+  const itemsPaginados = itemsFiltrados.slice(indicePrimerItem, indiceUltimoItem); // <--- Aquí cortamos a 6
+
+  // Manejador de búsqueda para regresar siempre a la página 1 al buscar
+  const manejarBusqueda = (e) => {
+    setBusqueda(e.target.value);
+    setPaginaActual(1);
   };
 
-  const guardarUbicacion = async (e) => {
-    e.preventDefault();
-    if (!zonaAlmacen || !estante) {
-      alert("Debes seleccionar una Zona y un Estante.");
-      return;
+  const seleccionarItem = (item) => {
+    setItemSeleccionado(item);
+    if (item.zonaAlmacen) {
+      if (item.zonaAlmacen.includes('Médico')) setTipoAlmacen('Medico');
+      else setTipoAlmacen('General');
+      
+      setZona(item.zonaAlmacen.replace('Médico - ', '').replace('General - ', ''));
+      setEstante(item.estante || '');
+    } else {
+      if (['Medicamentos', 'Material de Curación', 'Reactivos'].includes(item.categoria)) {
+        setTipoAlmacen('Medico');
+      } else {
+        setTipoAlmacen('General');
+      }
+      setZona('');
+      setEstante('');
     }
+  };
 
+  const guardarUbicacion = async () => {
+    if (!zona || !estante) return alert('Por favor selecciona una zona y un estante/nivel.');
+    
     setGuardando(true);
+    const zonaFormateada = `${tipoAlmacen === 'Medico' ? 'Médico' : 'General'} - ${zona}`;
+
     try {
-      // Enviamos el objeto con los nombres exactos que espera Java
-      const response = await fetch(`http://localhost:4000/api/almacen/inventario/${articuloSeleccionado.id}/ubicacion`, {
+      const res = await fetch(`http://localhost:4000/api/almacen/inventario/${itemSeleccionado.id}/ubicacion`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zonaAlmacen, estante })
+        body: JSON.stringify({ 
+          zonaAlmacen: zonaFormateada,
+          estante: estante
+        })
       });
 
-      if (!response.ok) throw new Error("Error al guardar la ubicación");
+      if (!res.ok) throw new Error('Error al guardar la ubicación');
 
-      // Actualizamos la lista visual al instante
-      setInventario(inventario.map(item => 
-        item.id === articuloSeleccionado.id ? { ...item, zonaAlmacen, estante } : item
-      ));
+      const nuevosItems = inventario.map(item => 
+        item.id === itemSeleccionado.id 
+          ? { ...item, zonaAlmacen: zonaFormateada, estante: estante } 
+          : item
+      );
+      setInventario(nuevosItems);
+      setItemSeleccionado(null);
       
-      alert(`¡Ubicación guardada! El insumo ahora está en la Zona ${zonaAlmacen}, Estante ${estante}.`);
-      setArticuloSeleccionado(null);
-      setZonaAlmacen('');
-      setEstante('');
-
     } catch (error) {
       console.error(error);
-      alert("No se pudo guardar. Verifica la conexión.");
+      alert('Hubo un problema de conexión al asignar la ubicación.');
     } finally {
       setGuardando(false);
     }
   };
 
-  // BUSCADOR ACTUALIZADO: Busca por nombreArticulo
-  const inventarioFiltrado = inventario.filter(item => 
-    item.nombreArticulo?.toLowerCase().includes(filtro.toLowerCase())
-  );
-
   return (
-    <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
-      <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-[#7E1D3B]" />
-          Paso 5: Ubicación Física en Almacén
-        </h2>
+    <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200 animate-in fade-in duration-300">
+      
+      {/* CABECERA */}
+      <div className="p-6 border-b border-slate-100 bg-slate-50 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div>
+          <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+            <MapPin className="text-[#7E1D3B]" /> Asignación de Ubicaciones
+          </h2>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+            Organiza los insumos en el almacén físico
+          </p>
+        </div>
+        
+        <div className="relative w-72">
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <input 
+            type="text" placeholder="Buscar insumo para ubicar..."
+            className="w-full pl-10 pr-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#7E1D3B]/40 focus:ring-4 focus:ring-[#7E1D3B]/10 transition-all"
+            value={busqueda} onChange={manejarBusqueda}
+          />
+        </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-slate-50/50 min-h-[500px]">
         
-        {/* COLUMNA IZQUIERDA: Lista de Insumos */}
-        <div className="w-80 border-r border-slate-100 flex flex-col bg-slate-50/50">
-          <div className="p-4 pb-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-              <input 
-                type="text" placeholder="Buscar insumo a ubicar..."
-                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-[#7E1D3B] transition-colors"
-                value={filtro} onChange={(e) => setFiltro(e.target.value)}
-              />
-            </div>
+        {/* COLUMNA IZQUIERDA: LISTA DE ITEMS */}
+        <div className="w-full md:w-1/2 border-r border-slate-200 flex flex-col bg-white">
+          <div className="p-4 border-b border-slate-100 bg-white/80 backdrop-blur z-10 flex justify-between items-center">
+             <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+               Inventario Físico ({itemsFiltrados.length})
+             </span>
+             <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-200 uppercase flex items-center gap-1">
+               <AlertCircle size={10}/> Prioridad: Sin Asignar
+             </span>
           </div>
-
-          <div className="flex-1 overflow-y-auto p-4 pt-2 space-y-2">
-            {cargando ? (
-              <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-400" /></div>
-            ) : (
-              inventarioFiltrado.map((item) => {
-                // ACTUALIZADO: Comprueba si falta la zona o el estante
-                const necesitaUbicacion = !item.zonaAlmacen || !item.estante;
+          
+          {/* AQUÍ RENDERIZAMOS SOLO LOS 6 ITEMS PAGINADOS */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+            {loading ? (
+              <div className="text-center py-10 text-slate-400 font-bold">Cargando...</div>
+            ) : itemsPaginados.map(item => (
+              <button 
+                key={item.id} 
+                onClick={() => seleccionarItem(item)}
+                className={`w-full text-left p-4 rounded-xl border-2 transition-all flex justify-between items-center group ${
+                  itemSeleccionado?.id === item.id 
+                    ? 'border-[#7E1D3B] bg-[#7E1D3B]/5' 
+                    : 'border-slate-100 bg-white hover:border-slate-300'
+                }`}
+              >
+                <div className="pr-4">
+                  <p className="text-sm font-black text-slate-800 line-clamp-1">{item.nombreArticulo}</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase mt-1 flex items-center gap-1.5">
+                    <Package size={12}/> {item.categoria || 'Sin Categoría'}
+                  </p>
+                </div>
                 
-                return (
-                  <button 
-                    key={item.id} onClick={() => seleccionarArticulo(item)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all ${
-                      articuloSeleccionado?.id === item.id 
-                        ? 'bg-[#7E1D3B] border-[#7E1D3B] text-white shadow-md' 
-                        : 'bg-white border-slate-200 hover:border-[#7E1D3B]/30 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-1">
-                      <p className={`text-xs font-bold line-clamp-1 ${articuloSeleccionado?.id === item.id ? 'text-white' : 'text-slate-800'}`}>
-                        {item.nombreArticulo}
-                      </p>
-                      {necesitaUbicacion && <div className="w-2 h-2 rounded-full bg-amber-500 shrink-0 mt-1"></div>}
-                    </div>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className={`text-[10px] uppercase font-bold tracking-wider ${articuloSeleccionado?.id === item.id ? 'text-white/70' : 'text-slate-400'}`}>
-                        Stock: {item.cantidadDisponible} {item.unidadMedida}
-                      </span>
-                      {!necesitaUbicacion ? (
-                        <span className={`text-[9px] px-2 py-0.5 rounded font-bold ${articuloSeleccionado?.id === item.id ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
-                          {item.zonaAlmacen}-{item.estante}
-                        </span>
-                      ) : (
-                         <span className={`text-[9px] px-2 py-0.5 rounded font-bold ${articuloSeleccionado?.id === item.id ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'}`}>
-                          Sin asignar
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                )
-              })
-            )}
+                <div className="shrink-0 text-right">
+                  {item.zonaAlmacen ? (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 px-2 py-1 rounded border border-emerald-200">
+                      <CheckCircle2 size={12}/> Ubicado
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase bg-amber-50 text-amber-600 px-2 py-1 rounded border border-amber-200 animate-pulse">
+                      <MapPin size={12}/> Pendiente
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))}
           </div>
-        </div>
 
-        {/* COLUMNA DERECHA: Panel de Acomodo */}
-        <div className="flex-1 flex flex-col bg-slate-50">
-          {articuloSeleccionado ? (
-            <div className="p-8 h-full flex flex-col max-w-2xl mx-auto w-full">
+          {/* CONTROLES DE PAGINACIÓN */}
+          {totalPaginas > 1 && (
+            <div className="p-3 border-t border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+              <button 
+                onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+                disabled={paginaActual === 1}
+                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronLeft size={18} />
+              </button>
               
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6 flex gap-4 items-center">
-                <div className="w-14 h-14 bg-[#7E1D3B]/10 rounded-xl flex items-center justify-center text-[#7E1D3B]">
-                  <Archive className="w-8 h-8" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asignando lugar a:</p>
-                  <h3 className="text-xl font-bold text-slate-800">{articuloSeleccionado.nombreArticulo}</h3>
-                  <p className="text-sm font-medium text-slate-500 mt-1">{articuloSeleccionado.cantidadDisponible} unidades en existencia</p>
-                </div>
-              </div>
-
-              <form onSubmit={guardarUbicacion} className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col">
-                <div className="grid grid-cols-2 gap-8 mb-8">
-                  
-                  {/* Selector de Zona */}
-                  <div>
-                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-blue-500" /> Zona / Pasillo
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['A', 'B', 'C', 'D', 'E', 'F'].map(letra => (
-                        <button
-                          key={letra} type="button"
-                          onClick={() => setZonaAlmacen(letra)}
-                          className={`py-3 rounded-xl text-lg font-black border-2 transition-all ${
-                            zonaAlmacen === letra 
-                              ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                              : 'border-slate-100 bg-white text-slate-400 hover:border-blue-200'
-                          }`}
-                        >
-                          {letra}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Selector de Estante */}
-                  <div>
-                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-emerald-500" /> Nivel de Estante
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['1', '2', '3', '4'].map(num => (
-                        <button
-                          key={num} type="button"
-                          onClick={() => setEstante(num)}
-                          className={`py-3 rounded-xl text-lg font-black border-2 transition-all ${
-                            estante === num 
-                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
-                              : 'border-slate-100 bg-white text-slate-400 hover:border-emerald-200'
-                          }`}
-                        >
-                          Nivel {num}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-auto pt-6 border-t border-slate-100">
-                  <button 
-                    type="submit"
-                    disabled={guardando || !zonaAlmacen || !estante}
-                    className="w-full py-4 bg-[#7E1D3B] text-white font-bold rounded-xl shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 transition-all hover:bg-[#63162e]"
-                  >
-                    {guardando ? <Loader2 className="animate-spin" /> : <>Confirmar Ubicación <CheckCircle2 /></>}
-                  </button>
-                </div>
-              </form>
-
-            </div>
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center text-slate-300">
-              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <PackageSearch className="w-10 h-10 opacity-40" />
-              </div>
-              <p className="text-sm font-bold uppercase tracking-widest">Selecciona un insumo de la lista</p>
-              <p className="text-xs font-medium mt-2">Los insumos con punto <span className="text-amber-500">naranja</span> requieren ubicación.</p>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Página {paginaActual} de {totalPaginas}
+              </span>
+              
+              <button 
+                onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+                disabled={paginaActual === totalPaginas}
+                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
           )}
+        </div>
+
+        {/* COLUMNA DERECHA: FORMULARIO DE ASIGNACIÓN */}
+        <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-8 bg-slate-50/50">
+          
+          {!itemSeleccionado ? (
+            <div className="text-center opacity-40 flex flex-col items-center">
+              <MapPin size={64} className="mb-4 text-slate-400" />
+              <p className="text-lg font-black text-slate-600">Selecciona un Insumo</p>
+              <p className="text-sm font-medium text-slate-500 mt-1">Elige un artículo de la lista para asignarle un lugar.</p>
+            </div>
+          ) : (
+            <div className="w-full max-w-md bg-white p-6 rounded-2xl border border-slate-200 shadow-xl animate-in zoom-in-95 duration-300">
+              
+              <div className="mb-6 pb-4 border-b border-slate-100">
+                <p className="text-[10px] font-black text-[#7E1D3B] uppercase tracking-widest mb-1">Insumo a Ubicar</p>
+                <h3 className="text-lg font-black text-slate-800 leading-tight">{itemSeleccionado.nombreArticulo}</h3>
+                <div className="flex gap-2 mt-2">
+                   <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded uppercase">Stock: {itemSeleccionado.cantidadDisponible} {itemSeleccionado.unidadMedida || 'Pza'}</span>
+                   {itemSeleccionado.cuidadosEspeciales !== 'Ninguno (Ambiente)' && itemSeleccionado.cuidadosEspeciales && (
+                      <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-100 font-bold px-2 py-0.5 rounded uppercase flex items-center gap-1"><Snowflake size={10}/> Cuidado Especial</span>
+                   )}
+                </div>
+              </div>
+
+              {/* SELECTOR DE ALMACÉN (TABS) */}
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                <button 
+                  onClick={() => { setTipoAlmacen('General'); setZona(''); setEstante(''); }}
+                  className={`p-3 rounded-xl border-2 font-black text-xs uppercase flex flex-col items-center gap-2 transition-all ${
+                    tipoAlmacen === 'General' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-100 text-slate-400 hover:bg-slate-50'
+                  }`}
+                >
+                  <Archive size={20} />
+                  Almacén General
+                </button>
+                <button 
+                  onClick={() => { setTipoAlmacen('Medico'); setZona(''); setEstante(''); }}
+                  className={`p-3 rounded-xl border-2 font-black text-xs uppercase flex flex-col items-center gap-2 transition-all ${
+                    tipoAlmacen === 'Medico' ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-slate-100 text-slate-400 hover:bg-slate-50'
+                  }`}
+                >
+                  <Stethoscope size={20} />
+                  Almacén Médico
+                </button>
+              </div>
+
+              {/* CAMPOS DE ZONA Y ESTANTE */}
+              <div className="space-y-4">
+                <div>
+                  <label className={`block text-[10px] font-black uppercase mb-1.5 flex items-center gap-1 ${tipoAlmacen === 'Medico' ? 'text-teal-700' : 'text-amber-700'}`}>
+                    <Layers size={14}/> Área / Zona ({tipoAlmacen})
+                  </label>
+                  <select 
+                    className={`w-full p-3 bg-slate-50 border-2 rounded-xl text-sm font-bold outline-none transition-colors appearance-none ${tipoAlmacen === 'Medico' ? 'border-teal-100 focus:border-teal-400' : 'border-amber-100 focus:border-amber-400'}`}
+                    value={zona} onChange={(e) => setZona(e.target.value)}
+                  >
+                    <option value="">Selecciona el área...</option>
+                    {(tipoAlmacen === 'General' ? opcionesZonaGeneral : opcionesZonaMedica).map(op => (
+                      <option key={op} value={op}>{op}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className={`block text-[10px] font-black uppercase mb-1.5 ${tipoAlmacen === 'Medico' ? 'text-teal-700' : 'text-amber-700'}`}>
+                    Estante / Nivel / Charola
+                  </label>
+                  <input 
+                    type="text" placeholder="Ej. Nivel 3, Charola B..."
+                    className={`w-full p-3 bg-slate-50 border-2 rounded-xl text-sm font-bold outline-none transition-colors ${tipoAlmacen === 'Medico' ? 'border-teal-100 focus:border-teal-400' : 'border-amber-100 focus:border-amber-400'}`}
+                    value={estante} onChange={(e) => setEstante(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-8 pt-4 border-t border-slate-100">
+                <button 
+                  onClick={guardarUbicacion}
+                  disabled={!zona || !estante || guardando}
+                  className={`w-full py-3.5 rounded-xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg ${
+                    zona && estante && !guardando 
+                      ? tipoAlmacen === 'Medico' ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-amber-500 text-white hover:bg-amber-600'
+                      : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+                  }`}
+                >
+                  {guardando ? 'Registrando...' : 'Confirmar Ubicación'} <ArrowRight size={16}/>
+                </button>
+              </div>
+
+            </div>
+          )}
+
         </div>
       </div>
     </div>

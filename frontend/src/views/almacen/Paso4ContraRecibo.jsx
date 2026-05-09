@@ -28,18 +28,15 @@ const Paso4ContraRecibo = ({ setActiveTab, recepcionActiva, articulosParaInventa
     try {
       const promesasGuardado = articulosParaInventario.map(articulo => {
         
-        // --- AQUÍ ESTÁ LA CONEXIÓN REAL CON EL PASO 1 ---
+        // --- CONEXIÓN CORREGIDA: Tomamos los datos directamente del objeto "articulo" ---
         const articuloParaJava = {
           nombreArticulo: articulo.articuloNombre, 
           cantidadDisponible: articulo.stock,      
-          // Usamos la unidad que seleccionaste en el Paso 1, o la que traía por defecto
-          unidadMedida: recepcionActiva?.unidadMedida || articulo.unidad,           
-          categoria: 'Almacén General',
-          lote: `L-${Math.floor(Math.random() * 10000)}`, // Lote dinámico simulado
-          
-          // CONECTADO A LAS VARIABLES DEL PASO 1:
-          fechaCaducidad: recepcionActiva?.caducidad || null,
-          cuidadosEspeciales: recepcionActiva?.cuidadosEspeciales || 'Ninguno (Temp. Ambiente)'
+          unidadMedida: articulo.unidad || 'Pza',          
+          categoria: articulo.categoria, // <-- Extraído de lo que el usuario eligió en el Paso 2
+          lote: `L-${Math.floor(Math.random() * 10000)}`, 
+          fechaCaducidad: articulo.caducidad || null, // <-- Extraído de la caducidad individual del Paso 2
+          cuidadosEspeciales: articulo.cuidadosEspeciales || 'Ninguno (Ambiente)' // <-- Extraído de los cuidados del Paso 2
         };
 
         return fetch('http://localhost:4000/api/almacen/inventario', {

@@ -8,6 +8,8 @@ public enum Estado {
     PRE_AUTORIZADA,
     EN_REVISION,
     AUTORIZADA,
+    INCOMPLETA, // Nuevo: Para recepciones parciales
+    RECIBIDA,    // Nuevo: Para cuando todo llegó al 100%
     FINALIZADA;
 
     @JsonValue

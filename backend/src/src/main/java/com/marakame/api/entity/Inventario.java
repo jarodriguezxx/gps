@@ -23,9 +23,6 @@ public class Inventario {
     @Column(name = "categoria")
     private String categoria;
 
-    @Column(name = "codigo_barras", unique = true)
-    private String codigoBarras;
-
     @Column(name = "lote")
     private String lote;
 
@@ -60,9 +57,6 @@ public class Inventario {
 
     public String getCategoria() { return categoria; }
     public void setCategoria(String categoria) { this.categoria = categoria; }
-
-    public String getCodigoBarras() { return codigoBarras; }
-    public void setCodigoBarras(String codigoBarras) { this.codigoBarras = codigoBarras; }
 
     public String getLote() { return lote; }
     public void setLote(String lote) { this.lote = lote; }

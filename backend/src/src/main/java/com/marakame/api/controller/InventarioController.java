@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/almacen/inventario")
@@ -60,6 +61,29 @@ public class InventarioController {
             }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error al guardar ubicación: " + e.getMessage());
+        }
+    }
+
+    // --- AQUÍ ESTÁ EL MÉTODO CORREGIDO QUE REEMPLAZA AL PATCH ---
+    @PutMapping("/stock-minimo/{id}")
+    public ResponseEntity<?> actualizarStockMinimo(@PathVariable("id") Long id, @RequestBody Map<String, Integer> payload) {
+        
+        Optional<Inventario> itemOpt = inventarioRepository.findById(id);
+        
+        if (itemOpt.isPresent()) {
+            Inventario articulo = itemOpt.get();
+            Integer nuevoMinimo = payload.get("nivelMinimoAlerta");
+            
+            if (nuevoMinimo != null) {
+                articulo.setNivelMinimoAlerta(nuevoMinimo);
+                inventarioRepository.save(articulo);
+                return ResponseEntity.ok().build();
+            } else {
+                return ResponseEntity.badRequest().body("No se envió el nivelMinimoAlerta");
+            }
+        } else {
+            // Mandamos un mensaje claro si no existe
+            return ResponseEntity.badRequest().body("No se encontró el artículo con ID: " + id);
         }
     }
 }
