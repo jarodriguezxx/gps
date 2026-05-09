@@ -1,55 +1,48 @@
 package com.marakame.api.entity;
-import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.*;
 import java.util.UUID;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "articulos_requisicion")
-public class Articulo {
+public class ArticuloRequisicion {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @JsonProperty("id")
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne
-    @JoinColumn(name = "requisicion_id")
-    @JsonBackReference("requisicion-articulos")
-    private Requisicion requisicion;
+    @Column(name = "requisicion_id", nullable = false)
+    private UUID requisicionId;
 
-    @Column(name = "articulo_requisitado")
-    @JsonProperty("articuloRequisitado")
+    @Column(name = "articulo_requisitado", nullable = false)
     private String articuloRequisitado;
 
-    @Enumerated(EnumType.STRING)
-    @JsonProperty("unidad")
-    private UnidadesArticulos unidad;
+    @Column(name = "unidad", nullable = false)
+    private String unidad;
 
-    @Column(name = "articulos_solicitados")
-    @JsonProperty("articulosSolicitados")
+    @Column(name = "articulos_solicitados", columnDefinition = "integer default 0")
     private Integer articulosSolicitados;
 
+    @Column(name = "articulos_entregados", columnDefinition = "integer default 0")
+    private Integer articulosEntregados;
 
-    @Column(name = "articulos_entregados")
-    @JsonProperty("articulosEntregados")
-    private Integer articulosEntregados = 0; // ← valor por defecto
-    
+    // Como este campo es generado automáticamente por PostgreSQL (STORED), 
+    // le decimos a Java que no intente insertarlo ni actualizarlo.
     @Column(name = "articulos_pendientes", insertable = false, updatable = false)
-    @JsonProperty("articulosPendientes")
     private Integer articulosPendientes;
+
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
-    public Requisicion getRequisicion() { return requisicion; }
-    public void setRequisicion(Requisicion requisicion) { this.requisicion = requisicion; }
+    public UUID getRequisicionId() { return requisicionId; }
+    public void setRequisicionId(UUID requisicionId) { this.requisicionId = requisicionId; }
 
     public String getArticuloRequisitado() { return articuloRequisitado; }
     public void setArticuloRequisitado(String articuloRequisitado) { this.articuloRequisitado = articuloRequisitado; }
 
-    public UnidadesArticulos getUnidad() { return unidad; }
-    public void setUnidad(UnidadesArticulos unidad) { this.unidad = unidad; }
+    public String getUnidad() { return unidad; }
+    public void setUnidad(String unidad) { this.unidad = unidad; }
 
     public Integer getArticulosSolicitados() { return articulosSolicitados; }
     public void setArticulosSolicitados(Integer articulosSolicitados) { this.articulosSolicitados = articulosSolicitados; }
