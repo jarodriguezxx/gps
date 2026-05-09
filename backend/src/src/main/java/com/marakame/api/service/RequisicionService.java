@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import java.time.OffsetDateTime;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -39,11 +40,24 @@ public class RequisicionService {
     }
 
     public Requisicion crear(Requisicion requisicion) {
-        return repository.save(requisicion);
+    requisicion.setFecha(OffsetDateTime.now());
+    return repository.save(requisicion);
     }
 
     public Optional<Requisicion> obtenerPorId(UUID id) {
         return repository.findById(id);
+    }
+
+    // ==========================================
+    // NUEVO MÉTODO: Actualizar estado de requisición
+    // ==========================================
+    @Transactional
+    public Requisicion actualizarEstado(UUID id, Estado nuevoEstado) {
+        Requisicion req = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("No se encontró la requisición con ID: " + id));
+        
+        req.setEstado(nuevoEstado);
+        return repository.save(req);
     }
 
     @Transactional
