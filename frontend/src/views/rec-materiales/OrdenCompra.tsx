@@ -4,7 +4,7 @@ import { ui } from "../../config/theme";
 import { API_BASE } from "../../config/api.ts";
 import * as requisicionTypes from "../../types/requisicion.ts";
 import * as ordenTypes from "../../types/ordenCompra.ts";
-import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
+import { ProveedorAPI, mapProveedorAPI, Proveedores as ProveedorItem } from "../../types/proveedores.ts";
 import { buscarEnCatalogo, DATA_CATALOGO_ARTICULOS } from "../../types/catalogoArticulos.ts";
 
 const moneda = new Intl.NumberFormat("es-MX", {
@@ -36,6 +36,14 @@ const OrdenCompra = () => {
     | { fuente: "path"; requisicionId: string; nombre: string };
   const [cotizaciones, setCotizaciones] = useState<CotizacionItem[] | null>(null);
   const [descargando, setDescargando] = useState<string | null>(null);
+  const [proveedoresLista, setProveedoresLista] = useState<ProveedorItem[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/proveedores`)
+      .then((r) => r.json())
+      .then((data: ProveedorAPI[]) => setProveedoresLista(data.map(mapProveedorAPI)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!id) {
@@ -102,7 +110,7 @@ const OrdenCompra = () => {
         });
 
         const primeraEntrada = buscarEnCatalogo(ordenLocal.articulos[0]?.articulo ?? "") ?? DATA_CATALOGO_ARTICULOS[0];
-        const proveedorAuto = DATA_PROVEEDORES.find((p) => p.id === primeraEntrada.proveedorId);
+        const proveedorAuto = proveedoresLista.find((p) => p.id === primeraEntrada.proveedorId);
 
         setOrden({
           ...ordenLocal,

@@ -9,7 +9,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { createPortal } from "react-dom";
-import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
+import { ProveedorAPI, mapProveedorAPI, Proveedores as ProveedorItem } from "../../types/proveedores.ts";
 import VistaFirmaRequisicion from "./VistaFirmaRequisicion";
 
 // Simulación de rol de REcMateriales
@@ -165,6 +165,15 @@ const DetallesRequisicion = () => {
   const [adjuntosGuardados, setAdjuntosGuardados] = useState<AdjuntoGuardado[]>(
     [],
   );
+
+  const [proveedoresLista, setProveedoresLista] = useState<ProveedorItem[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/proveedores`)
+      .then((r) => r.json())
+      .then((data: ProveedorAPI[]) => setProveedoresLista(data.map(mapProveedorAPI)))
+      .catch(() => {});
+  }, []);
 
   // Función para actualizar un archivo específico
   const actualizarArchivoGlobal = (numero: string, archivo: File | null) => {
@@ -1507,7 +1516,7 @@ const DetallesRequisicion = () => {
                         </tr>
                       </thead>
                       <tbody className="text-center overflow-auto select-text">
-                        {DATA_PROVEEDORES.map((prov) => {
+                        {proveedoresLista.map((prov) => {
                           return (
                             <tr key={prov.id} className={ui.table.row}>
                               <td className={ui.table.cell}>{prov.id}</td>
