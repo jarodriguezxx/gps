@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowRight, FileText, FileX, AlertTriangle, Search, Sparkles, X, Download, Upload, CheckCircle2, Paperclip, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
 import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
+import ReciboPagoDocumento from '../../components/admisiones/ReciboPagoDocumento';
 import { API_BASE, API_HOST } from '../../config/api';
 import PrimarySidebarActionButton from '../../components/buttons/PrimarySidebarActionButton';
 
@@ -381,192 +383,58 @@ const ReadOnlyRadio = ({ label, selectedValue, options }) => (
 	</div>
 );
 
-const convertirNumeroALetra = (num) => {
-	const numeros = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
-	const decenas = ['diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
-	const centenas = ['ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
-	
-	const n = Math.floor(num);
-	if (n === 0) return 'cero';
-	if (n < 10) return numeros[n];
-	if (n < 20) return decenas[n - 10];
-	if (n < 100) {
-		const dec = Math.floor(n / 10);
-		const unit = n % 10;
-		return unit === 0 ? decenas[dec + 8] : decenas[dec + 8] + ' y ' + numeros[unit];
-	}
-	if (n < 1000) {
-		const cent = Math.floor(n / 100);
-		const rest = n % 100;
-		return cent === 1 && rest === 0 ? 'cien' : centenas[cent - 1] + (rest > 0 ? ' ' + convertirNumeroALetra(rest) : '');
-	}
-	return String(n);
+const construirNombrePacienteRecibo = (prospecto) => {
+	const nombreCompleto = [prospecto?.nombres || prospecto?.nombre || prospecto?.nombreCompleto, prospecto?.apellidoPaterno, prospecto?.apellidoMaterno]
+		.filter(Boolean)
+		.join(' ')
+		.trim();
+
+	return nombreCompleto.toUpperCase();
 };
 
 const generarReciboHTML = (datos) => {
-	const totalMonto = parseFloat(datos.montoPago || 0) + parseFloat(datos.montoPrograma || 0);
-	const nombreCompletoPagador = `${datos.nombrePagador || ''} ${datos.apellidoPaternoPagador || ''} ${datos.apellidoMaternoPagador || ''}`.trim();
-	
-	return `
-		<!DOCTYPE html>
-		<html>
-		<head>
-			<meta charset="UTF-8">
-			<style>
-				body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-				.recibo { border: 2px solid #333; padding: 30px; max-width: 800px; margin: 0 auto; }
-				.header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #7E1D3B; padding-bottom: 15px; }
-				.header h1 { margin: 0; color: #7E1D3B; font-size: 28px; }
-				.header p { margin: 5px 0; font-size: 12px; color: #666; }
-				.numero-recibo { position: absolute; top: 20px; right: 30px; font-size: 14px; font-weight: bold; }
-				.grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 20px 0; }
-				.grid-2 { grid-template-columns: 1fr 1fr; }
-				.campo { margin-bottom: 12px; }
-				.campo label { font-weight: bold; font-size: 10px; color: #333; display: block; margin-bottom: 2px; }
-				.campo-valor { border-bottom: 1px solid #333; padding: 3px 0; font-size: 11px; }
-				.full-width { grid-column: 1 / -1; }
-				.tabla { width: 100%; border-collapse: collapse; margin: 20px 0; }
-				.tabla th { background: #7E1D3B; color: white; padding: 8px; text-align: left; font-size: 11px; }
-				.tabla td { border-bottom: 1px solid #ddd; padding: 8px; font-size: 11px; }
-				.tabla tr:last-child td { border-bottom: 2px solid #333; }
-				.firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; }
-				.firma { text-align: center; border-top: 1px solid #333; padding-top: 10px; font-size: 11px; }
-				.firma-linea { margin-top: 60px; }
-			</style>
-		</head>
-		<body>
-			<div class="recibo">
-				<div class="numero-recibo">Nº ${new Date().getTime().toString().slice(-4)}</div>
-				<div class="header">
-					<h1>RECIBO DE PAGO</h1>
-					<p>Instituto Marakame • Centro de Tratamiento</p>
-					<p>Fecha: ${new Date().toLocaleDateString('es-MX')}</p>
-				</div>
+	const totalMonto = Number(datos.montoPago || 0) + Number(datos.montoPrograma || 0);
+	const nombreCompletoPagador = [datos.nombrePagador, datos.apellidoPaternoPagador, datos.apellidoMaternoPagador].filter(Boolean).join(' ');
+	const nombreCompletoPaciente = construirNombrePacienteRecibo(datos);
+	const direccionCompleta = [
+		datos.direccionCalle,
+		datos.direccionNoExt,
+		datos.direccionNoInt,
+		datos.direccionColonia,
+		datos.direccionMunicipioDelegacion,
+		datos.codigoPostal,
+		datos.direccionCiudadEstado,
+	].filter(Boolean).join(', ');
+	const items = [];
 
-				<div class="grid grid-2">
-					<div class="campo">
-						<label>Nombre(s):</label>
-						<div class="campo-valor">${datos.nombrePagador || ''}</div>
-					</div>
-					<div class="campo">
-						<label>Apellido paterno:</label>
-						<div class="campo-valor">${datos.apellidoPaternoPagador || ''}</div>
-					</div>
-					<div class="campo">
-						<label>Apellido materno:</label>
-						<div class="campo-valor">${datos.apellidoMaternoPagador || ''}</div>
-					</div>
-					<div class="campo">
-						<label>Fecha de pago:</label>
-						<div class="campo-valor">${datos.fechaPago || ''}</div>
-					</div>
-					<div class="campo">
-						<label>RFC:</label>
-						<div class="campo-valor">${datos.rfc || ''}</div>
-					</div>
-					<div class="campo">
-						<label>Teléfono:</label>
-						<div class="campo-valor">${datos.telefonoPagador || ''}</div>
-					</div>
-				</div>
+	if (Number(datos.montoPago || 0) > 0) {
+		items.push({ descripcion: 'Tratamiento', cantidad: 1, precioUnitario: Number(datos.montoPago || 0), importe: Number(datos.montoPago || 0) });
+	}
 
-				<div style="border-top: 2px solid #7E1D3B; padding-top: 15px; margin: 20px 0;">
-					<p style="font-weight: bold; margin-bottom: 8px;">Dirección:</p>
-					<div class="grid grid-2">
-						<div class="campo">
-							<label>Calle:</label>
-							<div class="campo-valor">${datos.direccionCalle || ''}</div>
-						</div>
-						<div class="campo">
-							<label>No. Exterior:</label>
-							<div class="campo-valor">${datos.direccionNoExt || ''}</div>
-						</div>
-						<div class="campo">
-							<label>No. Interior:</label>
-							<div class="campo-valor">${datos.direccionNoInt || ''}</div>
-						</div>
-						<div class="campo">
-							<label>Colonia:</label>
-							<div class="campo-valor">${datos.direccionColonia || ''}</div>
-						</div>
-						<div class="campo">
-							<label>Municipio/Delegación:</label>
-							<div class="campo-valor">${datos.direccionMunicipioDelegacion || ''}</div>
-						</div>
-						<div class="campo">
-							<label>C.P.:</label>
-							<div class="campo-valor">${datos.codigoPostal || ''}</div>
-						</div>
-						<div class="campo full-width">
-							<label>Ciudad/Estado:</label>
-							<div class="campo-valor">${datos.direccionCiudadEstado || ''}</div>
-						</div>
-					</div>
-				</div>
+	if (Number(datos.montoPrograma || 0) > 0) {
+		items.push({ descripcion: 'Programa', cantidad: 1, precioUnitario: Number(datos.montoPrograma || 0), importe: Number(datos.montoPrograma || 0) });
+	}
 
-				<div style="border: 2px solid #7E1D3B; padding: 15px; margin: 20px 0;">
-					<div class="grid grid-2">
-						<div class="campo">
-							<label>Nombre(s) del paciente:</label>
-							<div class="campo-valor">${datos.nombrePaciente || ''}</div>
-						</div>
-						<div class="campo">
-							<label>Apellido paterno:</label>
-							<div class="campo-valor">${datos.apellidoPaternoPaciente || ''}</div>
-						</div>
-						<div class="campo">
-							<label>Apellido materno:</label>
-							<div class="campo-valor">${datos.apellidoMaternoPaciente || ''}</div>
-						</div>
-						<div class="campo">
-							<label>Clave del paciente:</label>
-							<div class="campo-valor">${datos.clavePaciente || ''}</div>
-						</div>
-						<div class="campo full-width">
-							<label>Concepto del pago:</label>
-							<div class="campo-valor">${datos.concepto || ''}</div>
-						</div>
-					</div>
-				</div>
+	if (items.length === 0) {
+		items.push({ descripcion: datos.concepto || 'Concepto de pago', cantidad: 1, precioUnitario: totalMonto, importe: totalMonto });
+	}
 
-				<table class="tabla">
-					<thead>
-						<tr>
-							<th>Concepto de pago</th>
-							<th style="text-align: right;">Monto</th>
-						</tr>
-					</thead>
-					<tbody>
-						${datos.montoPago > 0 ? `<tr><td>Tratamiento</td><td style="text-align: right;">$${parseFloat(datos.montoPago).toFixed(2)}</td></tr>` : ''}
-						${datos.montoPrograma > 0 ? `<tr><td>Programa Familiar</td><td style="text-align: right;">$${parseFloat(datos.montoPrograma).toFixed(2)}</td></tr>` : ''}
-						<tr style="font-weight: bold;">
-							<td>TOTAL</td>
-							<td style="text-align: right;">$${totalMonto.toFixed(2)}</td>
-						</tr>
-					</tbody>
-				</table>
-
-				<div class="campo full-width" style="margin-top: 20px;">
-					<label>Cantidad en letra:</label>
-					<div class="campo-valor" style="font-size: 13px; text-transform: capitalize;">${convertirNumeroALetra(Math.floor(totalMonto))} pesos con ${String(totalMonto).split('.')[1] || '00'} centavos</div>
-				</div>
-
-				<div class="firmas">
-					<div class="firma">
-						<div class="firma-linea"></div>
-						<div>Persona que recibe el pago</div>
-						<div>${datos.nombreRecibe || ''}</div>
-					</div>
-					<div class="firma">
-						<div class="firma-linea"></div>
-						<div>Persona que realiza el pago</div>
-						<div>${nombreCompletoPagador}</div>
-					</div>
-				</div>
-			</div>
-		</body>
-		</html>
-	`;
+	return renderToStaticMarkup(
+		<ReciboPagoDocumento
+			folio={datos.folioRecibo || datos.folio || datos.numeroRecibo || ''}
+			fecha={datos.fechaPago}
+			recibiDe={nombreCompletoPagador}
+			concepto={datos.concepto}
+			nombrePaciente={nombreCompletoPaciente}
+			clavePaciente={datos.clavePaciente}
+			nombreRecibe={datos.nombreRecibe}
+			rfc={datos.rfc}
+			telefono={datos.telefonoPagador}
+			direccion={direccionCompleta}
+			items={items}
+			total={totalMonto}
+		/>
+	);
 };
 
 const ExpedienteAdmisiones = () => {
@@ -635,22 +503,7 @@ const ExpedienteAdmisiones = () => {
 	const cargarRecibosPersistidos = async (pacienteId) => {
 		if (!pacienteId) return [];
 		const storageKey = getRecibosStorageKey(pacienteId);
-		try {
-			const response = await fetch(`${API_BASE}/pacientes/${pacienteId}/recibos`);
-			if (response.ok) {
-				const recibosApi = await response.json();
-				const normalizados = Array.isArray(recibosApi) ? recibosApi.map(normalizarReciboApi) : [];
-				if (normalizados.length > 0) {
-					setRecibosSubidos(normalizados);
-					setReciboPersistido(normalizados.find((item) => String(item.estadoPago || '').toUpperCase() === 'VALIDADO') || normalizados[0]);
-					setFolioReciboActual(normalizados[0]?.numeroRecibo || normalizados[0]?.tokenGenerado || '');
-					window.localStorage.setItem(storageKey, JSON.stringify(normalizados));
-					return normalizados;
-				}
-			}
-		} catch (error) {
-			console.error('Error al cargar recibos persistidos:', error);
-		}
+
 
 		const localGuardado = window.localStorage.getItem(storageKey);
 		if (localGuardado) {
@@ -790,10 +643,10 @@ const ExpedienteAdmisiones = () => {
 		// Autocompletar datos del recibo con formato correcto
 		setDatosRecibo(prev => ({
 			...prev,
-			nombrePaciente: prospecto.nombres || '',
-			apellidoPaternoPaciente: prospecto.apellidoPaterno || '',
-			apellidoMaternoPaciente: prospecto.apellidoMaterno || '',
-			clavePaciente: prospecto.clavePaciente || '--',
+			nombrePaciente: construirNombrePacienteRecibo(prospecto),
+			apellidoPaternoPaciente: String(prospecto.apellidoPaterno || '').toUpperCase(),
+			apellidoMaternoPaciente: String(prospecto.apellidoMaterno || '').toUpperCase(),
+			clavePaciente: String(prospecto.clavePaciente || '--').toUpperCase(),
 			direccionCalle: prospecto.direccionCalle || '',
 			direccionNoExt: prospecto.direccionNoExt || '',
 			direccionNoInt: prospecto.direccionNoInt || '',
@@ -803,6 +656,18 @@ const ExpedienteAdmisiones = () => {
 			direccionCiudadEstado: prospecto.direccionCiudadEstado || '',
 		}));
 	};
+
+	useEffect(() => {
+		if (!modalReciboAbierto || !prospectoSeleccionado?.id) return;
+
+		setDatosRecibo((prev) => ({
+			...prev,
+			nombrePaciente: construirNombrePacienteRecibo(prospectoSeleccionado),
+			apellidoPaternoPaciente: String(prospectoSeleccionado.apellidoPaterno || '').toUpperCase(),
+			apellidoMaternoPaciente: String(prospectoSeleccionado.apellidoMaterno || '').toUpperCase(),
+			clavePaciente: String(prospectoSeleccionado.clavePaciente || prev.clavePaciente || '--').toUpperCase(),
+		}));
+	}, [modalReciboAbierto, prospectoSeleccionado?.id]);
 
 	const descargarRecibo = () => {
 		if (!prospectoSeleccionado?.id) return;

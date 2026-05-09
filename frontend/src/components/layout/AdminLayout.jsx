@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CalendarDays, FileText, Folder, Inbox, LayoutDashboard, PhoneCall } from 'lucide-react';
+import { CalendarDays, ClipboardList, FileText, Folder, Inbox, LayoutDashboard, PhoneCall } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 export const AdminHeader = ({ submodule = 'Módulo de Admisiones' }) => (
@@ -62,6 +62,7 @@ const admisionesNavItems = [
   { label: 'Dashboard de Inicio', icon: LayoutDashboard, key: 'dashboard', path: '/admisiones' },
   { label: 'Bandeja Operativa', icon: Inbox, key: 'bandeja', path: '/admisiones/bandeja-operativa' },
   { label: 'Expediente', icon: Folder, key: 'expediente', path: '/admisiones/expediente' },
+  { label: 'Requisiciones', icon: ClipboardList, key: 'requisiciones', path: '/admisiones/requisiciones' },
   { label: 'Agenda de Citas', icon: CalendarDays, key: 'agenda', path: '/admisiones/agenda-citas' },
   { label: 'Seguimiento Telefónico', icon: PhoneCall, key: 'seguimiento', path: '/admisiones/seguimiento-telefonico' },
   // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
