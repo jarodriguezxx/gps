@@ -1,24 +1,26 @@
 import React, { useState } from 'react';
-import { Package, Inbox, Search, Undo2, CheckSquare, MonitorSmartphone, MapPin, Bell, Upload, ShoppingCart, ClipboardCheck } from 'lucide-react';
-import marakameLogo from '../../assets/marakame.jpeg'; 
+import { Package, Undo2, CheckSquare, MonitorSmartphone, MapPin, Bell, Upload, ShoppingCart, ClipboardCheck, Inbox } from 'lucide-react';
+import marakameLogo from '../../assets/marakame.jpeg';
 
 // Importamos los componentes
 import PanelGeneral from './PanelGeneral';
-import Paso1Y2RecepcionVerificacion from './Paso1Y2RecepcionVerificacion'; // El nuevo componente unificado
+import Paso1Y2RecepcionVerificacion from './Paso1Y2RecepcionVerificacion';
 import Paso3Devolucion from './Paso3Devolucion';
 import Paso4ContraRecibo from './Paso4ContraRecibo';
-import Paso5Ubicacion from './Paso5Ubicacion'; 
-import Paso6Inventario from './Paso6Inventario'; 
+import Paso5Ubicacion from './Paso5Ubicacion';
+import Paso6Inventario from './Paso6Inventario';
 import Paso7Notificacion from './Paso7Notificacion';
 import Paso8Bajas from './Paso8Bajas';
 import Paso9Requisicion from './Paso9Requisicion';
+import PanelBandejaRequisiciones from './PanelBandejaRequisiciones';
 
 const navItems = [
-  { label: 'Panel General', icon: Package, key: 'dashboard', section: 'General' },
-  { label: '1. Recepción y Verificación', icon: ClipboardCheck, key: 'paso1', section: 'Procedimiento' }, // Unificado
+  { label: 'Panel General',           icon: Package,       key: 'dashboard',   section: 'General' },
+  { label: 'Bandeja de Solicitudes',  icon: Inbox,         key: 'bandeja-req', section: 'General' },
+  { label: '1. Recepción y Verificación', icon: ClipboardCheck, key: 'paso1', section: 'Procedimiento' },
   { label: '3. Devolución al Proveedor', icon: Undo2, key: 'paso3', section: 'Procedimiento' },
   { label: '4. Contra-recibo', icon: CheckSquare, key: 'paso4', section: 'Procedimiento' },
-  { label: '5. Ubicar en Almacén', icon: MapPin, key: 'paso5', section: 'Procedimiento' }, 
+  { label: '5. Ubicar en Almacén', icon: MapPin, key: 'paso5', section: 'Procedimiento' },
   { label: '6. Inventario Maestro', icon: MonitorSmartphone, key: 'paso6', section: 'Procedimiento' },
   { label: '7. Notificar a Rec. Mat.', icon: Bell, key: 'paso7', section: 'Procedimiento' },
   { label: '8. Baja de Consumibles', icon: Upload, key: 'paso8', section: 'Procedimiento' },
@@ -68,7 +70,8 @@ const AlmacenDashboard = () => {
             </aside>
 
             <main>
-              {activeTab === 'dashboard' && <PanelGeneral setActiveTab={setActiveTab} />}
+              {activeTab === 'dashboard'   && <PanelGeneral setActiveTab={setActiveTab} />}
+              {activeTab === 'bandeja-req' && <PanelBandejaRequisiciones />}
               
               {activeTab === 'paso1' && (
                 <Paso1Y2RecepcionVerificacion 

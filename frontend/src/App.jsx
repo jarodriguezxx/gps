@@ -15,6 +15,8 @@ import DirectorioAdmisiones from './views/admisiones/DirectorioAdmisiones';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
 import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 import RequisicionesAdmisiones from './views/admisiones/RequisicionesAdmisiones';
+import RequisicionesMedico     from './views/medico/RequisicionesMedico';
+import RequisicionesClinico    from './views/clinico/RequisicionesClinico';
 
 // Médico
 import InicioJefeMedico from './views/medico/InicioJefeMedico';
@@ -215,7 +217,7 @@ function App() {
         <Route path="/admisiones/expediente"                   element={<PrivateRoute><DirectorioAdmisiones /></PrivateRoute>} />
         <Route path="/admisiones/expediente-digital/:id"       element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
         <Route path="/admisiones/requisiciones"                element={<PrivateRoute><RequisicionesAdmisiones /></PrivateRoute>} />
-        <Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
+<Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
         <Route path="/admisiones/valoracion-diagnostica"       element={<PrivateRoute><ValoracionDiagnostica /></PrivateRoute>} />
         <Route path="/admisiones/bandeja"                      element={<Navigate to="/admisiones/bandeja-operativa" replace />} />
 
@@ -230,6 +232,7 @@ function App() {
         <Route path="/medico/historia-medica"                  element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
         <Route path="/medico/nueva-evolucion/:id"              element={<PrivateRoute><NuevaEvolucion /></PrivateRoute>} />
         <Route path="/medico/monitoreo/:id"                    element={<PrivateRoute><ControlMonitoreo /></PrivateRoute>} />
+        <Route path="/medico/requisiciones"                    element={<PrivateRoute><RequisicionesMedico /></PrivateRoute>} />
 
         <Route path="/nutriologo/pacientes"                    element={<PrivateRoute><PacientesNutricion /></PrivateRoute>} />
         <Route path="/nutriologo/inicio"                       element={<PrivateRoute><InicioNutricion /></PrivateRoute>} />
@@ -247,6 +250,7 @@ function App() {
         <Route path="/clinico/consejeria/:id"                 element={<PrivateRoute><GestorDocumentosClinicos rolActivo="consejeria" /></PrivateRoute>} />
         <Route path="/clinico/familia/:id"                    element={<PrivateRoute><GestorDocumentosClinicos rolActivo="familia" /></PrivateRoute>} />
         <Route path="/clinico/gestor"                         element={<PrivateRoute><GestorDocumentosClinicos rolActivo="general" /></PrivateRoute>} />
+        <Route path="/clinico/requisiciones"                  element={<PrivateRoute><RequisicionesClinico /></PrivateRoute>} />
 
         {/* Recursos Humanos */}
         <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
