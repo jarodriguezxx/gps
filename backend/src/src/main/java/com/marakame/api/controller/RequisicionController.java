@@ -294,33 +294,6 @@ public class RequisicionController {
     }
 
     
-    // ==========================================
-    // NUEVO MÉTODO: Actualizar artículos entregados
-    // ==========================================
-    @PutMapping("/articulos/{id}") 
-    public ResponseEntity<?> actualizarArticulosEntregados(
-            @PathVariable UUID id, 
-            @RequestBody Map<String, Integer> request) {
-        
-        Optional<ArticuloRequisicion> articuloOpt = articuloRepository.findById(id);
-        
-        if (articuloOpt.isPresent()) {
-            ArticuloRequisicion articulo = articuloOpt.get();
-            
-            Integer entregados = request.containsKey("articulos_entregados") ? 
-                                 request.get("articulos_entregados") : 
-                                 request.get("articulosEntregados");
-                                 
-            if (entregados != null) {
-                articulo.setArticulosEntregados(entregados);
-                articuloRepository.save(articulo);
-                return ResponseEntity.ok(articulo);
-            }
-        }
-        
-        return ResponseEntity.notFound().build();
-    }
-
 // ==========================================
     // NUEVO MÉTODO: Actualizar estado general de la Requisición
     // ==========================================

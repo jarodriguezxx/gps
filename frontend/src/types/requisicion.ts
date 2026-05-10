@@ -5,7 +5,9 @@ export type Estado =
   | "FINALIZADA"
   | "PRE-AUTORIZADA"
   | "EN-REVISION"
-  | "RECHAZADA";
+  | "RECHAZADA"
+  | "INCOMPLETA"
+  | "RECIBIDA";
 export type TamanioCompra = "MAYOR" | "MENOR" | "INDEFINIDO";
 export type TipoCompra = "ORDINARIA" | "EXTRAORDINARIA";
 // TODO: Investigar bien todas las unidades que se manejan

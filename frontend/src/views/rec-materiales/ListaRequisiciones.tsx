@@ -17,7 +17,7 @@ const ListaRequisiciones = () => {
   const { rol } = useParams<{ rol: string }>();
   const requisicionesAMostrar = useMemo(() => {
     if (rol === "rec-materiales") {
-      return requisiciones;
+      return requisiciones.filter((r) => r.estado !== "INCOMPLETA");
     } else if (rol === "administracion") {
       return requisiciones.filter(
         (r) => r.estado === "PRE-AUTORIZADA" && !r.firmaAdminsitradora,
@@ -54,6 +54,10 @@ const ListaRequisiciones = () => {
         return "bg-orange-100 text-orange-800 border border-orange-300";
       case "RECHAZADA":
         return "bg-red-100 text-red-800 border border-red-300";
+      case "INCOMPLETA":
+        return "bg-amber-100 text-amber-800 border border-amber-300";
+      case "RECIBIDA":
+        return "bg-teal-100 text-teal-800 border border-teal-300";
       default:
         return "bg-slate-100 text-slate-800 border border-slate-300";
     }
