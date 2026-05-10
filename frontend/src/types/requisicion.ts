@@ -4,7 +4,10 @@ export type Estado =
   | "AUTORIZADA"
   | "FINALIZADA"
   | "PRE-AUTORIZADA"
-  | "EN-REVISION";
+  | "EN-REVISION"
+  | "RECHAZADA"
+  | "INCOMPLETA"
+  | "RECIBIDA";
 export type TamanioCompra = "MAYOR" | "MENOR" | "INDEFINIDO";
 export type TipoCompra = "ORDINARIA" | "EXTRAORDINARIA";
 // TODO: Investigar bien todas las unidades que se manejan
@@ -38,6 +41,8 @@ export type RequisicionesContenido = {
   firmaDirectoraGral: Boolean;
   cotizacionPath?: string | null;
   facturaPath?: string | null;
+  observacionesRechazo?: string | null;
+  rechazadoPor?: string | null;
 };
 
 export type Requisicion = RequisicionesCamposTabla & RequisicionesContenido;

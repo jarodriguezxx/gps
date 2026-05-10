@@ -209,6 +209,91 @@ public class RequisicionController {
         return ResponseEntity.notFound().build();
     }
 
+    @PatchMapping("/{id}/firma-administradora")
+    public ResponseEntity<?> firmarAdministradora(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Rol", required = false) String rol) {
+        if (!"administracion".equals(rol)) {
+            return ResponseEntity.status(403).body("acceso-denegado");
+        }
+        try {
+            return ResponseEntity.ok(service.firmarAdministradora(id));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{id}/firma-directora-gral")
+    public ResponseEntity<?> firmarDirectoraGral(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Rol", required = false) String rol) {
+        if (!"direccion-general".equals(rol)) {
+            return ResponseEntity.status(403).body("acceso-denegado");
+        }
+        try {
+            return ResponseEntity.ok(service.firmarDirectoraGral(id));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{id}/rechazar")
+    public ResponseEntity<?> rechazar(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Rol", required = false) String rol,
+            @RequestBody Map<String, String> body) {
+        if (!"administracion".equals(rol) && !"direccion-general".equals(rol)) {
+            return ResponseEntity.status(403).body("acceso-denegado");
+        }
+        try {
+            return ResponseEntity.ok(service.rechazar(id, rol, body.get("observaciones")));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("error-inesperado: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{id}/tamanio")
+    public ResponseEntity<?> actualizarTamanio(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> body) {
+        try {
+            if (!body.containsKey("estado")) {
+                return ResponseEntity.badRequest().body("Falta el campo 'estado' en la petición.");
+            }
+            
+            // Convertimos el texto (ej. "INCOMPLETA") al valor del Enum
+            Estado nuevoEstado = Estado.fromJson(body.get("estado"));
+            
+            // Llamamos al servicio para guardar
+            Requisicion actualizada = service.actualizarEstado(id, nuevoEstado);
+            
+            return ResponseEntity.ok(actualizada);
+            
+        } catch (java.util.NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Estado no reconocido por el sistema: " + body.get("estado"));
+        } catch (Exception e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error inesperado: " + e.getMessage());
+        }
+    }
+
+    
 // ==========================================
     // NUEVO MÉTODO: Actualizar estado general de la Requisición
     // ==========================================
