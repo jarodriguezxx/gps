@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Stethoscope, Users, ClipboardList, Activity, FileBarChart,
-  UserCheck, AlertTriangle, Search, Save, FileSignature
+  UserCheck, AlertTriangle, Search, Save, FileSignature, CheckCircle2, XCircle
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -75,7 +75,8 @@ const ValoracionMedica = () => {
     pronostico: '',
     tratamientoSugerido: '',
     observaciones: '',
-    esAptoParaIngreso: false
+    dictamen: null,
+    motivoRechazo: ''
   });
 
   const handleNavClick = (item) => { 
@@ -91,6 +92,14 @@ const ValoracionMedica = () => {
     }));
   };
 
+  const seleccionarDictamen = (dictamen) => {
+    setFormulario((prev) => ({
+      ...prev,
+      dictamen,
+      motivoRechazo: dictamen === 'RECHAZADO' ? prev.motivoRechazo : '',
+    }));
+  };
+
   const handleGuardar = async (e) => {
     e.preventDefault();
 
@@ -100,8 +109,24 @@ const ValoracionMedica = () => {
       return;
     }
 
+    if (!formulario.dictamen) {
+      alert('Selecciona un dictamen para continuar.');
+      return;
+    }
+
+    if (formulario.dictamen === 'RECHAZADO' && !formulario.motivoRechazo.trim()) {
+      alert('Captura el motivo del rechazo clínico para continuar.');
+      return;
+    }
+
     try {
       setIsSaving(true);
+      const esRechazo = formulario.dictamen === 'RECHAZADO';
+      const observacionesCompletas = [
+        formulario.observaciones?.trim(),
+        esRechazo ? `Motivo del rechazo clínico: ${formulario.motivoRechazo.trim()}` : '',
+      ].filter(Boolean).join('\n\n');
+
       // 2. Preparamos los datos tal como los espera la entidad ValoracionMedica
       const payload = {
         tipoValoracion: formulario.tipoValoracion,
@@ -120,8 +145,8 @@ const ValoracionMedica = () => {
         diagnostico: formulario.diagnostico,
         pronostico: formulario.pronostico,
         tratamientoSugerido: formulario.tratamientoSugerido,
-        observaciones: formulario.observaciones,
-        esAptoParaIngreso: formulario.esAptoParaIngreso,
+        observaciones: observacionesCompletas,
+        esAptoParaIngreso: formulario.dictamen === 'APTO',
         medicoAsignado: "Jefe Médico", 
       };
 
@@ -136,6 +161,21 @@ const ValoracionMedica = () => {
 
       // 4. Manejamos la respuesta
       if (response.ok) {
+        if (esRechazo) {
+          const estadoResponse = await fetch(`http://localhost:4000/api/pacientes/${id}/estado`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ estado: 'DENEGADO' }),
+          });
+
+          if (!estadoResponse.ok) {
+            const estadoError = await estadoResponse.json().catch(() => ({}));
+            throw new Error(estadoError.error || 'No se pudo actualizar el estado del paciente a DENEGADO.');
+          }
+        }
+
         alert("¡Valoración guardada correctamente! El equipo de Admisiones ya puede verla.");
         navigate('/medico/prospectos'); 
       } else {
@@ -354,14 +394,51 @@ const ValoracionMedica = () => {
                       <textarea disabled={yaValorado} rows="2" name="observaciones" value={formulario.observaciones} onChange={handleChange} className={`${inputClass} resize-none`} />
                     </div>
                     
-                    <div className="flex flex-col gap-3 min-w-[260px] w-full md:w-auto">
-                      <label className={`flex items-center gap-3 p-3.5 rounded-xl cursor-pointer border transition-all ${formulario.esAptoParaIngreso ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'} ${yaValorado ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                        <input disabled={yaValorado} type="checkbox" name="esAptoParaIngreso" checked={formulario.esAptoParaIngreso} onChange={handleChange} className="w-4 h-4 accent-emerald-600 rounded disabled:cursor-not-allowed" />
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold uppercase tracking-wider">Apto para Ingreso</span>
-                          <span className="text-[10px] font-semibold opacity-70">Habilitar pase a admisión</span>
-                        </div>
-                      </label>
+                    <div className="flex flex-col gap-3 min-w-[280px] w-full md:w-auto">
+                      <div className="grid gap-3">
+                        <button
+                          type="button"
+                          disabled={yaValorado}
+                          onClick={() => seleccionarDictamen('APTO')}
+                          className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${formulario.dictamen === 'APTO' ? 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'} ${yaValorado ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                        >
+                          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/80 text-emerald-600 border border-emerald-100 shrink-0">
+                            <CheckCircle2 size={22} />
+                          </span>
+                          <span className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-wider">Apto para Ingreso</span>
+                            <span className="text-[10px] font-semibold opacity-70">Habilitar pase a admisión</span>
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={yaValorado}
+                          onClick={() => seleccionarDictamen('RECHAZADO')}
+                          className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${formulario.dictamen === 'RECHAZADO' ? 'bg-rose-50 border-rose-200 text-rose-800 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'} ${yaValorado ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                        >
+                          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/80 text-rose-600 border border-rose-100 shrink-0">
+                            <XCircle size={22} />
+                          </span>
+                          <span className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-wider">Rechazo Médico</span>
+                            <span className="text-[10px] font-semibold opacity-70">Bloquear ingreso y registrar motivo</span>
+                          </span>
+                        </button>
+                      </div>
+
+                      <div className={`overflow-hidden transition-all duration-300 ${formulario.dictamen === 'RECHAZADO' ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
+                        <label className="mt-1 block text-[11px] font-bold text-rose-700 uppercase tracking-widest mb-1.5">Motivo del Rechazo Clínico *</label>
+                        <textarea
+                          disabled={yaValorado}
+                          rows="4"
+                          name="motivoRechazo"
+                          value={formulario.motivoRechazo}
+                          onChange={handleChange}
+                          className={`${inputClass} resize-none border-rose-200 bg-rose-50/40 focus:ring-2 focus:ring-rose-200`}
+                          placeholder="Explique de forma clínica y clara el motivo del rechazo..."
+                        />
+                      </div>
 
                       <button type="submit" disabled={isSaving || yaValorado} className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-3.5 text-sm font-bold text-white shadow-md hover:bg-[#63162e] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         <Save size={18} />

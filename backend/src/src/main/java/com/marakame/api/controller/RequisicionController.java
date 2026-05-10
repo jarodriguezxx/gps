@@ -2,8 +2,11 @@ package com.marakame.api.controller;
 
 import com.marakame.api.entity.AdjuntoRequisicion;
 import com.marakame.api.entity.Requisicion;
-import com.marakame.api.entity.TamanioCompra;
+import com.marakame.api.entity.ArticuloRequisicion;
+import com.marakame.api.entity.Estado;
+import com.marakame.api.repository.ArticuloRequisicionRepository;
 import com.marakame.api.service.RequisicionService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +22,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -28,6 +32,10 @@ public class RequisicionController {
 
     @Autowired
     private RequisicionService service;
+
+    // Repositorio inyectado para actualizar los artículos
+    @Autowired
+    private ArticuloRequisicionRepository articuloRepository;
 
     @GetMapping
     public List<Requisicion> getAll() {
@@ -174,23 +182,31 @@ public class RequisicionController {
         }
     }
 
-    @GetMapping("/{id}/cotizacion/descargar")
-    public ResponseEntity<?> descargarCotizacion(@PathVariable UUID id) {
-        try {
-            Requisicion req = service.obtenerPorId(id).orElseThrow(NoSuchElementException::new);
-            if (req.getCotizacionPath() == null)
-                return ResponseEntity.notFound().build();
-            byte[] datos = Files.readAllBytes(Paths.get(req.getCotizacionPath()));
-            String nombreArchivo = Paths.get(req.getCotizacionPath()).getFileName().toString();
-            return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
-                    .body(new ByteArrayResource(datos));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-leyendo-archivo");
+    // ==========================================
+    // NUEVO MÉTODO: Actualizar artículos entregados
+    // ==========================================
+    @PutMapping("/articulos/{id}") 
+    public ResponseEntity<?> actualizarArticulosEntregados(
+            @PathVariable UUID id, 
+            @RequestBody Map<String, Integer> request) {
+        
+        Optional<ArticuloRequisicion> articuloOpt = articuloRepository.findById(id);
+        
+        if (articuloOpt.isPresent()) {
+            ArticuloRequisicion articulo = articuloOpt.get();
+            
+            Integer entregados = request.containsKey("articulos_entregados") ? 
+                                 request.get("articulos_entregados") : 
+                                 request.get("articulosEntregados");
+                                 
+            if (entregados != null) {
+                articulo.setArticulosEntregados(entregados);
+                articuloRepository.save(articulo);
+                return ResponseEntity.ok(articulo);
+            }
         }
+        
+        return ResponseEntity.notFound().build();
     }
 
     @PatchMapping("/{id}/firma-administradora")
@@ -255,32 +271,25 @@ public class RequisicionController {
             @PathVariable UUID id,
             @RequestBody Map<String, String> body) {
         try {
-            TamanioCompra tamanio = TamanioCompra.valueOf(body.get("tamanio"));
-            return ResponseEntity.ok(service.actualizarTamanio(id, tamanio));
-        } catch (NoSuchElementException e) {
+            if (!body.containsKey("estado")) {
+                return ResponseEntity.badRequest().body("Falta el campo 'estado' en la petición.");
+            }
+            
+            // Convertimos el texto (ej. "INCOMPLETA") al valor del Enum
+            Estado nuevoEstado = Estado.fromJson(body.get("estado"));
+            
+            // Llamamos al servicio para guardar
+            Requisicion actualizada = service.actualizarEstado(id, nuevoEstado);
+            
+            return ResponseEntity.ok(actualizada);
+            
+        } catch (java.util.NoSuchElementException e) {
             return ResponseEntity.notFound().build();
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("tamanio-invalido");
-        }
-    }
-
-    @GetMapping("/{id}/adjuntos/{adjuntoId}/descargar")
-    public ResponseEntity<?> descargarAdjunto(
-            @PathVariable UUID id,
-            @PathVariable UUID adjuntoId) {
-        try {
-            AdjuntoRequisicion adjunto = service.obtenerAdjunto(id, adjuntoId);
-            byte[] datos = Files.readAllBytes(Paths.get(adjunto.getRutaArchivo()));
-            String contentType = adjunto.getTipoContenido() != null ? adjunto.getTipoContenido() : "application/octet-stream";
-            String nombreArchivo = adjunto.getNombreOriginal() != null ? adjunto.getNombreOriginal() : adjunto.getNombreArchivo();
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
-                    .body(new ByteArrayResource(datos));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-leyendo-archivo");
+            return ResponseEntity.badRequest().body("Estado no reconocido por el sistema: " + body.get("estado"));
+        } catch (Exception e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error inesperado: " + e.getMessage());
         }
     }
 

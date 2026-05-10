@@ -17,8 +17,9 @@ public class Requisicion {
     @JsonProperty("id")
     private UUID id;
 
+    @Column(name = "fecha")
     @JsonProperty("fecha")
-    private OffsetDateTime fecha;
+    private OffsetDateTime fecha = OffsetDateTime.now();
 
     @JsonProperty("area")
     private String area;

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
+import { API_BASE } from '../../config/api';
 
 const estadoClasses = {
 	Confirmada: 'bg-emerald-100 text-emerald-800',
@@ -49,7 +50,7 @@ const BandejaOperativa = () => {
 		try {
 			setLoadingTablas(true);
 			setErrorTablas('');
-			const response = await fetch('http://localhost:4000/api/seguimientos/tablas');
+			const response = await fetch(`${API_BASE}/seguimientos/tablas`);
 
 			if (!response.ok) {
 				const errorText = await response.text();

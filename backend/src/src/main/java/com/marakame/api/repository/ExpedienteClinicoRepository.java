@@ -12,6 +12,7 @@ public interface ExpedienteClinicoRepository extends JpaRepository<ExpedienteCli
     Optional<ExpedienteClinico> findByPacienteId(Long pacienteId);
     // Agrega este método dentro de la interfaz
     long countByEstado(String estado);
+    java.util.Optional<ExpedienteClinico> findByPaciente_Id(Long pacienteId);
     
 }
 

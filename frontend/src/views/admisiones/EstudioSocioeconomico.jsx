@@ -1,10 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Save, X, Search, User, Briefcase, Wallet, Heart, Home, Users, Info, CheckCircle2, Circle, Plus, Trash2, ArrowLeft, ArrowRight, AlertTriangle, FileText, FileX, Phone, Calculator, DollarSign } from 'lucide-react';
-import { AdminHeader, AdminMainTitle, AdminErrorAlert, AdminSuccessAlert } from '../../components/layout/AdminLayout';
+import { AdminHeader, AdminMainTitle } from '../../components/layout/AdminLayout';
+import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
+import { API_BASE, API_HOST } from '../../config/api';
 
 const EstudioSocioeconomico = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Estado para guardar pacienteId que usaremos al cancelar
+  const [pacienteIdDeOrigen, setPacienteIdDeOrigen] = useState(null);
+
+  // Protegemos la ruta: solo accesible si se recibe pacienteId desde navigation state
+  useEffect(() => {
+    const navState = location && location.state ? location.state : null;
+    if (!navState || !navState.pacienteId) {
+      setFeedback({ type: 'error', message: 'Acceso denegado: Selecciona un prospecto desde el expediente para realizar el estudio' });
+      // redirigir al expediente después de un breve lapso para que el toast se muestre
+      setTimeout(() => navigate('/admisiones/expediente'), 700);
+    } else {
+      // Guardamos el pacienteId para usarlo al cancelar
+      setPacienteIdDeOrigen(navState.pacienteId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Estado para controlar qué pestaña está activa
   const [activeTab, setActiveTab] = useState('solicitante');
   const [isDirty, setIsDirty] = useState(false);
@@ -78,8 +98,19 @@ const EstudioSocioeconomico = () => {
     { nombre: '', telefono: '', relacion: '', tiempoConocer: '' },
   ]);
 
-  const splitNombreCompleto = (nombreCompleto = '') => {
-    const partes = String(nombreCompleto || '').trim().split(/\s+/).filter(Boolean);
+  const splitNombreCompleto = (nombreCompletoOrPaciente = '') => {
+    // Si se pasa un objeto paciente con campos desglosados, úsalos directamente
+    if (nombreCompletoOrPaciente && typeof nombreCompletoOrPaciente === 'object') {
+      const p = nombreCompletoOrPaciente;
+      return {
+        nombres: p.nombres || p.solicitante?.nombres || p.nombre || '',
+        apellidoPaterno: p.apellidoPaterno || p.solicitante?.apellidoPaterno || '',
+        apellidoMaterno: p.apellidoMaterno || p.solicitante?.apellidoMaterno || '',
+      };
+    }
+
+    const nombreCompleto = String(nombreCompletoOrPaciente || '').trim();
+    const partes = nombreCompleto.split(/\s+/).filter(Boolean);
     if (partes.length === 0) {
       return { nombres: '', apellidoPaterno: '', apellidoMaterno: '' };
     }
@@ -249,7 +280,7 @@ const EstudioSocioeconomico = () => {
     return regimen + totalHabitaciones + tipo + materialPiso + materialMuros + materialTecho;
   };
 
-  const [formData, setFormData] = useState({
+  const initialFormState = {
     nombreSolicitante: '',
     solicitanteNombres: '',
     solicitanteApellidoPaterno: '',
@@ -282,7 +313,13 @@ const EstudioSocioeconomico = () => {
     pacienteEscolaridad: '',
     pacienteOcupacion: '',
     pacienteEstadoCivil: '',
-    pacienteDireccion: '',
+    pacienteDireccionCalle: '',
+    pacienteDireccionNoExt: '',
+    pacienteDireccionNoInt: '',
+    pacienteDireccionColonia: '',
+    pacienteDireccionMunicipioDelegacion: '',
+    pacienteDireccionCp: '',
+    pacienteDireccionCiudadEstado: '',
     pacienteTelefonoCasa: '',
     pacienteTelefonoCelular: '',
     laboralCuentaConEmpleo: '',
@@ -344,7 +381,17 @@ const EstudioSocioeconomico = () => {
     familiarDiagnostico: '',
     familiarObservacionesTrabajoSocial: '',
     familiarObservacionesVisitaDomiciliaria: '',
+  };
+
+  const getCleanFormState = () => ({
+    ...initialFormState,
+    saludAsistenciaOpciones: [],
+    viviendaConformacion: [],
+    diagnosticoEconomico: createDiagnosticoEconomicoState(),
   });
+
+  const [formData, setFormData] = useState(() => getCleanFormState());
+  const [tieneConyuge, setTieneConyuge] = useState(false);
 
   // Pestañas basadas en tu boceto
   const tabs = [
@@ -388,7 +435,11 @@ const EstudioSocioeconomico = () => {
       'pacienteSexo',
       'pacienteEscolaridad',
       'pacienteEstadoCivil',
-      'pacienteDireccion',
+      'pacienteDireccionCalle',
+      'pacienteDireccionColonia',
+      'pacienteDireccionMunicipioDelegacion',
+      'pacienteDireccionCp',
+      'pacienteDireccionCiudadEstado',
       'pacienteTelefonoCelular',
     ],
     laboral: [
@@ -492,6 +543,13 @@ const EstudioSocioeconomico = () => {
     { value: 'ocasional', label: 'Ocasionalmente' },
   ];
 
+  const contributorParentescoOptions = [
+    { value: 'abuelo', label: 'Abuelo(a)' },
+    { value: 'tio', label: 'Tío(a)' },
+    { value: 'hermano', label: 'Hermano(a)' },
+    { value: 'otro', label: 'Otro' },
+  ];
+
   const calculateAgeFromDate = (dateValue) => {
     if (!dateValue) return '';
 
@@ -510,7 +568,12 @@ const EstudioSocioeconomico = () => {
     return String(Math.max(years, 0));
   };
 
-  const totalIncomes = Object.values(monthlyIncomes).reduce((acc, value) => acc + (Number(value) || 0), 0);
+  const totalIncomes =
+    (Number(formData.laboralIngresoMensual) || 0) +
+    Object.entries(monthlyIncomes)
+      .filter(([key]) => key !== 'solicitante')
+      .reduce((acc, [, value]) => acc + (Number(value) || 0), 0);
+  const otherFamilyIncome = incomeContributors.reduce((acc, row) => acc + (Number(row.cantidadMensual) || 0), 0);
   const totalExpenses = Object.values(monthlyExpenses).reduce((acc, value) => acc + (Number(value) || 0), 0);
   const economicResult = totalIncomes - totalExpenses;
   const hasVehicle = formData.patrimonioCuentaAuto === 'si';
@@ -773,6 +836,20 @@ const EstudioSocioeconomico = () => {
     });
   }, [economicResult]);
 
+  useEffect(() => {
+    setMonthlyIncomes((prev) => {
+      const nextOtros = String(otherFamilyIncome || 0);
+      if (prev.otros === nextOtros) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        otros: nextOtros,
+      };
+    });
+  }, [otherFamilyIncome]);
+
   // Actualizar puntos de Nivel 1 (categoría + aportación + balance), Nivel 2 (vehículos), Nivel 3 (vivienda), más días de tratamiento
   useEffect(() => {
     setFormData((prev) => {
@@ -952,7 +1029,7 @@ const EstudioSocioeconomico = () => {
       try {
         setCargandoCitasRegistradas(true);
         setErrorCitasRegistradas('');
-        const response = await fetch('http://localhost:4000/api/seguimientos/tablas');
+        const response = await fetch(`${API_BASE}/seguimientos/tablas`);
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -972,6 +1049,94 @@ const EstudioSocioeconomico = () => {
     cargarCitasRegistradas();
   }, []);
 
+
+  // Si venimos desde Expediente con state (pacienteId / datosBase), seleccionar al paciente automáticamente
+  // Prevención de colisiones: limpiar estado completamente si el pacienteId cambia
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const syncFromNav = async () => {
+      try {
+        const navState = location && location.state ? location.state : null;
+        if (!navState || !navState.pacienteId) {
+          return;
+        }
+
+        if (pacienteSeleccionadoId === Number(navState.pacienteId)) return;
+
+        // Prioridad: siempre usar el pacienteId recibido para obtener el registro canónico
+        if (cargandoCitasRegistradas) return;
+        if (errorCitasRegistradas) return;
+
+        const pacienteId = Number(navState.pacienteId);
+        if (!Number.isFinite(pacienteId) || pacienteId <= 0) {
+          setFeedback({ type: 'warning', message: 'ID de paciente inválido. Vuelve a seleccionar el expediente.' });
+          return;
+        }
+
+        // Limpieza total antes de cargar el nuevo paciente por ID
+        setPacienteSeleccionadoId(null);
+        setBusquedaPaciente('');
+        setMostrarResultados(false);
+        setPacientesBase([]);
+        setIndiceResaltado(-1);
+        setFormData(getCleanFormState());
+
+        try {
+          const resp = await fetch(`${API_BASE}/pacientes/${pacienteId}`, {
+            signal: controller.signal,
+            headers: {
+              Accept: 'application/json',
+            },
+          });
+          if (resp.ok) {
+            const fetched = await resp.json();
+
+            // Si se nos pasó datosBase en el navigation state, validar exactitud del nombre
+            const datosBase = navState.datosBase || null;
+            if (
+              datosBase &&
+              datosBase.nombreCompleto &&
+              String(datosBase.nombreCompleto).trim() !== String(fetched.nombreCompleto).trim()
+            ) {
+              setFeedback({ type: 'warning', message: 'Inconsistencia de identidad detectada' });
+            }
+
+            seleccionarPaciente(fetched);
+            return;
+          }
+        } catch (err) {
+          console.error('Error fetching paciente canonical desde ID:', err);
+        }
+
+        // Fallback: buscar en pacientesBase por id si el fetch canónico no respondió
+        const fallback = pacientesBase.find((p) => String(p.id) === String(pacienteId));
+        if (fallback) {
+          seleccionarPaciente(fallback);
+          return;
+        }
+
+        setFeedback({
+          type: 'warning',
+          message: 'No fue posible cargar el paciente por ID canónico. Verifica la conexión o vuelve a seleccionar el expediente.',
+        });
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          return;
+        }
+        console.error('Error sincronizando paciente desde navegación', err);
+      }
+    };
+
+    syncFromNav();
+    return () => {
+      controller.abort();
+      setMostrarResultados(false);
+      setPacientesBase([]);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, cargandoCitasRegistradas]);
+
   useEffect(() => {
     const nombre = busquedaPaciente.trim();
     const controller = new AbortController();
@@ -990,7 +1155,7 @@ const EstudioSocioeconomico = () => {
         setCargandoPacientes(true);
         setErrorPacientes('');
         const response = await fetch(
-          `http://localhost:4000/api/pacientes/busqueda?query=${encodeURIComponent(nombre)}`,
+          `${API_BASE}/pacientes/busqueda?query=${encodeURIComponent(nombre)}`,
           { signal: controller.signal }
         );
 
@@ -1071,6 +1236,11 @@ const EstudioSocioeconomico = () => {
       return;
     }
 
+    // Limpiar UI inmediatamente: cerrar dropdown y borrar lista de búsqueda
+    setMostrarResultados(false);
+    setPacientesBase([]);
+    setIndiceResaltado(-1);
+
     const tieneCitaRegistrada = citasRegistradas.some((item) => item.pacienteId === paciente.id);
     if (!tieneCitaRegistrada) {
       setFeedback({
@@ -1080,6 +1250,7 @@ const EstudioSocioeconomico = () => {
       return;
     }
 
+    // Establecer ID seleccionada inmediatamente (estrictamente paciente.id)
     setPacienteSeleccionadoId(paciente.id);
     setBusquedaPaciente(paciente.nombreCompleto || '');
     setIsDirty(true);
@@ -1090,12 +1261,126 @@ const EstudioSocioeconomico = () => {
     setErrorRechazo('');
     setGuardandoRechazo(false);
     setRechazoRegistrado(false);
-    const nombreSolicitanteCompleto = paciente.solicitante?.nombre || '';
-    const solicitantePartes = splitNombreCompleto(nombreSolicitanteCompleto);
-    const pacientePartes = splitNombreCompleto(paciente.nombreCompleto || '');
-    setFormData((prev) => ({
-      ...prev,
-      nombreSolicitante: nombreSolicitanteCompleto,
+
+    // Limpiar por completo state del formulario antes de cargar nuevos datos
+    const empty = {
+      nombreSolicitante: '',
+      solicitanteNombres: '',
+      solicitanteApellidoPaterno: '',
+      solicitanteApellidoMaterno: '',
+      fechaNacimiento: '',
+      lugarNacimiento: '',
+      edad: '',
+      sexo: '',
+      escolaridad: '',
+      ocupacion: '',
+      estadoCivil: '',
+      direccionCalle: '',
+      direccionNoExt: '',
+      direccionNoInt: '',
+      direccionColonia: '',
+      direccionMunicipioDelegacion: '',
+      direccionCp: '',
+      direccionCiudadEstado: '',
+      telefonoCasa: '',
+      telefonoCelular: '',
+      cuentaConTarjeta: '',
+      pacienteNombre: '',
+      pacienteNombres: '',
+      pacienteApellidoPaterno: '',
+      pacienteApellidoMaterno: '',
+      pacienteFechaNacimiento: '',
+      pacienteLugarNacimiento: '',
+      pacienteEdad: '',
+      pacienteSexo: '',
+      pacienteEscolaridad: '',
+      pacienteOcupacion: '',
+      pacienteEstadoCivil: '',
+      pacienteDireccionCalle: '',
+      pacienteDireccionNoExt: '',
+      pacienteDireccionNoInt: '',
+      pacienteDireccionColonia: '',
+      pacienteDireccionMunicipioDelegacion: '',
+      pacienteDireccionCp: '',
+      pacienteDireccionCiudadEstado: '',
+      pacienteTelefonoCasa: '',
+      pacienteTelefonoCelular: '',
+      laboralCuentaConEmpleo: '',
+      laboralLugarTrabajo: '',
+      laboralAntiguedad: '',
+      laboralPuesto: '',
+      laboralHorario: '',
+      laboralDependientes: '',
+      laboralIngresoMensual: '',
+      laboralOtrosIngresos: '',
+      laboralCategoriaOcupacion: '',
+      laboralNumeroOcupacion: '',
+      conyugeOcupacion: '',
+      conyugeLugarTrabajo: '',
+      conyugeAntiguedad: '',
+      conyugeIngresoMensual: '',
+      familiarAportaIngreso: '',
+      numeroIntegrantesAportan: '',
+      balanceEconomico: '',
+      patrimonioCuentaAuto: '',
+      patrimonioCantidad: '',
+      vehiculoCategoria: '',
+      vehiculoNumero: '',
+      saludAsistenciaOpciones: [],
+      saludMontoConsultas: '',
+      saludOtrosServicios: '',
+      saludMiembrosConAsistencia: '',
+      saludAdicAlcoholismoDetalle: '',
+      saludAdicAlcoholismoFrecuencia: '',
+      saludAdicAlcoholismoSeveridad: '',
+      saludAdicTcaLudopatiaDetalle: '',
+      saludAdicTcaLudopatiaFrecuencia: '',
+      saludAdicTcaLudopatiaSeveridad: '',
+      saludAdicDrogadiccionDetalle: '',
+      saludAdicDrogadiccionFrecuencia: '',
+      saludAdicDrogadiccionSeveridad: '',
+      saludAdicOtrosDetalle: '',
+      saludAdicOtrosFrecuencia: '',
+      saludAdicOtrosSeveridad: '',
+      saludRelacionFamiliar: '',
+      viviendaRegimen: '',
+      viviendaRegimenNumero: '',
+      viviendaTipo: '',
+      viviendaTipoNumero: '',
+      viviendaTotalHabitaciones: '',
+      viviendaTotalHabitacionesNumero: '',
+      viviendaConformacion: [],
+      viviendaBanos: '',
+      viviendaRecamaras: '',
+      viviendaEspecificarSinBanos: '',
+      viviendaOtrasCaracteristicas: '',
+      viviendaMaterialPiso: '',
+      viviendaMaterialPisoNumero: '',
+      viviendaMaterialMuros: '',
+      viviendaMaterialMurosNumero: '',
+      viviendaMaterialTecho: '',
+      viviendaMaterialTechoNumero: '',
+      diagnosticoEconomico: createDiagnosticoEconomicoState(),
+      familiarDiagnostico: '',
+      familiarObservacionesTrabajoSocial: '',
+      familiarObservacionesVisitaDomiciliaria: '',
+    };
+
+    // Usar campos desglosados si existen; si no, hacer split del nombreCompleto
+    const solicitantePartes = {
+      nombres: paciente.solicitante?.nombres || (paciente.solicitante?.nombre ? splitNombreCompleto(paciente.solicitante.nombre).nombres : ''),
+      apellidoPaterno: paciente.solicitante?.apellidoPaterno || '',
+      apellidoMaterno: paciente.solicitante?.apellidoMaterno || '',
+    };
+    const pacientePartes = {
+      nombres: paciente.nombres || splitNombreCompleto(paciente.nombreCompleto || '').nombres,
+      apellidoPaterno: paciente.apellidoPaterno || splitNombreCompleto(paciente.nombreCompleto || '').apellidoPaterno,
+      apellidoMaterno: paciente.apellidoMaterno || splitNombreCompleto(paciente.nombreCompleto || '').apellidoMaterno,
+    };
+
+    setFormData(() => ({
+      ...empty,
+      nombreSolicitante: paciente.solicitante?.nombre || '',
       solicitanteNombres: paciente.solicitante?.nombres || solicitantePartes.nombres,
       solicitanteApellidoPaterno: paciente.solicitante?.apellidoPaterno || solicitantePartes.apellidoPaterno,
       solicitanteApellidoMaterno: paciente.solicitante?.apellidoMaterno || solicitantePartes.apellidoMaterno,
@@ -1127,12 +1412,116 @@ const EstudioSocioeconomico = () => {
       pacienteEscolaridad: paciente.escolaridad || '',
       pacienteOcupacion: paciente.ocupacion || '',
       pacienteEstadoCivil: paciente.estadoCivil || '',
-      pacienteDireccion: paciente.domicilioParticular || '',
+      pacienteDireccionCalle: paciente.direccionCalle || paciente.domicilioParticular || '',
+      pacienteDireccionNoExt: paciente.direccionNoExt || '',
+      pacienteDireccionNoInt: paciente.direccionNoInt || '',
+      pacienteDireccionColonia: paciente.direccionColonia || '',
+      pacienteDireccionMunicipioDelegacion: paciente.direccionMunicipioDelegacion || '',
+      pacienteDireccionCp: paciente.direccionCp || '',
+      pacienteDireccionCiudadEstado: paciente.direccionCiudadEstado || '',
       pacienteTelefonoCasa: paciente.telefonoCasa || '',
       pacienteTelefonoCelular: paciente.telefonoContacto || '',
       sustanciaConsumo: paciente.sustanciaConsumo || '',
-      diagnosticoEconomico: createDiagnosticoEconomicoState(),
+      
+      // Datos Laborales
+      laboralCuentaConEmpleo: paciente.cuentaConEmpleo || '',
+      laboralLugarTrabajo: paciente.lugarTrabajo || '',
+      laboralAntiguedad: paciente.antiguedadLaboral || '',
+      laboralPuesto: paciente.puestoLaboral || '',
+      laboralHorario: paciente.horarioTrabajo || '',
+      laboralDependientes: paciente.dependientesEconomicos ? String(paciente.dependientesEconomicos) : '',
+      laboralIngresoMensual: paciente.ingresoMensual ? String(paciente.ingresoMensual) : '',
+      laboralOtrosIngresos: paciente.otrosIngresos ? String(paciente.otrosIngresos) : '',
+      laboralCategoriaOcupacion: paciente.categoriaOcupacion || '',
+      laboralNumeroOcupacion: paciente.numeroOcupacion ? String(paciente.numeroOcupacion) : '',
+      conyugeOcupacion: paciente.conyugeOcupacion || '',
+      conyugeLugarTrabajo: paciente.conyugeLugarTrabajo || '',
+      conyugeAntiguedad: paciente.conyugeAntiguedad || '',
+      conyugeIngresoMensual: paciente.conyugeIngresoMensual ? String(paciente.conyugeIngresoMensual) : '',
+      
+      // Datos Económicos
+      familiarAportaIngreso: paciente.familiarAportaIngreso || '',
+      numeroIntegrantesAportan: paciente.numeroIntegrantesAportan ? String(paciente.numeroIntegrantesAportan) : '',
+      balanceEconomico: paciente.balanceEconomico || '',
+      patrimonioCuentaAuto: paciente.patrimonioCuentaAuto || '',
+      patrimonioCantidad: paciente.patrimonioCantidad ? String(paciente.patrimonioCantidad) : '',
+      vehiculoCategoria: paciente.vehiculoCategoria || '',
+      vehiculoNumero: paciente.vehiculoNumero ? String(paciente.vehiculoNumero) : '',
+      
+      // Datos de Salud
+      saludAsistenciaOpciones: Array.isArray(paciente.saludAsistencia) ? paciente.saludAsistencia : [],
+      saludMontoConsultas: paciente.saludMontoConsultas ? String(paciente.saludMontoConsultas) : '',
+      saludOtrosServicios: paciente.saludOtrosServicios || '',
+      saludMiembrosConAsistencia: paciente.saludMiembrosConAsistencia ? String(paciente.saludMiembrosConAsistencia) : '',
+      saludAdicAlcoholismoDetalle: paciente.saludAdicAlcoholismoDetalle || '',
+      saludAdicAlcoholismoFrecuencia: paciente.saludAdicAlcoholismoFrecuencia || '',
+      saludAdicAlcoholismoSeveridad: paciente.saludAdicAlcoholismoSeveridad || '',
+      saludAdicTcaLudopatiaDetalle: paciente.saludAdicTcaLudopatiaDetalle || '',
+      saludAdicTcaLudopatiaFrecuencia: paciente.saludAdicTcaLudopatiaFrecuencia || '',
+      saludAdicTcaLudopatiaSeveridad: paciente.saludAdicTcaLudopatiaSeveridad || '',
+      saludAdicDrogadiccionDetalle: paciente.saludAdicDrogadiccionDetalle || '',
+      saludAdicDrogadiccionFrecuencia: paciente.saludAdicDrogadiccionFrecuencia || '',
+      saludAdicDrogadiccionSeveridad: paciente.saludAdicDrogadiccionSeveridad || '',
+      saludAdicOtrosDetalle: paciente.saludAdicOtrosDetalle || '',
+      saludAdicOtrosFrecuencia: paciente.saludAdicOtrosFrecuencia || '',
+      saludAdicOtrosSeveridad: paciente.saludAdicOtrosSeveridad || '',
+      saludRelacionFamiliar: paciente.saludRelacionFamiliar || '',
+      
+      // Datos de Vivienda
+      viviendaRegimen: paciente.viviendaRegimen || '',
+      viviendaRegimenNumero: paciente.viviendaRegimenNumero ? String(paciente.viviendaRegimenNumero) : '',
+      viviendaTipo: paciente.viviendaTipo || '',
+      viviendaTipoNumero: paciente.viviendaTipoNumero ? String(paciente.viviendaTipoNumero) : '',
+      viviendaTotalHabitaciones: paciente.viviendaTotalHabitaciones || '',
+      viviendaTotalHabitacionesNumero: paciente.viviendaTotalHabitacionesNumero ? String(paciente.viviendaTotalHabitacionesNumero) : '',
+      viviendaConformacion: Array.isArray(paciente.viviendaConformacion) ? paciente.viviendaConformacion : [],
+      viviendaBanos: paciente.viviendaBanos ? String(paciente.viviendaBanos) : '',
+      viviendaRecamaras: paciente.viviendaRecamaras ? String(paciente.viviendaRecamaras) : '',
+      viviendaEspecificarSinBanos: paciente.viviendaEspecificarSinBanos || '',
+      viviendaOtrasCaracteristicas: paciente.viviendaOtrasCaracteristicas || '',
+      viviendaMaterialPiso: paciente.viviendaMaterialPiso || '',
+      viviendaMaterialPisoNumero: paciente.viviendaMaterialPisoNumero ? String(paciente.viviendaMaterialPisoNumero) : '',
+      viviendaMaterialMuros: paciente.viviendaMaterialMuros || '',
+      viviendaMaterialMurosNumero: paciente.viviendaMaterialMurosNumero ? String(paciente.viviendaMaterialMurosNumero) : '',
+      viviendaMaterialTecho: paciente.viviendaMaterialTecho || '',
+      viviendaMaterialTechoNumero: paciente.viviendaMaterialTechoNumero ? String(paciente.viviendaMaterialTechoNumero) : '',
+      
+      // Datos Familiares
+      familiarDiagnostico: paciente.familiarDiagnostico || '',
+      familiarObservacionesTrabajoSocial: paciente.familiarObservacionesTrabajoSocial || '',
+      familiarObservacionesVisitaDomiciliaria: paciente.familiarObservacionesVisitaDomiciliaria || '',
+      diagnosticoEconomico: paciente.diagnosticoEconomico || createDiagnosticoEconomicoState(),
     }));
+    
+    // Cargar tablas adicionales si existen
+    if (Array.isArray(paciente.integrantesFamiliares) && paciente.integrantesFamiliares.length > 0) {
+      setHouseholdMembers(paciente.integrantesFamiliares);
+    }
+    
+    if (Array.isArray(paciente.aportacionesFamiliares) && paciente.aportacionesFamiliares.length > 0) {
+      setIncomeContributors(paciente.aportacionesFamiliares);
+    }
+    
+    if (Array.isArray(paciente.referenciasPersonales) && paciente.referenciasPersonales.length > 0) {
+      setFamilyReferences(paciente.referenciasPersonales);
+    }
+    
+    if (Array.isArray(paciente.vehiculos) && paciente.vehiculos.length > 0) {
+      setVehicleAssets(paciente.vehiculos);
+    }
+    
+    // Cargar ingresos y gastos mensuales si existen
+    if (paciente.ingresosDetalle && typeof paciente.ingresosDetalle === 'object') {
+      setMonthlyIncomes(paciente.ingresosDetalle);
+    }
+    
+    if (paciente.gastosDetalle && typeof paciente.gastosDetalle === 'object') {
+      setMonthlyExpenses(paciente.gastosDetalle);
+    }
+    
+    if (paciente.frecuenciaAlimentos && typeof paciente.frecuenciaAlimentos === 'object') {
+      setFoodFrequency(paciente.frecuenciaAlimentos);
+    }
   };
 
   const handleBlur = (name) => {
@@ -1240,10 +1629,11 @@ const EstudioSocioeconomico = () => {
     });
   };
 
-  const handleIncomeChange = (field, value) => {
-    setIsDirty(true);
-    setMonthlyIncomes((prev) => ({ ...prev, [field]: value }));
-  };
+  // handleIncomeChange comentada: los ingresos del solicitante ahora se calculan automáticamente (ingresoMensual + otrosIngresos)
+  // const handleIncomeChange = (field, value) => {
+  //   setIsDirty(true);
+  //   setMonthlyIncomes((prev) => ({ ...prev, [field]: value }));
+  // };
 
   const handleExpenseChange = (field, value) => {
     setIsDirty(true);
@@ -1449,102 +1839,7 @@ const EstudioSocioeconomico = () => {
       const confirmed = window.confirm('Tienes cambios sin guardar. ¿Deseas salir de todos modos?');
       if (!confirmed) return;
     }
-    setFormData({
-      nombreSolicitante: '',
-      solicitanteNombres: '',
-      solicitanteApellidoPaterno: '',
-      solicitanteApellidoMaterno: '',
-      fechaNacimiento: '',
-      lugarNacimiento: '',
-      edad: '',
-      sexo: '',
-      escolaridad: '',
-      ocupacion: '',
-      estadoCivil: '',
-      direccionCalle: '',
-      direccionNoExt: '',
-      direccionNoInt: '',
-      direccionColonia: '',
-      direccionMunicipioDelegacion: '',
-      direccionCp: '',
-      direccionCiudadEstado: '',
-      telefonoCasa: '',
-      telefonoCelular: '',
-      cuentaConTarjeta: '',
-      pacienteNombre: '',
-      pacienteNombres: '',
-      pacienteApellidoPaterno: '',
-      pacienteApellidoMaterno: '',
-      pacienteFechaNacimiento: '',
-      pacienteLugarNacimiento: '',
-      pacienteEdad: '',
-      pacienteSexo: '',
-      pacienteEscolaridad: '',
-      pacienteOcupacion: '',
-      pacienteEstadoCivil: '',
-      pacienteDireccion: '',
-      pacienteTelefonoCasa: '',
-      pacienteTelefonoCelular: '',
-      laboralCuentaConEmpleo: '',
-      laboralLugarTrabajo: '',
-      laboralAntiguedad: '',
-      laboralPuesto: '',
-      laboralHorario: '',
-      laboralDependientes: '',
-      laboralIngresoMensual: '',
-      laboralOtrosIngresos: '',
-      laboralCategoriaOcupacion: '',
-      laboralNumeroOcupacion: '',
-      conyugeOcupacion: '',
-      conyugeLugarTrabajo: '',
-      conyugeAntiguedad: '',
-      conyugeIngresoMensual: '',
-      familiarAportaIngreso: '',
-      numeroIntegrantesAportan: '',
-      balanceEconomico: '',
-      patrimonioCuentaAuto: '',
-      patrimonioCantidad: '',
-      vehiculoCategoria: '',
-      vehiculoNumero: '',
-      saludAsistenciaOpciones: [],
-      saludMontoConsultas: '',
-      saludOtrosServicios: '',
-      saludMiembrosConAsistencia: '',
-      saludAdicAlcoholismoDetalle: '',
-      saludAdicAlcoholismoFrecuencia: '',
-      saludAdicAlcoholismoSeveridad: '',
-      saludAdicTcaLudopatiaDetalle: '',
-      saludAdicTcaLudopatiaFrecuencia: '',
-      saludAdicTcaLudopatiaSeveridad: '',
-      saludAdicDrogadiccionDetalle: '',
-      saludAdicDrogadiccionFrecuencia: '',
-      saludAdicDrogadiccionSeveridad: '',
-      saludAdicOtrosDetalle: '',
-      saludAdicOtrosFrecuencia: '',
-      saludAdicOtrosSeveridad: '',
-      saludRelacionFamiliar: '',
-      viviendaRegimen: '',
-      viviendaRegimenNumero: '',
-      viviendaTipo: '',
-      viviendaTipoNumero: '',
-      viviendaTotalHabitaciones: '',
-      viviendaTotalHabitacionesNumero: '',
-      viviendaConformacion: [],
-      viviendaBanos: '',
-      viviendaRecamaras: '',
-      viviendaEspecificarSinBanos: '',
-      viviendaOtrasCaracteristicas: '',
-      viviendaMaterialPiso: '',
-      viviendaMaterialPisoNumero: '',
-      viviendaMaterialMuros: '',
-      viviendaMaterialMurosNumero: '',
-      viviendaMaterialTecho: '',
-      viviendaMaterialTechoNumero: '',
-      diagnosticoEconomico: createDiagnosticoEconomicoState(),
-      familiarDiagnostico: '',
-      familiarObservacionesTrabajoSocial: '',
-      familiarObservacionesVisitaDomiciliaria: '',
-    });
+    setFormData(getCleanFormState());
     setHouseholdMembers([{ nombre: '', parentesco: '', edad: '', sexo: '', estadoCivil: '', ocupacionLugar: '' }]);
     setIncomeContributors([{ parentesco: '', cantidadMensual: '' }]);
     setVehicleAssets([{ marca: '', ano: '', propietario: '' }]);
@@ -1587,7 +1882,19 @@ const EstudioSocioeconomico = () => {
     setTouched({});
     setErrors({});
     setIsDirty(false);
-    navigate('/admisiones');
+    
+    // Navegación con validación de seguridad
+    // Si tenemos pacienteIdDeOrigen, regresar al expediente digital específico
+    // De lo contrario, ir al directorio de expedientes como fallback
+    if (pacienteIdDeOrigen && Number.isInteger(Number(pacienteIdDeOrigen))) {
+      navigate(`/admisiones/expediente-digital/${pacienteIdDeOrigen}`, {
+        state: { pacienteIdPreseleccionado: pacienteIdDeOrigen },
+        replace: true
+      });
+    } else {
+      // Fallback de seguridad: si no hay ID válido, ir al directorio
+      navigate('/admisiones/expediente', { replace: true });
+    }
   };
 
   const handleSaveDraft = () => {
@@ -1620,7 +1927,7 @@ const EstudioSocioeconomico = () => {
       setGuardandoRechazo(true);
       setErrorRechazo('');
 
-      const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteSeleccionadoId}/rechazo-administrativo`, {
+      const response = await fetch(`${API_BASE}/pacientes/${pacienteSeleccionadoId}/rechazo-administrativo`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1685,7 +1992,13 @@ const EstudioSocioeconomico = () => {
       pacienteEscolaridad: 'Preparatoria',
       pacienteOcupacion: 'Estudiante',
       pacienteEstadoCivil: 'Soltero(a)',
-      pacienteDireccion: 'Av. del Lago 245, Residencial Victoria, Zapopan, Jalisco',
+      pacienteDireccionCalle: 'Av. del Lago',
+      pacienteDireccionNoExt: '245',
+      pacienteDireccionNoInt: '3B',
+      pacienteDireccionColonia: 'Residencial Victoria',
+      pacienteDireccionMunicipioDelegacion: 'Zapopan',
+      pacienteDireccionCp: '45019',
+      pacienteDireccionCiudadEstado: 'Jalisco',
       pacienteTelefonoCasa: '33 3812 4455',
       pacienteTelefonoCelular: '33 1122 3344',
       laboralCuentaConEmpleo: 'si',
@@ -1914,7 +2227,13 @@ const EstudioSocioeconomico = () => {
         escolaridadPaciente: formData.pacienteEscolaridad,
         ocupacionPaciente: formData.pacienteOcupacion,
         lugarNacimientoPaciente: formData.pacienteLugarNacimiento,
-        direccionPaciente: formData.pacienteDireccion,
+        direccionCallePaciente: formData.pacienteDireccionCalle,
+        direccionNoExtPaciente: formData.pacienteDireccionNoExt,
+        direccionNoIntPaciente: formData.pacienteDireccionNoInt,
+        direccionColoniaPaciente: formData.pacienteDireccionColonia,
+        direccionMunicipioDelegacionPaciente: formData.pacienteDireccionMunicipioDelegacion,
+        direccionCpPaciente: formData.pacienteDireccionCp,
+        direccionCiudadEstadoPaciente: formData.pacienteDireccionCiudadEstado,
         telefonoCasaPaciente: formData.pacienteTelefonoCasa,
         telefonoCelularPaciente: formData.pacienteTelefonoCelular,
       };
@@ -1928,7 +2247,7 @@ const EstudioSocioeconomico = () => {
         const fechaCita = new Date(citaPaciente.fechaHoraProgramada);
         if (fechaCita.getTime() <= ahora.getTime()) {
           // La cita ya ocurrió, activar la ficha
-          const response = await fetch(`http://localhost:4000/api/pacientes/${pacienteSeleccionadoId}/datos-basicos`, {
+          const response = await fetch(`${API_BASE}/pacientes/${pacienteSeleccionadoId}/datos-basicos`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -1971,8 +2290,22 @@ const EstudioSocioeconomico = () => {
           familyReferences,
         },
       };
+      // Seguridad extra: confirmar que el ID seleccionado en frontend coincide con el usado en el endpoint
+      const endpointId = pacienteSeleccionadoId;
+      if (!endpointId) {
+        setGuardandoEstudio(false);
+        setFeedback({ type: 'error', message: 'ID del paciente inválido al intentar generar PDF.' });
+        return;
+      }
 
-      const pdfResponse = await fetch(`http://localhost:4000/api/pacientes/${pacienteSeleccionadoId}/estudio-socioeconomico/pdf`, {
+      const pdfUrl = `${API_BASE}/pacientes/${endpointId}/estudio-socioeconomico/pdf`;
+      if (!String(pdfUrl).includes(`/pacientes/${endpointId}/`)) {
+        setGuardandoEstudio(false);
+        setFeedback({ type: 'error', message: 'Error de verificación de ID antes de enviar datos al servidor.' });
+        return;
+      }
+
+      const pdfResponse = await fetch(pdfUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2034,55 +2367,40 @@ const EstudioSocioeconomico = () => {
       {/* --- HEADER DE ACCIÓN --- */}
       <AdminHeader submodule="Estudio Socioeconómico" />
 
-        <main className="space-y-5">
+        <main key={`estudio-socioeconomico-${pacienteSeleccionadoId || 'sin-paciente'}`} className="space-y-5">
 
-        {feedback && (
-          <section
-            className={`mb-4 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-sm ${
-              feedback.type === 'success'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                : feedback.type === 'info'
-                ? 'border-sky-200 bg-sky-50 text-sky-800'
-                : feedback.type === 'warning'
-                ? 'border-amber-200 bg-amber-50 text-amber-800'
-                : 'border-rose-200 bg-rose-50 text-rose-800'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <p>{feedback.message}</p>
-              <button
-                type="button"
-                onClick={() => setFeedback(null)}
-                className="rounded-md px-2 py-1 text-xs font-bold uppercase tracking-wide opacity-80 hover:opacity-100"
-              >
-                Cerrar
-              </button>
-            </div>
-          </section>
-        )}
+        <AdmisionesToast
+          message={feedback?.message}
+          variant={feedback?.type || 'info'}
+          onClose={() => setFeedback(null)}
+          title={feedback?.type === 'success' ? 'Confirmación' : feedback?.type === 'warning' ? 'Atención' : feedback?.type === 'error' ? 'Aviso' : 'Información'}
+        />
         
         {/* --- BUSCADOR DE SOLICITANTE --- */}
-        <section className="mb-8">
-          <div className="relative group z-20">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#7E1D3B] transition-colors" size={20}/>
-            <input 
-              type="text" 
-              value={busquedaPaciente}
-              onChange={(e) => setBusquedaPaciente(e.target.value)}
-              onFocus={() => {
-                if (busquedaPaciente.trim().length >= 2) {
-                  setMostrarResultados(true);
-                }
-              }}
-              onBlur={() => {
-                window.setTimeout(() => setMostrarResultados(false), 120);
-              }}
-              onKeyDown={handleBusquedaPacienteKeyDown}
-              placeholder="Escribe el nombre del paciente (minimo 2 letras)..." 
-              className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-[#7E1D3B]/20 focus:border-[#7E1D3B] transition-all text-sm hover:shadow-md"
-            />
+        {!pacienteSeleccionadoId && (
+          <section className="relative mb-8">
+            <div className="relative group z-20">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#7E1D3B] transition-colors" size={20}/>
+              <input
+                type="text"
+                value={busquedaPaciente}
+                onChange={(e) => setBusquedaPaciente(e.target.value)}
+                onFocus={() => {
+                  if (busquedaPaciente.trim().length >= 2) {
+                    setMostrarResultados(true);
+                  }
+                }}
+                onBlur={() => {
+                  window.setTimeout(() => setMostrarResultados(false), 120);
+                }}
+                onKeyDown={handleBusquedaPacienteKeyDown}
+                placeholder="Escribe el nombre del paciente (minimo 2 letras)..."
+                className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-[#7E1D3B]/20 focus:border-[#7E1D3B] transition-all text-sm hover:shadow-md"
+              />
+            </div>
+
             {mostrarResultados && busquedaPaciente.trim().length >= 2 && (
-              <div className="absolute left-0 right-0 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
+              <div className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
                 <div className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-slate-500">
                   Resultados por nombre
                 </div>
@@ -2115,9 +2433,7 @@ const EstudioSocioeconomico = () => {
                               setMostrarResultados(false);
                             }}
                             className={`w-full border-b border-slate-100 px-4 py-2 text-left transition last:border-b-0 ${
-                              resaltado || activo
-                                ? 'bg-[#7E1D3B]/10'
-                                : 'bg-white hover:bg-slate-50'
+                              resaltado || activo ? 'bg-[#7E1D3B]/10' : 'bg-white hover:bg-slate-50'
                             }`}
                           >
                             <p className="text-sm font-semibold text-slate-900">{paciente.nombreCompleto}</p>
@@ -2132,14 +2448,51 @@ const EstudioSocioeconomico = () => {
                 )}
               </div>
             )}
-          </div>
 
-          {!errorPacientes && busquedaPaciente.trim().length < 2 && (
-            <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
-              Escribe al menos 2 letras del nombre del paciente para iniciar la busqueda.
-            </p>
-          )}
-        </section>
+            {!errorPacientes && busquedaPaciente.trim().length < 2 && (
+              <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                Escribe al menos 2 letras del nombre del paciente para iniciar la busqueda.
+              </p>
+            )}
+          </section>
+        )}
+
+        {pacienteSeleccionadoId && (
+          <section className="mb-8">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <User className="text-[#7E1D3B]" />
+                <div>
+                  <p className="text-sm font-bold text-slate-900">Paciente en proceso</p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wider">
+                      {(formData.pacienteNombre || busquedaPaciente || '—').toUpperCase()}
+                    </p>
+                    <span className="inline-block bg-[#7E1D3B] text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+                      Folio: {pacienteSeleccionadoId}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPacienteSeleccionadoId(null);
+                    setBusquedaPaciente('');
+                    setMostrarResultados(false);
+                    setPacientesBase([]);
+                    setIndiceResaltado(-1);
+                    setFormData(getCleanFormState());
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  Cambiar
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
         {!cargandoCitasRegistradas && errorCitasRegistradas && (
           <section className="-mt-2 mb-2">
@@ -2366,8 +2719,19 @@ const EstudioSocioeconomico = () => {
                   </div>
                 ))}
 
-                <div className="md:col-span-2 xl:col-span-3">
-                  <InputGroup label="Dirección Actual" name="pacienteDireccion" value={formData.pacienteDireccion} error={errors.pacienteDireccion} required onChange={handleChange} onBlur={handleBlur} placeholder="Calle, Número, Colonia, C.P." />
+                <div className="md:col-span-2 xl:col-span-3 bg-rose-50/70 p-4 rounded-2xl border border-rose-100/70">
+                  <p className="mb-3 text-sm font-bold text-[#7E1D3B]">Dirección actual</p>
+                  <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-3">
+                    <InputGroup label="Calle" name="pacienteDireccionCalle" value={formData.pacienteDireccionCalle} error={errors.pacienteDireccionCalle} required onChange={handleChange} onBlur={handleBlur} placeholder="Calle" />
+                    <InputGroup label="No. Ext." name="pacienteDireccionNoExt" value={formData.pacienteDireccionNoExt} error={errors.pacienteDireccionNoExt} onChange={handleChange} onBlur={handleBlur} placeholder="No. Ext." />
+                    <InputGroup label="No. Int." name="pacienteDireccionNoInt" value={formData.pacienteDireccionNoInt} error={errors.pacienteDireccionNoInt} onChange={handleChange} onBlur={handleBlur} placeholder="No. Int." />
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-4">
+                    <InputGroup label="Colonia" name="pacienteDireccionColonia" value={formData.pacienteDireccionColonia} error={errors.pacienteDireccionColonia} required onChange={handleChange} onBlur={handleBlur} placeholder="Colonia" />
+                    <InputGroup label="Mpio. o Delegación" name="pacienteDireccionMunicipioDelegacion" value={formData.pacienteDireccionMunicipioDelegacion} error={errors.pacienteDireccionMunicipioDelegacion} required onChange={handleChange} onBlur={handleBlur} placeholder="Municipio o Delegación" />
+                    <InputGroup label="C.P." name="pacienteDireccionCp" value={formData.pacienteDireccionCp} error={errors.pacienteDireccionCp} required onChange={handleChange} onBlur={handleBlur} placeholder="C.P." />
+                    <InputGroup label="Ciudad o Estado" name="pacienteDireccionCiudadEstado" value={formData.pacienteDireccionCiudadEstado} error={errors.pacienteDireccionCiudadEstado} required onChange={handleChange} onBlur={handleBlur} placeholder="Ciudad o Estado" />
+                  </div>
                 </div>
 
                 <InputGroup label="No. telefónico" name="pacienteTelefonoCasa" value={formData.pacienteTelefonoCasa} error={errors.pacienteTelefonoCasa} onChange={handleChange} onBlur={handleBlur} placeholder="000-000-0000" />
@@ -2496,13 +2860,45 @@ const EstudioSocioeconomico = () => {
               </section>
 
               <section className="mt-10">
-                <h3 className="mb-4 text-sm font-black uppercase tracking-wide text-slate-700">Datos Laborales del Cónyuge (si aplica)</h3>
-                <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
-                  <InputGroup label="Ocupación" name="conyugeOcupacion" value={formData.conyugeOcupacion} error={errors.conyugeOcupacion} onChange={handleChange} onBlur={handleBlur} placeholder="Ocupación actual" />
-                  <InputGroup label="Lugar de Trabajo/Empleo" name="conyugeLugarTrabajo" value={formData.conyugeLugarTrabajo} error={errors.conyugeLugarTrabajo} onChange={handleChange} onBlur={handleBlur} placeholder="Empresa o negocio" />
-                  <InputGroup label="Antiguedad Laboral" name="conyugeAntiguedad" value={formData.conyugeAntiguedad} error={errors.conyugeAntiguedad} onChange={handleChange} onBlur={handleBlur} placeholder="Ej. 1 ano" />
-                  <InputGroup label="Ingreso mensual Neto" name="conyugeIngresoMensual" value={formData.conyugeIngresoMensual} error={errors.conyugeIngresoMensual} onChange={handleChange} onBlur={handleBlur} type="number" placeholder="0" />
+                <div className="mb-6">
+                  <label className="block text-[11px] font-black uppercase text-slate-600 mb-4 ml-1 tracking-widest">¿Tiene cónyuge? <span className="text-[#7E1D3B]">*</span></label>
+                  <div className="flex gap-4 max-w-md">
+                    <label className="flex-1 flex items-center justify-center gap-2 p-3 border border-slate-100 rounded-xl bg-slate-50 cursor-pointer hover:bg-white hover:border-[#7E1D3B] transition-all">
+                      <input
+                        type="radio"
+                        name="tieneConyuge"
+                        value="si"
+                        checked={tieneConyuge === true}
+                        onChange={() => setTieneConyuge(true)}
+                        className="accent-[#7E1D3B]"
+                      />
+                      <span className="text-sm font-bold text-slate-600">Sí</span>
+                    </label>
+                    <label className="flex-1 flex items-center justify-center gap-2 p-3 border border-slate-100 rounded-xl bg-slate-50 cursor-pointer hover:bg-white hover:border-[#7E1D3B] transition-all">
+                      <input
+                        type="radio"
+                        name="tieneConyuge"
+                        value="no"
+                        checked={tieneConyuge === false}
+                        onChange={() => setTieneConyuge(false)}
+                        className="accent-[#7E1D3B]"
+                      />
+                      <span className="text-sm font-bold text-slate-600">No</span>
+                    </label>
+                  </div>
                 </div>
+
+                {tieneConyuge && (
+                  <>
+                    <h3 className="mb-4 text-sm font-black uppercase tracking-wide text-slate-700">Datos Laborales del Cónyuge</h3>
+                    <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
+                      <InputGroup label="Ocupación" name="conyugeOcupacion" value={formData.conyugeOcupacion} error={errors.conyugeOcupacion} onChange={handleChange} onBlur={handleBlur} placeholder="Ocupación actual" />
+                      <InputGroup label="Lugar de Trabajo/Empleo" name="conyugeLugarTrabajo" value={formData.conyugeLugarTrabajo} error={errors.conyugeLugarTrabajo} onChange={handleChange} onBlur={handleBlur} placeholder="Empresa o negocio" />
+                      <InputGroup label="Antiguedad Laboral" name="conyugeAntiguedad" value={formData.conyugeAntiguedad} error={errors.conyugeAntiguedad} onChange={handleChange} onBlur={handleBlur} placeholder="Ej. 1 ano" />
+                      <InputGroup label="Ingreso mensual Neto" name="conyugeIngresoMensual" value={formData.conyugeIngresoMensual} error={errors.conyugeIngresoMensual} onChange={handleChange} onBlur={handleBlur} type="number" placeholder="0" />
+                    </div>
+                  </>
+                )}
               </section>
 
               <section className="mt-10">
@@ -2546,6 +2942,7 @@ const EstudioSocioeconomico = () => {
                       activeRow={activeContributorRow}
                       onRowFocus={setActiveContributorRow}
                       disabled={formData.familiarAportaIngreso === 'no'}
+                      parentescoOptions={contributorParentescoOptions}
                     />
                     {formData.familiarAportaIngreso === 'no' && (
                       <p className="mt-2 text-xs font-semibold text-slate-500">
@@ -2590,34 +2987,56 @@ const EstudioSocioeconomico = () => {
               <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/40 p-4 md:p-5">
                   <h3 className="mb-3 text-sm font-black uppercase tracking-wide text-slate-700">Ingresos Mensuales</h3>
+                  
                   <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
                     <table className="w-full text-xs">
                       <tbody>
                         {[
-                          ['Solicitante', 'solicitante'],
-                          ['Esposo(a)', 'conyuge'],
+                          ['Solicitante (Ingreso neto + Otros)', 'solicitante'],
+                          ...(tieneConyuge ? [['Esposo(a)', 'conyuge']] : []),
                           ['Hijos(as)', 'hijos'],
-                          ['Otros', 'otros'],
+                          ['Otros familiares', 'otros'],
                         ].map(([label, key]) => (
                           <tr key={key} className="border-t border-slate-200 first:border-t-0">
                             <td className="px-3 py-2 font-medium text-slate-700">{label}</td>
                             <td className="w-48 p-1.5">
                               <div className="flex items-center gap-2">
                                 <span className="text-slate-400">$</span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={monthlyIncomes[key]}
-                                  onChange={(e) => handleIncomeChange(key, e.target.value)}
-                                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-                                />
+                                {key === 'solicitante' ? (
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={Number(formData.laboralIngresoMensual || 0) + Number(formData.laboralOtrosIngresos || 0)}
+                                    readOnly
+                                    className="w-full rounded-lg border border-slate-200 bg-slate-100 px-2 py-1.5 text-slate-500 outline-none font-semibold"
+                                  />
+                                ) : key === 'conyuge' ? (
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={formData.conyugeIngresoMensual}
+                                    readOnly
+                                    className="w-full rounded-lg border border-slate-200 bg-slate-100 px-2 py-1.5 text-slate-500 outline-none font-semibold"
+                                  />
+                                ) : (
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={monthlyIncomes[key]}
+                                    onChange={(e) => {
+                                      setIsDirty(true);
+                                      setMonthlyIncomes((prev) => ({ ...prev, [key]: e.target.value }));
+                                    }}
+                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
+                                  />
+                                )}
                               </div>
                             </td>
                           </tr>
                         ))}
                         <tr className="border-t border-slate-300 bg-slate-100/70">
                           <td className="px-3 py-2 font-black text-slate-700">Total</td>
-                          <td className="px-3 py-2 text-right font-black text-[#7E1D3B]">$ {totalIncomes.toLocaleString('es-MX')}</td>
+                          <td className="px-3 py-2 text-right font-black text-[#7E1D3B]">$ {(Number(formData.laboralIngresoMensual || 0) + Number(formData.laboralOtrosIngresos || 0) + (tieneConyuge ? Number(formData.conyugeIngresoMensual || 0) : 0) + Number(monthlyIncomes.hijos || 0) + Number(monthlyIncomes.otros || 0)).toLocaleString('es-MX')}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -2677,30 +3096,30 @@ const EstudioSocioeconomico = () => {
                         ? 'border-rose-300 bg-rose-50'
                         : 'border-slate-200 bg-slate-100'
                     }`}>
-                      <span className={`text-sm font-bold ${formData.balanceEconomico === 'deficit' ? 'text-rose-700' : 'text-slate-500'}`}>Déficit (Falta)</span>
+                      <span className={`text-sm font-bold ${formData.balanceEconomico === 'deficit' ? 'text-rose-700' : 'text-slate-500'}`}>Déficit </span>
                     </div>
                     <div className={`flex items-center justify-center gap-2 p-3 border rounded-xl transition-all ${
                       formData.balanceEconomico === 'superavit'
                         ? 'border-emerald-300 bg-emerald-50'
                         : 'border-slate-200 bg-slate-100'
                     }`}>
-                      <span className={`text-sm font-bold ${formData.balanceEconomico === 'superavit' ? 'text-emerald-700' : 'text-slate-500'}`}>Superávit (Sobra)</span>
+                      <span className={`text-sm font-bold ${formData.balanceEconomico === 'superavit' ? 'text-emerald-700' : 'text-slate-500'}`}>Superávit </span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className={`h-[48px] rounded-xl border px-3 flex items-center justify-between ${
+                  <div className="grid grid-cols-[minmax(0,1.45fr)_minmax(0,0.85fr)] gap-3">
+                      <div className={`h-[56px] rounded-xl border px-4 py-3 flex flex-col justify-center gap-0.5 ${
                       economicResult < 0
                         ? 'border-rose-300 bg-rose-50'
                         : 'border-emerald-300 bg-emerald-50'
                     }`}>
-                      <span className="text-[11px] font-black uppercase tracking-wide text-slate-500">Resultado</span>
-                      <span className={`text-sm font-black ${economicResult < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
-                        $ {economicResult.toLocaleString('es-MX')}
+                        <span className="text-[10px] font-black uppercase tracking-wide text-slate-500 leading-none">Resultado</span>
+                        <span className={`text-lg font-black leading-none ${economicResult < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                          $ {economicResult.toLocaleString('es-MX')}
                       </span>
                     </div>
-                    <div className="h-[48px] rounded-xl border border-[#7E1D3B]/30 bg-[#7E1D3B]/5 flex items-center justify-between px-3">
-                      <span className="text-[11px] font-black uppercase tracking-wide text-slate-500">Puntos</span>
-                      <span className="text-base font-black text-[#7E1D3B] leading-none">{calculateBalancePoints(formData.balanceEconomico)}</span>
+                      <div className="h-[56px] rounded-xl border border-[#7E1D3B]/30 bg-[#7E1D3B]/5 flex flex-col justify-center px-3">
+                        <span className="text-[10px] font-black uppercase tracking-wide text-slate-500 leading-none">Puntos</span>
+                        <span className="text-xl font-black text-[#7E1D3B] leading-none">{calculateBalancePoints(formData.balanceEconomico)}</span>
                     </div>
                   </div>
                 </div>
@@ -3983,7 +4402,7 @@ const FamilyReferencesTable = ({ rows, onChange, onAddRow, onRemoveRow, activeRo
   </div>
 );
 
-const IncomeContributorsTable = ({ rows, onChange, onAddRow, onRemoveRow, activeRow, onRowFocus, disabled = false }) => (
+const IncomeContributorsTable = ({ rows, onChange, onAddRow, onRemoveRow, activeRow, onRowFocus, disabled = false, parentescoOptions = [] }) => (
   <div className={`rounded-2xl border border-slate-200 p-4 md:p-5 ${disabled ? 'bg-slate-100/80 opacity-80' : 'bg-slate-50/40'}`}>
     <div className="mb-3 flex items-center justify-between gap-3">
       <h3 className="text-sm font-black uppercase tracking-wide text-slate-700">Aportación de otros familiares</h3>
@@ -4015,13 +4434,20 @@ const IncomeContributorsTable = ({ rows, onChange, onAddRow, onRemoveRow, active
               }`}
             >
               <td className="p-2">
-                <input
+                <select
                   value={row.parentesco}
                   onChange={(e) => onChange(index, 'parentesco', e.target.value)}
                   onFocus={() => onRowFocus(index)}
                   disabled={disabled}
                   className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-                />
+                >
+                  <option value="">Seleccionar</option>
+                  {parentescoOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </td>
               <td className="p-2">
                 <input

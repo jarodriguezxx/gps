@@ -14,6 +14,7 @@ import {
 	Users,
 } from 'lucide-react';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
+import { API_BASE } from '../../config/api';
 
 const getEstadoPaciente = (item) => String(item?.estadoPaciente || item?.estado || '').toUpperCase();
 
@@ -44,7 +45,7 @@ const formatDateShort = (value) => {
 	if (!value) return '';
 	try {
 		return new Date(value).toLocaleDateString('es-MX');
-	} catch (e) {
+	} catch {
 		return String(value);
 	}
 };
@@ -63,7 +64,7 @@ const DirectorioAdmisiones = () => {
 			setLoading(true);
 			setError('');
 			try {
-				const response = await fetch('http://localhost:4000/api/pacientes');
+				const response = await fetch(`${API_BASE}/pacientes`);
 				if (!response.ok) {
 					throw new Error('No se pudieron cargar los expedientes.');
 				}

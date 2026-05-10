@@ -5,7 +5,10 @@ import org.springframework.stereotype.Repository;
 
 import com.marakame.api.entity.Paciente;
 
+import java.util.List;
+
 @Repository
 public interface PacienteRepository extends JpaRepository<Paciente, Long> {
     // Aquí podrías agregar búsquedas personalizadas después, por ahora está perfecto así.
+    List<Paciente> findByPagoValidadoFalse();
 }

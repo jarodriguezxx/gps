@@ -10,7 +10,8 @@ public enum Estado {
     AUTORIZADA,
     FINALIZADA,
     RECHAZADA,
-    RECIBIDA;
+    INCOMPLETA, // Nuevo: Para recepciones parciales
+    RECIBIDA,    // Nuevo: Para cuando todo llegó al 100%
 
     @JsonValue
     public String toJson() {

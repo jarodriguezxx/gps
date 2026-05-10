@@ -1831,10 +1831,48 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         return pacienteRepository.findById(id);
     }
 
+    public List<Paciente> obtenerPacientesPendientesValidacionPago() {
+        return pacienteRepository.findByPagoValidadoFalse();
+    }
+
+    @Transactional
+    public Paciente validarPagoPaciente(Long pacienteId) {
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
+
+        ReciboPago recibo = obtenerUltimoReciboPaciente(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("No existe un recibo registrado para este paciente"));
+
+        LocalDateTime ahora = LocalDateTime.now();
+        String folio = recibo.getNumeroRecibo();
+        if (folio == null || folio.isBlank()) {
+            folio = recibo.getTokenGenerado();
+        }
+
+        paciente.setPagoValidado(true);
+        paciente.setFechaValidacion(ahora);
+        paciente.setFolioRecibo(folio);
+        pacienteRepository.save(paciente);
+
+        recibo.setEstadoPago("VALIDADO");
+        recibo.setFechaValidacion(ahora);
+        if (folio != null && !folio.isBlank()) {
+            recibo.setNumeroRecibo(folio);
+            recibo.setTokenGenerado(folio);
+        }
+        reciboPagoRepository.save(recibo);
+
+        return paciente;
+    }
+
     @Transactional
     public String validarIngresoYGenerarClave(Long pacienteId, Map<String, Object> payload) {
         Paciente paciente = pacienteRepository.findById(pacienteId)
             .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
+
+        if (!Boolean.TRUE.equals(paciente.getPagoValidado())) {
+            throw new IllegalArgumentException("Esperando validación de Finanzas");
+        }
 
         // Validar que el recibo esté cargado
         String reciboPagadoStr = String.valueOf(payload.getOrDefault("reciboPagado", false));
@@ -1848,31 +1886,6 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         String año = String.valueOf(LocalDateTime.now().getYear());
         String aleatorio = String.format("%05d", (int)(Math.random() * 100000));
         String clavePaciente = String.format("INST-%s-%d-%s", año, pacienteId, aleatorio);
-
-        ReciboPago recibo = obtenerUltimoReciboPaciente(pacienteId)
-            .orElseGet(() -> {
-                ReciboPago nuevo = new ReciboPago();
-                nuevo.setPaciente(paciente);
-                return nuevo;
-            });
-
-        recibo.setPaciente(paciente);
-        recibo.setNumeroRecibo(clavePaciente);
-        recibo.setTokenGenerado(clavePaciente);
-        recibo.setMontoPago(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPago", recibo.getMontoPago() != null ? recibo.getMontoPago() : 0))));
-        recibo.setMontoPrograma(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPrograma", recibo.getMontoPrograma() != null ? recibo.getMontoPrograma() : 0))));
-        recibo.setConcepto((String) payload.getOrDefault("concepto", recibo.getConcepto() != null ? recibo.getConcepto() : "Tratamiento de desintoxicación"));
-        recibo.setNombrePagador((String) payload.getOrDefault("nombrePagador", recibo.getNombrePagador() != null ? recibo.getNombrePagador() : ""));
-        recibo.setRfcPagador((String) payload.getOrDefault("rfc", recibo.getRfcPagador() != null ? recibo.getRfcPagador() : ""));
-        if (payload.containsKey("archivoReciboUrl") && payload.get("archivoReciboUrl") != null) {
-            recibo.setArchivoReciboUrl(String.valueOf(payload.get("archivoReciboUrl")));
-        }
-        if (recibo.getFechaPago() == null) {
-            recibo.setFechaPago(LocalDateTime.now());
-        }
-        recibo.setEstadoPago("VALIDADO");
-        recibo.setFechaValidacion(LocalDateTime.now());
-        reciboPagoRepository.save(recibo);
 
         // Actualizar estado del paciente
         paciente.setEstadoPaciente(EstadoPaciente.INGRESADO);
@@ -1915,18 +1928,53 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 			throw new IllegalArgumentException("No se pueden registrar recibos para pacientes denegados");
 		}
 
-        ReciboPago recibo = new ReciboPago();
+        String numeroRecibo = (String) payload.getOrDefault("numeroRecibo", "REC-" + pacienteId + "-" + System.currentTimeMillis());
+        ReciboPago recibo = reciboPagoRepository.findByNumeroRecibo(numeroRecibo).orElseGet(ReciboPago::new);
+        boolean reciboValidado = "VALIDADO".equalsIgnoreCase(String.valueOf(recibo.getEstadoPago()));
+
         recibo.setPaciente(paciente);
-        recibo.setNumeroRecibo((String) payload.getOrDefault("numeroRecibo", "REC-" + pacienteId + "-" + System.currentTimeMillis()));
-        recibo.setMontoPago(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPago", 0))));
-        recibo.setMontoPrograma(Double.parseDouble(String.valueOf(payload.getOrDefault("montoPrograma", 0))));
-        recibo.setConcepto((String) payload.getOrDefault("concepto", "Tratamiento de desintoxicación"));
-        recibo.setNombrePagador((String) payload.getOrDefault("nombrePagador", ""));
-        recibo.setRfcPagador((String) payload.getOrDefault("rfc", ""));
-        recibo.setArchivoReciboUrl((String) payload.getOrDefault("archivoReciboUrl", ""));
-        recibo.setFechaPago(LocalDateTime.now());
-        recibo.setEstadoPago("PENDIENTE");
+        recibo.setNumeroRecibo(numeroRecibo);
+        recibo.setMontoPago(toDoubleValue(payload.getOrDefault("montoPago", recibo.getMontoPago() != null ? recibo.getMontoPago() : 0), 0));
+        recibo.setMontoPrograma(toDoubleValue(payload.getOrDefault("montoPrograma", recibo.getMontoPrograma() != null ? recibo.getMontoPrograma() : 0), 0));
+        recibo.setConcepto((String) payload.getOrDefault("concepto", recibo.getConcepto() != null ? recibo.getConcepto() : "Tratamiento de desintoxicación"));
+        recibo.setNombrePagador((String) payload.getOrDefault("nombrePagador", recibo.getNombrePagador() != null ? recibo.getNombrePagador() : ""));
+        recibo.setRfcPagador((String) payload.getOrDefault("rfc", recibo.getRfcPagador() != null ? recibo.getRfcPagador() : ""));
+
+        if (payload.containsKey("archivoReciboUrl") && payload.get("archivoReciboUrl") != null) {
+            recibo.setArchivoReciboUrl(String.valueOf(payload.get("archivoReciboUrl")));
+        }
+
+        if (recibo.getFechaPago() == null) {
+            recibo.setFechaPago(LocalDateTime.now());
+        }
+
+        if (!reciboValidado) {
+            recibo.setEstadoPago("PENDIENTE");
+            paciente.setPagoValidado(false);
+            paciente.setFechaValidacion(null);
+        }
+
+        paciente.setFolioRecibo(numeroRecibo);
+        pacienteRepository.save(paciente);
         return reciboPagoRepository.save(recibo);
+    }
+
+    private double toDoubleValue(Object value, double defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        String text = String.valueOf(value).trim();
+        if (text.isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            return Double.parseDouble(text);
+        } catch (NumberFormatException ex) {
+            return defaultValue;
+        }
     }
 
     private Optional<ReciboPago> obtenerUltimoReciboPaciente(Long pacienteId) {
@@ -1939,5 +1987,17 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         ReciboPago recibo = reciboPagoRepository.findByIdAndPaciente_Id(reciboId, pacienteId)
             .orElseThrow(() -> new IllegalArgumentException("Recibo no encontrado para este paciente"));
         reciboPagoRepository.delete(recibo);
+    }
+
+    @Transactional
+    public Paciente iniciarPagoPaciente(Long pacienteId, String folioRecibo) {
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+            .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
+
+        paciente.setPagoValidado(false);
+        paciente.setFolioRecibo(folioRecibo);
+        paciente.setFechaRegistroRecibo(LocalDateTime.now());
+
+        return pacienteRepository.save(paciente);
     }
 }

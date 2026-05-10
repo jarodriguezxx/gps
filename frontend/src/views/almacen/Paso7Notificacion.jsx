@@ -1,123 +1,137 @@
-import React from 'react';
-import { Bell, ArrowRight, FileCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bell, CheckCircle2, FileText, Printer, Mail, ArrowRight, Building2, PackageCheck, AlertCircle } from 'lucide-react';
 
-const Paso7Notificacion = ({ setActiveTab }) => {
-  const labelClass = "block text-xs font-bold text-slate-500 uppercase tracking-[0.15em] mb-1.5 ml-0.5";
-  const inputClass = "w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30 focus:border-[#7E1D3B]/50 transition-all placeholder:text-slate-300";
+const Paso7Notificacion = ({ setActiveTab, recepcionActiva, articulosParaInventario }) => {
+  const [enviado, setEnviado] = useState(false);
+
+  const finalizarProceso = () => {
+    // Aquí podrías disparar un correo real o una notificación push a Rec. Materiales
+    setEnviado(true);
+    setTimeout(() => {
+      alert("Proceso finalizado. El inventario ha sido actualizado y Recursos Materiales ha sido notificado.");
+      setActiveTab('dashboard'); // Cerramos el ciclo regresando al inicio
+    }, 1500);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
-    <div className="grid lg:grid-cols-2 gap-5 animate-in fade-in duration-300">
+    <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-300">
       
-      {/* ── Panel Izquierdo: Formulario y Checklist ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col h-full">
-        <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4 shrink-0">
-          <Bell className="text-[#7E1D3B]" size={24} />
-          <div>
-            <h2 className="text-lg font-black text-slate-800">Notificación a Rec. Materiales</h2>
-            <p className="text-xs text-slate-500">Paso 7 — Entradas y Salidas de Almacén</p>
-          </div>
-        </div>
-
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-xs text-blue-800 leading-relaxed shrink-0">
-          ℹ️ Se notifica al <strong>Encargado de Recursos Materiales</strong> la recepción de los consumibles y se entregan las <strong>facturas correspondientes</strong> para que continúen el proceso de pago a proveedores.
-        </div>
-
-        {/* Formulario */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 shrink-0">
-          <div className="md:col-span-2">
-            <label className={labelClass}>Notificar Recepción de</label>
-            <select className={inputClass}>
-              <option>ENT-0089 — Buprenorfina 8mg — Farm. del Ahorro</option>
-              <option>ENT-0088 — Víveres quincena — Prov. Nutrición</option>
-            </select>
+      {/* Encabezado con Icono de Notificación */}
+      <div className="px-6 py-6 border-b border-slate-100 bg-[#7E1D3B] text-white">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+            <Bell className="w-7 h-7" />
           </div>
           <div>
-            <label className={labelClass}>Encargado Rec. Materiales</label>
-            <input type="text" placeholder="Nombre de quien recibe" className={inputClass} />
+            <h2 className="text-xl font-black">Paso 7: Notificación a Recursos Materiales</h2>
+            <p className="text-xs font-medium text-white/70 uppercase tracking-widest">Cierre de proceso de recepción</p>
           </div>
-          <div>
-            <label className={labelClass}>Fecha de Entrega Física</label>
-            <input type="date" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>No. Contra-recibo Emitido</label>
-            <input type="text" placeholder="CR-2795" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>No. Factura del Proveedor</label>
-            <input type="text" placeholder="FC-2318" className={inputClass} />
-          </div>
-        </div>
-
-        {/* Lista de Documentos a Entregar */}
-        <div className="border-t border-slate-100 pt-5 mb-6 flex-1">
-          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">Documentos Físicos que se Entregan</h3>
-          <div className="space-y-2">
-            {[
-              'Factura original del proveedor (sellada y firmada por almacén)',
-              'Copia del contra-recibo emitido',
-              'Copia de la requisición de referencia'
-            ].map((item, i) => (
-              <label key={i} className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition">
-                <input type="checkbox" className="mt-0.5 w-4 h-4 text-[#7E1D3B] rounded border-slate-300 focus:ring-[#7E1D3B]" />
-                <p className="text-sm text-slate-700 flex-1">{item}</p>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Botones de acción */}
-        <div className="pt-4 border-t border-slate-100 shrink-0 mt-auto">
-          <button onClick={() => setActiveTab('paso8')} className="w-full flex items-center justify-center gap-2 py-3 bg-[#7E1D3B] text-white rounded-xl font-bold text-sm hover:bg-[#63162e] transition shadow-sm">
-            Notificación Registrada → Ir a Bajas <ArrowRight size={16} />
-          </button>
         </div>
       </div>
 
-      {/* ── Panel Derecho: Notificaciones del Día ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-fit">
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
-          <FileCheck size={16} className="text-[#7E1D3B]" />
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Notificaciones de Hoy</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                <th className="px-5 py-3">Entrada</th>
-                <th className="px-5 py-3">Insumo</th>
-                <th className="px-5 py-3">CR Emitido</th>
-                <th className="px-5 py-3">Factura</th>
-                <th className="px-5 py-3">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              <tr className="hover:bg-slate-50 transition">
-                <td className="px-5 py-3 font-mono font-bold text-[#7E1D3B] text-xs">ENT-0087</td>
-                <td className="px-5 py-3 text-slate-600 font-medium text-xs">Mat. curación</td>
-                <td className="px-5 py-3 font-mono text-slate-500 text-xs">CR-2794</td>
-                <td className="px-5 py-3 font-mono text-slate-500 text-xs">NR-0044</td>
-                <td className="px-5 py-3"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[9px] rounded-full font-bold uppercase whitespace-nowrap">Notificado</span></td>
-              </tr>
-              <tr className="hover:bg-slate-50 transition">
-                <td className="px-5 py-3 font-mono font-bold text-[#7E1D3B] text-xs">ENT-0083</td>
-                <td className="px-5 py-3 text-slate-600 font-medium text-xs">Guantes látex</td>
-                <td className="px-5 py-3 font-mono text-slate-500 text-xs">CR-2790</td>
-                <td className="px-5 py-3 font-mono text-slate-500 text-xs">FC-2300</td>
-                <td className="px-5 py-3"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[9px] rounded-full font-bold uppercase whitespace-nowrap">Notificado</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        
-        <div className="p-5 bg-slate-50 border-t border-slate-100">
-          <p className="text-[11px] text-slate-500 text-center leading-relaxed">
-            💡 Es importante recabar la <strong>firma de acuse de recibo</strong> del personal de Recursos Materiales en tu copia del contra-recibo para amparar la entrega de las facturas originales.
-          </p>
+      <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
+        <div id="reporte-final" className="max-w-3xl mx-auto space-y-6">
+          
+          {/* Tarjeta 1: Estado del Proceso */}
+          <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-4">
+                <CheckCircle2 className="text-emerald-500 w-12 h-12 opacity-20" />
+             </div>
+             
+             <div className="flex items-center gap-2 mb-6 text-[#7E1D3B]">
+                <PackageCheck size={20} />
+                <h3 className="font-black uppercase text-xs tracking-tighter">Resumen de Entrada al Almacén</h3>
+             </div>
+
+             <div className="grid grid-cols-2 gap-8">
+                <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Proveedor</p>
+                    <p className="text-sm font-bold text-slate-800">{recepcionActiva?.proveedor || 'N/A'}</p>
+                </div>
+                <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Folio de Factura</p>
+                    <p className="text-sm font-bold text-slate-800 font-mono">{recepcionActiva?.folio || 'N/A'}</p>
+                </div>
+                <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Fecha de Ingreso</p>
+                    <p className="text-sm font-bold text-slate-800">{recepcionActiva?.fechaRecepcion || 'Hoy'}</p>
+                </div>
+                <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Cuidado Especial</p>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
+                        {recepcionActiva?.cuidadosEspeciales || 'Estándar'}
+                    </span>
+                </div>
+             </div>
+          </div>
+
+          {/* Tarjeta 2: Listado Detallado */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <span className="text-[10px] font-black text-slate-500 uppercase">Artículos Ingresados al Inventario Digital</span>
+                <span className="text-[10px] font-black bg-[#7E1D3B] text-white px-2 py-0.5 rounded-full">
+                    {articulosParaInventario?.length || 0} Ítems
+                </span>
+             </div>
+             <div className="divide-y divide-slate-50">
+                {articulosParaInventario?.map((art, idx) => (
+                    <div key={idx} className="px-6 py-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                        <div>
+                            <p className="text-sm font-bold text-slate-700">{art.articuloNombre}</p>
+                            <p className="text-[10px] text-slate-400 font-medium">Categoría: {art.categoria}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-sm font-black text-[#7E1D3B]">+{art.stock} {art.unidad}</p>
+                            <p className="text-[9px] text-slate-400 font-bold">FECHA CAD: {recepcionActiva?.caducidad || 'N/A'}</p>
+                        </div>
+                    </div>
+                ))}
+             </div>
+          </div>
+
+          {/* Advertencia Final */}
+          <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+             <AlertCircle className="text-amber-500 shrink-0" size={18} />
+             <p className="text-xs text-amber-800 font-medium leading-relaxed">
+                Este resumen será enviado automáticamente al departamento de <strong>Recursos Materiales</strong> para su validación administrativa. Recuerde entregar las facturas originales foliadas físicamente.
+             </p>
+          </div>
         </div>
       </div>
 
+      {/* Botones de Acción */}
+      <div className="px-6 py-6 bg-white border-t border-slate-100 flex justify-between items-center">
+        <button 
+          onClick={handlePrint}
+          className="px-6 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all flex items-center gap-2"
+        >
+          <Printer size={18} /> Imprimir Reporte
+        </button>
+
+        <div className="flex gap-3">
+            <button className="px-6 py-3 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition-all flex items-center gap-2">
+                <Mail size={18} /> Enviar Copia Email
+            </button>
+            
+            <button 
+                onClick={finalizarProceso}
+                disabled={enviado}
+                className={`px-10 py-3 rounded-xl font-bold text-white shadow-lg transition-all flex items-center gap-2 ${
+                    enviado ? 'bg-emerald-500' : 'bg-[#7E1D3B] hover:shadow-[#7E1D3B]/20'
+                }`}
+            >
+                {enviado ? (
+                    <>¡Notificado! <CheckCircle2 size={18} /></>
+                ) : (
+                    <>Finalizar y Notificar <ArrowRight size={18} /></>
+                )}
+            </button>
+        </div>
+      </div>
     </div>
   );
 };
