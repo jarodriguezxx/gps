@@ -17,8 +17,9 @@ public class Requisicion {
     @JsonProperty("id")
     private UUID id;
 
+    @Column(name = "fecha")
     @JsonProperty("fecha")
-    private OffsetDateTime fecha;
+    private OffsetDateTime fecha = OffsetDateTime.now();
 
     @JsonProperty("area")
     private String area;
@@ -60,6 +61,14 @@ public class Requisicion {
     @Column(name = "firma_directora_gral")
     @JsonProperty("firmaDirectoraGral")
     private Boolean firmaDirectoraGral = false;
+
+    @Column(name = "observaciones_rechazo", columnDefinition = "TEXT")
+    @JsonProperty("observacionesRechazo")
+    private String observacionesRechazo;
+
+    @Column(name = "rechazado_por")
+    @JsonProperty("rechazadoPor")
+    private String rechazadoPor;
 
     @Column(name = "cotizacion_path")
     @JsonProperty("cotizacionPath")
@@ -118,6 +127,12 @@ public class Requisicion {
 
     public Boolean getFirmaDirectoraGral() { return firmaDirectoraGral; }
     public void setFirmaDirectoraGral(Boolean firmaDirectoraGral) { this.firmaDirectoraGral = firmaDirectoraGral; }
+
+    public String getObservacionesRechazo() { return observacionesRechazo; }
+    public void setObservacionesRechazo(String observacionesRechazo) { this.observacionesRechazo = observacionesRechazo; }
+
+    public String getRechazadoPor() { return rechazadoPor; }
+    public void setRechazadoPor(String rechazadoPor) { this.rechazadoPor = rechazadoPor; }
 
     public String getCotizacionPath() { return cotizacionPath; }
     public void setCotizacionPath(String cotizacionPath) { this.cotizacionPath = cotizacionPath; }

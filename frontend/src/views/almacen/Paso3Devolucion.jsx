@@ -1,126 +1,125 @@
-import React from 'react';
-import { Undo2, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertTriangle, ArrowLeft, Send, ClipboardX, Info, PackageX } from 'lucide-react';
 
-const Paso3Devolucion = ({ setActiveTab }) => {
-  const labelClass = "block text-xs font-bold text-slate-500 uppercase tracking-[0.15em] mb-1.5 ml-0.5";
-  const inputClass = "w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-900/30 focus:border-rose-900/50 transition-all placeholder:text-slate-300";
+const Paso3Devolucion = ({ setActiveTab, recepcionActiva, datosIncidencia }) => {
+  const [motivo, setMotivo] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  // Obtenemos la lista de artículos rechazados desde el objeto de incidencia
+  const articulosParaDevolver = datosIncidencia?.articulosRechazados || [];
+
+  const manejarDevolucion = async (e) => {
+    e.preventDefault();
+    setEnviando(true);
+    
+    try {
+      // Simulación de guardado en la tabla incidencias_almacen de Neon
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      alert(`Reporte generado con éxito para ${articulosParaDevolver.length} insumo(s).`);
+      setActiveTab('dashboard'); 
+    } catch (error) {
+      alert("Error al registrar la incidencia.");
+    } finally {
+      setEnviando(false);
+    }
+  };
 
   return (
-    <div className="grid lg:grid-cols-2 gap-5 animate-in fade-in duration-300">
-      
-      {/* ── Panel Izquierdo: Formulario de Devolución ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col h-full">
-        <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4 shrink-0">
-          <div className="h-10 w-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
-            <Undo2 size={20} />
+    <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm overflow-hidden">
+      {/* Encabezado */}
+      <div className="px-6 py-4 border-b border-rose-100 bg-rose-50 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
+            <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-800">Devolución al Proveedor</h2>
-            <p className="text-xs text-slate-500">Paso 3a — No corresponde a Requisición</p>
+            <h2 className="text-lg font-bold text-rose-900">Paso 3: Registro de Devolución</h2>
+            <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Inconsistencias Detectadas</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => setActiveTab('paso2')}
+          className="px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-xs font-bold hover:bg-rose-50 transition-colors flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Regresar
+        </button>
+      </div>
+
+      <div className="flex-1 p-8 flex flex-col lg:flex-row gap-8 overflow-y-auto">
+        {/* Lado Izquierdo: Lista de Insumos Inválidos */}
+        <div className="lg:w-1/2 space-y-6">
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <ClipboardX className="w-4 h-4" />
+              Insumos que no corresponden
+            </h3>
+            
+            {/* NUEVA: Lista dinámica de artículos rechazados */}
+            <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+              {articulosParaDevolver.length > 0 ? (
+                articulosParaDevolver.map((art, idx) => (
+                  <div key={idx} className="p-3 bg-white border border-rose-100 rounded-xl flex items-center gap-3 shadow-sm">
+                    <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-500">
+                      <PackageX className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-700">{art.articuloRequisitado}</p>
+                      <p className="text-[10px] text-slate-500">Cantidad reportada: {art.articulosSolicitados} {art.unidad}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 bg-white border border-slate-200 rounded-xl text-center italic text-slate-400 text-xs">
+                  No se seleccionaron artículos específicos.
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-200 space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-500">Factura:</span>
+                <span className="font-bold text-slate-700">{recepcionActiva?.folio || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-500">Proveedor:</span>
+                <span className="font-bold text-slate-700">{recepcionActiva?.proveedor || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
+            <Info className="w-5 h-5 text-amber-500 shrink-0" />
+            <p className="text-[11px] text-amber-800 leading-relaxed">
+              <strong>Nota Normativa Marakame:</strong> Este reporte será enviado a Recursos Materiales para la gestión de la nota de crédito o sustitución física del material.
+            </p>
           </div>
         </div>
 
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 mb-6 text-xs text-rose-800 leading-relaxed shrink-0">
-          ❌ El pedido <strong>no cumple</strong> con las características descritas en la requisición. Los consumibles se devuelven al proveedor y el procedimiento termina para esta entrada.
-        </div>
-
-        {/* Formulario */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 flex-1 overflow-y-auto pr-2">
-          <div className="md:col-span-2">
-            <label className={labelClass}>Entrada a Devolver</label>
-            <select className={inputClass}>
-              <option>ENT-0085 — Metadona 10mg/mL — Lab. Pisa</option>
-              <option>ENT-0089 — Buprenorfina 8mg — Farm. del Ahorro</option>
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Fecha de Devolución</label>
-            <input type="date" className={inputClass} />
-          </div>
-          <div className="md:col-span-2">
-            <label className={labelClass}>Motivo Principal</label>
-            <select className={inputClass}>
-              <option>Tipo de bien incorrecto (no corresponde a requisición)</option>
-              <option>Cantidad entregada incorrecta</option>
-              <option>Presentación no corresponde a lo solicitado</option>
-              <option>Empaque dañado o abierto</option>
-              <option>Producto caducado o menos de 6 meses de vigencia</option>
-              <option>Bien distinto al de la orden de compra</option>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className={labelClass}>Descripción Detallada del Problema</label>
+        {/* Lado Derecho: Formulario de Reporte */}
+        <div className="lg:w-1/2">
+          <form onSubmit={manejarDevolucion} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">
+              Motivo General de la Devolución
+            </label>
             <textarea 
-              rows="3" 
-              placeholder="Explicar detalladamente por qué se rechaza la mercancía..." 
-              className={`${inputClass} resize-none`}
-            ></textarea>
-          </div>
-          <div>
-            <label className={labelClass}>Representante Proveedor</label>
-            <input type="text" placeholder="Nombre de quien recoge" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Factura Devuelta</label>
-            <input type="text" placeholder="No. de factura" className={inputClass} />
-          </div>
-        </div>
+              required
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Explica brevemente por qué estos artículos no fueron aceptados (ej. caducidad, empaque dañado, no es el gramaje solicitado)..."
+              className="w-full h-40 p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all resize-none mb-6"
+            />
 
-        {/* Botones de acción */}
-        <div className="pt-4 border-t border-slate-100 shrink-0 space-y-3">
-          <button className="w-full flex items-center justify-center gap-2 py-3 bg-rose-600 text-white rounded-xl font-bold text-sm hover:bg-rose-700 transition shadow-sm shadow-rose-600/20">
-            <Undo2 size={16} /> Confirmar Devolución al Proveedor
-          </button>
-          <button onClick={() => setActiveTab('paso2')} className="w-full flex items-center justify-center gap-2 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-50 transition">
-            <ArrowLeft size={16} /> Regresar a Verificación
-          </button>
-        </div>
-
-        <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 text-center">
-          📌 <strong>TERMINA PROCEDIMIENTO</strong>. Se notificará automáticamente a Recursos Materiales para gestionar la reposición.
+            <button 
+              type="submit"
+              disabled={enviando || articulosParaDevolver.length === 0}
+              className="w-full py-4 bg-rose-600 text-white rounded-xl font-bold shadow-lg hover:bg-rose-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              {enviando ? 'Registrando...' : 'Confirmar Devolución'}
+            </button>
+          </form>
         </div>
       </div>
-
-      {/* ── Panel Derecho: Devoluciones Registradas ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-fit">
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Historial de Devoluciones</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                <th className="px-5 py-3">Entrada</th>
-                <th className="px-5 py-3">Proveedor</th>
-                <th className="px-5 py-3">Motivo</th>
-                <th className="px-5 py-3">Fecha</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              <tr className="hover:bg-slate-50 transition">
-                <td className="px-5 py-3 font-mono font-bold text-[#7E1D3B] text-xs">ENT-0085</td>
-                <td className="px-5 py-3 text-slate-600 text-xs">Lab. Pisa S.A.</td>
-                <td className="px-5 py-3 text-rose-600 font-medium text-xs">Presentación incorrecta</td>
-                <td className="px-5 py-3 font-mono text-slate-400 text-xs">Hoy</td>
-              </tr>
-              <tr className="hover:bg-slate-50 transition">
-                <td className="px-5 py-3 font-mono font-bold text-[#7E1D3B] text-xs">ENT-0061</td>
-                <td className="px-5 py-3 text-slate-600 text-xs">Prov. Nutrición</td>
-                <td className="px-5 py-3 text-rose-600 font-medium text-xs">Caducidad &lt; 6 meses</td>
-                <td className="px-5 py-3 font-mono text-slate-400 text-xs">12/03</td>
-              </tr>
-              <tr className="hover:bg-slate-50 transition">
-                <td className="px-5 py-3 font-mono font-bold text-[#7E1D3B] text-xs">ENT-0042</td>
-                <td className="px-5 py-3 text-slate-600 text-xs">Farm. del Ahorro</td>
-                <td className="px-5 py-3 text-rose-600 font-medium text-xs">Cantidad incorrecta</td>
-                <td className="px-5 py-3 font-mono text-slate-400 text-xs">15/02</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
     </div>
   );
 };

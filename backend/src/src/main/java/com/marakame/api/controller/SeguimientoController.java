@@ -1,9 +1,10 @@
 package com.marakame.api.controller;
 
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -98,9 +99,10 @@ public class SeguimientoController {
         }
 
         boolean tieneLlamadaInicial = seguimientoRepository.existsByPaciente_IdAndTipoAccionContainingIgnoreCase(request.pacienteId(), "llamada");
-        if (!tieneLlamadaInicial) {
+        boolean tieneHistorialSeguimiento = seguimientoRepository.existsByPaciente_Id(request.pacienteId());
+        if (!tieneLlamadaInicial && !tieneHistorialSeguimiento) {
             return new ResponseEntity<>(Map.of(
-                "error", "El paciente no tiene llamada inicial registrada."
+                "error", "El paciente no tiene historial de seguimiento o llamada inicial registrada."
             ), HttpStatus.CONFLICT);
         }
 
@@ -150,6 +152,8 @@ public class SeguimientoController {
             ), HttpStatus.BAD_REQUEST);
         }
 
+        boolean esNoPresento = estadoAsistencia.equalsIgnoreCase("No se presentó");
+
         if (estadoAsistencia.equalsIgnoreCase("Llegó") && (request.diagnosticoVisual() == null || request.diagnosticoVisual().isBlank())) {
             return new ResponseEntity<>(Map.of(
                 "error", "diagnosticoVisual es obligatorio cuando el estado es Llegó."
@@ -157,15 +161,26 @@ public class SeguimientoController {
         }
 
         seguimiento.setEstadoAsistencia(estadoAsistencia);
-        seguimiento.setEstadoSeguimiento(estadoAsistencia);
+        seguimiento.setEstadoSeguimiento(esNoPresento ? "No se presentó - requiere re agendación" : estadoAsistencia);
         seguimiento.setDiagnosticoVisual(request.diagnosticoVisual() == null ? "" : request.diagnosticoVisual().trim());
+
+        if (esNoPresento) {
+            seguimiento.setPrioridad(Prioridad.ALTA);
+            seguimiento.setFechaSiguienteAccion(LocalDateTime.now().plusDays(1));
+        }
+
         seguimientoRepository.save(seguimiento);
 
-        return ResponseEntity.ok(Map.of(
-            "id", seguimiento.getId(),
-            "estadoAsistencia", seguimiento.getEstadoAsistencia(),
-            "diagnosticoVisual", seguimiento.getDiagnosticoVisual()
-        ));
+        Map<String, Object> responseBody = new LinkedHashMap<>();
+        responseBody.put("id", seguimiento.getId());
+        responseBody.put("estadoAsistencia", seguimiento.getEstadoAsistencia());
+        responseBody.put("estadoSeguimiento", seguimiento.getEstadoSeguimiento());
+        responseBody.put("diagnosticoVisual", seguimiento.getDiagnosticoVisual());
+        responseBody.put("prioridad", seguimiento.getPrioridad());
+        responseBody.put("fechaSiguienteAccion", seguimiento.getFechaSiguienteAccion());
+        responseBody.put("avisoReagendacion", esNoPresento);
+
+        return ResponseEntity.ok(responseBody);
     }
 
     private SeguimientoTablaDTO toTablaDTO(Seguimiento seguimiento) {

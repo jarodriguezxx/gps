@@ -9,7 +9,8 @@ import {
   useParams,
 } from "react-router-dom";
 import { createPortal } from "react-dom";
-import { DATA_PROVEEDORES } from "../../types/proveedores.ts";
+import { ProveedorAPI, mapProveedorAPI, Proveedores as ProveedorItem } from "../../types/proveedores.ts";
+import VistaFirmaRequisicion from "./VistaFirmaRequisicion";
 
 // Simulación de rol de REcMateriales
 
@@ -164,6 +165,15 @@ const DetallesRequisicion = () => {
   const [adjuntosGuardados, setAdjuntosGuardados] = useState<AdjuntoGuardado[]>(
     [],
   );
+
+  const [proveedoresLista, setProveedoresLista] = useState<ProveedorItem[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/proveedores`)
+      .then((r) => r.json())
+      .then((data: ProveedorAPI[]) => setProveedoresLista(data.map(mapProveedorAPI)))
+      .catch(() => {});
+  }, []);
 
   // Función para actualizar un archivo específico
   const actualizarArchivoGlobal = (numero: string, archivo: File | null) => {
@@ -509,6 +519,11 @@ const DetallesRequisicion = () => {
     }
   }, [id, rol, requisiciones]);
 
+  if (rol === "administracion" || rol === "direccion-general") {
+    return <VistaFirmaRequisicion rol={rol} />;
+  }
+
+
   const articulos = datos?.articulos;
   let i = 0;
 
@@ -617,6 +632,16 @@ const DetallesRequisicion = () => {
   return (
     // Div principal, debe tener altura definida y un ancho
     <div className="w-full min-h-screen bg-white flex flex-col m-0 p-2">
+      {/* Banner de rechazo */}
+      {datos?.rechazadoPor && datos?.observacionesRechazo && (
+        <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3">
+          <p className="text-sm font-bold text-red-700">Requisición rechazada</p>
+          <p className="mt-1 text-xs text-red-600">
+            Rechazada por: <strong>{datos.rechazadoPor}</strong>
+          </p>
+          <p className="mt-1 text-sm text-red-800">{datos.observacionesRechazo}</p>
+        </div>
+      )}
       {/* div de la primera mitad de tamaño */}
       <div className="w-full flex flex-col ">
         {/* div de las cabeceras */}
@@ -1491,7 +1516,7 @@ const DetallesRequisicion = () => {
                         </tr>
                       </thead>
                       <tbody className="text-center overflow-auto select-text">
-                        {DATA_PROVEEDORES.map((prov) => {
+                        {proveedoresLista.map((prov) => {
                           return (
                             <tr key={prov.id} className={ui.table.row}>
                               <td className={ui.table.cell}>{prov.id}</td>

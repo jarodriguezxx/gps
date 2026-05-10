@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CalendarDays, FileText, Folder, Inbox, LayoutDashboard, PhoneCall } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
-export const AdminHeader = ({ moduleTitle, submodule = 'Módulo de Admisiones' }) => (
+export const AdminHeader = ({ submodule = 'Módulo de Admisiones' }) => (
   <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
     <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
       <div className="flex items-center gap-3">
@@ -36,7 +36,10 @@ export const AdminSidebar = ({ navItems, activeKey }) => {
   
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {navItems.map(({ label, icon: Icon, key, path }) => (
+      {navItems.map(({ label, icon, key, path }) => {
+        const NavIcon = icon;
+
+        return (
         <button 
           key={key} 
           onClick={() => navigate(path)}
@@ -46,10 +49,11 @@ export const AdminSidebar = ({ navItems, activeKey }) => {
               : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
           }`}
         >
-          <Icon size={15} />
+          {React.createElement(NavIcon, { size: 15 })}
           {label}
         </button>
-      ))}
+        );
+      })}
     </aside>
   );
 };
@@ -60,7 +64,7 @@ const admisionesNavItems = [
   { label: 'Expediente', icon: Folder, key: 'expediente', path: '/admisiones/expediente' },
   { label: 'Agenda de Citas', icon: CalendarDays, key: 'agenda', path: '/admisiones/agenda-citas' },
   { label: 'Seguimiento Telefónico', icon: PhoneCall, key: 'seguimiento', path: '/admisiones/seguimiento-telefonico' },
-  { label: 'Estudio Socioeconómico', icon: FileText, key: 'estudio', path: '/admisiones/estudio-socioeconomico' },
+  // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
 ];
 
 export const AdmisionesSidebar = () => {
@@ -69,8 +73,9 @@ export const AdmisionesSidebar = () => {
 
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {admisionesNavItems.map(({ label, icon: Icon, key, path }) => {
+      {admisionesNavItems.map(({ label, icon, key, path }) => {
         const active = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon = icon;
 
         return (
           <button
@@ -83,7 +88,7 @@ export const AdmisionesSidebar = () => {
                 : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
             }`}
           >
-            <Icon size={15} className="shrink-0" />
+            {React.createElement(NavIcon, { size: 15, className: 'shrink-0' })}
             <span>{label}</span>
           </button>
         );

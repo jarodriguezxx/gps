@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { API_BASE } from './config/api.ts';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
@@ -23,6 +23,22 @@ import DetalleExpediente from './views/medico/DetalleExpediente';
 import ValoracionMedica from './views/medico/ValoracionMedica';
 import Prospectos from './views/medico/Prospectos';
 import HistoriaMedica from './views/medico/HistoriaMedica';
+import NuevaEvolucion from './views/medico/NuevaEvolucion';
+import ControlMonitoreo from './views/medico/ControlMonitoreo';
+
+//Nutriólogo
+import InicioNutricion from './views/nutriologo/InicioNutricion';
+import PacientesNutricion from './views/nutriologo/PacientesNutricion'; 
+import EvaluacionNutricional from './views/nutriologo/EvaluacionNutricional.jsx';
+import ExpedientesNutricion from './views/nutriologo/ExpedientesNutricion';
+import ReportesNutricion from './views/nutriologo/ReportesNutricion';
+import VistaExpedienteNutricion from './views/nutriologo/VistaExpedienteNutricion';
+
+//Clínico
+import InicioJefeClinico from './views/clinico/InicioJefeClinico';
+import GestorDocumentosClinicos from './views/clinico/GestorDocumentosClinicos';
+import InicioTerapeuta from './views/clinico/InicioTerapeuta';
+import PacientesClinico from './views/clinico/PacientesClinico';
 
 // Recursos Humanos
 import AltaPersonal from './views/rh/AltaPersonal';
@@ -38,6 +54,7 @@ import FacturaElectronica from './views/financiero/FacturaElectronica';
 import ComprobantesFiscales from './views/financiero/ComprobantesFiscales';
 import RequisicionesAlmacen from './views/financiero/RequisicionesAlmacen';
 import DepositoBancario from './views/financiero/DepositoBancario';
+import ValidacionPagos from './views/financiero/ValidacionPagos';
 
 // Recursos Materiales
 import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
@@ -69,6 +86,19 @@ const quickViews = [
   { label: 'Médico - Expedientes',   path: '/medico/expedientes' },
   { label: 'Médico - Prospectos',    path: '/medico/prospectos' },
   { label: 'Medico - Historia '  ,   path: '/medico/historia-medica' },
+  { label: 'Medico - Nueva ',        path: '/medico/nueva-evolucion/1' },
+  { label: 'Medico - Monitoreo',     path: '/medico/monitoreo/1' },
+  { label: 'Nutriólogo - Inicio',    path: '/nutriologo/inicio' },
+  { label: 'Nutriólogo - Pacientes', path: '/nutriologo/pacientes' },
+  { label: 'Nutriólogo  Evaluación', path: '/nutriologo/evaluacion/1' },
+  { label: 'Nutri - Expedientes',    path: '/nutriologo/expedientes' },
+  { label: "Clínico - Inicio",       path: '/clinico/inicio-jefe-clinico' },
+  { label: "Clinico - Gestor",       path: '/clinico/gestor' },
+  { label: "Clínico - Pacientes",    path: '/clinico/pacientes' },
+  { label: "Clínico - Psicología",   path: '/clinico/psicologia/1' },
+  { label: "Clínico - Consejería",   path: '/clinico/consejeria/1' },
+  { label: "Clínico - Familia",      path: '/clinico/familia/1' },
+  { label: "Clínico - Terapeuta",    path: '/clinico/inicio-terapeuta' },
   { label: 'RH - Alta',              path: '/rh/alta-personal' },
   { label: 'RH - Baja',              path: '/rh/baja-personal' },
   { label: 'RH - Catálogo',          path: '/rh/catalogo-roles' },
@@ -80,9 +110,13 @@ const quickViews = [
   { label: 'Fin - Comprobantes',     path: '/financiero/comprobantes-fiscales' },
   { label: 'Fin - Requisiciones',    path: '/financiero/requisiciones-almacen' },
   { label: 'Fin - Depósito',         path: '/financiero/deposito-bancario' },
-  { label: 'Rec. Materiales',        path: '/rec-materiales/rec-materiales' },
-  { label: 'Rec. Proveedores',       path: '/rec-materiales/rec-materiales/proveedores' },
-  { label: 'Rec. Historial',         path: '/rec-materiales/rec-materiales/historial' },
+  { label: 'Rec. Materiales',        path: '/materiales/rec-materiales' },
+  { label: 'Rec. Proveedores',       path: '/materiales/rec-materiales/proveedores' },
+  { label: 'Rec. Historial',         path: '/materiales/rec-materiales/historial' },
+  { label: 'Administración',         path: '/materiales/administracion' },
+  { label: 'Dirección Gral.',        path: '/materiales/direccion-general' },
+  { label: 'Compras-Inventario',     path: '/materiales/compras-inventario' },
+  { label: 'Fin - Validación',       path: '/financiero/validacion-pagos' },
   { label: 'Almacén',                path: '/almacen' },
 ];
 
@@ -174,7 +208,26 @@ function App() {
         <Route path="/medico/expedientes/:id"                  element={<PrivateRoute><DetalleExpediente /></PrivateRoute>} />
         <Route path="/medico/prospectos"                       element={<PrivateRoute><Prospectos /></PrivateRoute>} />
         <Route path="/medico/valoracion/:id"                   element={<PrivateRoute><ValoracionMedica /></PrivateRoute>} />
-        <Route path="/medico/historia-medica"              element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
+        <Route path="/medico/historia-medica"                  element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
+        <Route path="/medico/nueva-evolucion/:id"              element={<PrivateRoute><NuevaEvolucion /></PrivateRoute>} />
+        <Route path="/medico/monitoreo/:id"                    element={<PrivateRoute><ControlMonitoreo /></PrivateRoute>} />
+
+        <Route path="/nutriologo/pacientes"                    element={<PrivateRoute><PacientesNutricion /></PrivateRoute>} />
+        <Route path="/nutriologo/inicio"                       element={<PrivateRoute><InicioNutricion /></PrivateRoute>} />
+        <Route path="/nutriologo/evaluacion/:id"               element={<PrivateRoute><EvaluacionNutricional /></PrivateRoute>} />
+        <Route path="/nutriologo/expedientes"                  element={<PrivateRoute><ExpedientesNutricion /></PrivateRoute>} />
+        <Route path="/nutriologo/reportes"                     element={<PrivateRoute><ReportesNutricion /></PrivateRoute>} />
+        <Route path="/nutriologo/vista-expediente/:id"         element={<PrivateRoute><VistaExpedienteNutricion /></PrivateRoute>} />
+
+         {/* Clínico */}
+        <Route path="/clinico"                                element={<Navigate to="/clinico/inicio-jefe-clinico" replace />} />
+        <Route path="/clinico/inicio-jefe-clinico"            element={<PrivateRoute><InicioJefeClinico /></PrivateRoute>} />
+        <Route path="/clinico/pacientes"                      element={<PrivateRoute><PacientesClinico /></PrivateRoute>} />
+        <Route path="/clinico/inicio-terapeuta"               element={<PrivateRoute><InicioTerapeuta /></PrivateRoute>} />
+        <Route path="/clinico/psicologia/:id"                 element={<PrivateRoute><GestorDocumentosClinicos rolActivo="psicologia" /></PrivateRoute>} />
+        <Route path="/clinico/consejeria/:id"                 element={<PrivateRoute><GestorDocumentosClinicos rolActivo="consejeria" /></PrivateRoute>} />
+        <Route path="/clinico/familia/:id"                    element={<PrivateRoute><GestorDocumentosClinicos rolActivo="familia" /></PrivateRoute>} />
+        <Route path="/clinico/gestor"                         element={<PrivateRoute><GestorDocumentosClinicos rolActivo="general" /></PrivateRoute>} />
 
         {/* Recursos Humanos */}
         <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
@@ -190,6 +243,7 @@ function App() {
         <Route path="/financiero/requisiciones-almacen"        element={<PrivateRoute><RequisicionesAlmacen /></PrivateRoute>} />
         <Route path="/financiero/gestionar-correcciones"       element={<PrivateRoute><GestionarCorreciones /></PrivateRoute>} />
         <Route path="/financiero/deposito-bancario"            element={<PrivateRoute><DepositoBancario /></PrivateRoute>} />
+        <Route path="/financiero/validacion-pagos"             element={<PrivateRoute><ValidacionPagos /></PrivateRoute>} />
 
 {/* Rutas para Recursos Materiales y Compras/Inventario */}
         <Route path='/materiales/:rol' element={<RecMaterialesDashboard/>}>

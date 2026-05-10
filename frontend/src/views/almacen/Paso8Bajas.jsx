@@ -1,225 +1,305 @@
-import React from 'react';
-import { Upload, AlertTriangle, ClipboardList } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { PackageMinus, Search, Plus, Trash2, Building, ArrowRight, ClipboardList, AlertCircle, Loader2 } from 'lucide-react';
 
 const Paso8Bajas = ({ setActiveTab }) => {
-  const labelClass = "block text-xs font-bold text-slate-500 uppercase tracking-[0.15em] mb-1.5 ml-0.5";
-  const inputClass = "w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30 focus:border-[#7E1D3B]/50 transition-all placeholder:text-slate-300";
+  // Ahora inicia vacío, esperando la base de datos
+  const [inventario, setInventario] = useState([]);
+  const [cargandoInventario, setCargandoInventario] = useState(true);
+
+  const [filtro, setFiltro] = useState('');
+  const [areaDestino, setAreaDestino] = useState('');
+  const [quienRecibe, setQuienRecibe] = useState('');
+  
+  const [listaSalida, setListaSalida] = useState([]);
+  const [procesando, setProcesando] = useState(false);
+
+  // NUEVO: Cargar el inventario real al abrir la pantalla
+  useEffect(() => {
+    const fetchInventario = async () => {
+      try {
+        const response = await fetch('http://localhost:4000/api/almacen/inventario');
+        if (response.ok) {
+          const data = await response.json();
+          // ACTUALIZADO: Usamos cantidadDisponible en lugar de stock
+          setInventario(data.filter(item => item.cantidadDisponible > 0));
+        }
+      } catch (error) {
+        console.error("Error al cargar inventario real:", error);
+      } finally {
+        setCargandoInventario(false);
+      }
+    };
+    fetchInventario();
+  }, []);
+
+  // ACTUALIZADO: Usamos nombreArticulo
+  const inventarioFiltrado = inventario.filter(item => 
+    item.nombreArticulo?.toLowerCase().includes(filtro.toLowerCase()) ||
+    item.categoria?.toLowerCase().includes(filtro.toLowerCase())
+  );
+
+  const agregarALista = (articulo) => {
+    if (listaSalida.find(item => item.id === articulo.id)) return;
+    setListaSalida([...listaSalida, { ...articulo, cantidadSalida: 1 }]);
+  };
+
+  const removerDeLista = (id) => {
+    setListaSalida(listaSalida.filter(item => item.id !== id));
+  };
+
+  const actualizarCantidad = (id, nuevaCantidad) => {
+    const cantidad = parseInt(nuevaCantidad) || 0;
+    setListaSalida(listaSalida.map(item => {
+      if (item.id === id) {
+        // ACTUALIZADO: Usamos cantidadDisponible
+        const cantFinal = cantidad > item.cantidadDisponible ? item.cantidadDisponible : cantidad;
+        return { ...item, cantidadSalida: cantFinal };
+      }
+      return item;
+    }));
+  };
+
+  const ejecutarBaja = async (e) => {
+    e.preventDefault();
+    if (listaSalida.length === 0) {
+      alert("Debes agregar al menos un artículo para registrar la salida.");
+      return;
+    }
+    
+    setProcesando(true);
+    
+    try {
+      // Ajustamos los nombres para el backend (Java SalidaAlmacen espera articuloNombre)
+      const salidasParaBackend = listaSalida.map(item => ({
+        articuloNombre: item.nombreArticulo, 
+        cantidad: item.cantidadSalida,
+        areaDestino: areaDestino,
+        quienRecibe: quienRecibe
+      }));
+
+      const response = await fetch('http://localhost:4000/api/almacen/salidas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(salidasParaBackend)
+      });
+
+      if (!response.ok) {
+        const errMsg = await response.text();
+        throw new Error(errMsg);
+      }
+
+      alert(`Salida registrada con éxito. Se actualizó el inventario.`);
+      setListaSalida([]);
+      setAreaDestino('');
+      setQuienRecibe('');
+      setActiveTab('dashboard'); // Regresa al inicio para ver las stats actualizadas
+      
+    } catch (error) {
+      console.error("Fallo:", error);
+      alert(error.message || "No se pudo conectar con la base de datos.");
+    } finally {
+      setProcesando(false);
+    }
+  };
 
   return (
-    <div className="grid lg:grid-cols-2 gap-5 animate-in fade-in duration-300">
-      
-      {/* ── Panel Izquierdo: Formulario de Baja ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col h-full">
-        <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4 shrink-0">
-          <Upload className="text-[#7E1D3B]" size={24} />
-          <div>
-            <h2 className="text-lg font-black text-slate-800">Registrar Baja de Consumibles</h2>
-            <p className="text-xs text-slate-500">Paso 8 — Entradas y Salidas de Almacén</p>
-          </div>
-        </div>
-
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-xs text-amber-800 leading-relaxed shrink-0">
-          ⚠️ Toda salida de bienes del almacén debe efectuarse mediante el <strong>formato correspondiente</strong> y contener la <strong>firma de autorización</strong> del área solicitante — conforme al manual oficial.
-        </div>
-
-        {/* Formulario */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 flex-1 overflow-y-auto pr-2">
-          <div>
-            <label className={labelClass}>Folio de Baja</label>
-            <input type="text" placeholder="BAJ-0090" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Fecha y Hora de Salida</label>
-            <input type="datetime-local" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Área Solicitante</label>
-            <select className={inputClass}>
-              <option>-- Seleccionar Área --</option>
-              <option>Consulta Externa</option>
-              <option>Internamiento / Hospitalización</option>
-              <option>Farmacia Interna</option>
-              <option>Cocina / Nutrición</option>
-              <option>Trabajo Social</option>
-              <option>Dirección / Administración</option>
-              <option>Intendencia y Limpieza</option>
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Responsable (Firma)</label>
-            <input type="text" placeholder="Nombre de quien autoriza/recibe" className={inputClass} />
-          </div>
-          <div className="md:col-span-2">
-            <label className={labelClass}>Insumo a Despachar</label>
-            <select className={inputClass}>
-              <option>Buprenorfina 8mg/2mg — 12 u. disponibles</option>
-              <option>Metadona 10mg/mL — 5 frs. disponibles</option>
-              <option>Naltrexona 50mg — 40 u. disponibles</option>
-              <option>Vendas elásticas — 18 pzs disponibles</option>
-              <option>Guantes látex M — 2 cajas disponibles</option>
-              <option>Víveres quincena — OK</option>
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Cantidad a Entregar</label>
-            <input type="number" placeholder="0" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Unidad</label>
-            <select className={inputClass}>
-              <option>Tabletas</option>
-              <option>Frascos</option>
-              <option>Piezas</option>
-              <option>Cajas</option>
-              <option>Kits</option>
-              <option>Raciones</option>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className={labelClass}>Motivo / Uso del Consumible</label>
-            <select className={inputClass}>
-              <option>Uso clínico — Tratamiento de paciente</option>
-              <option>Consumo en área (material de curación)</option>
-              <option>Consumo en cocina (víveres diarios)</option>
-              <option>Uso administrativo (papelería/limpieza)</option>
-              <option>Merma / Caducidad (baja por deterioro)</option>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className={labelClass}>Observaciones</label>
-            <textarea 
-              rows="2" 
-              placeholder="Número de paciente (si aplica), lote consumido, notas de la salida..." 
-              className={`${inputClass} resize-none`}
-            ></textarea>
-          </div>
-        </div>
-
-        {/* Verificación antes de despachar */}
-        <div className="border-t border-slate-100 pt-5 mb-6 shrink-0">
-          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">Verificación Antes de Despachar</h3>
-          <div className="space-y-2">
-            {[
-              'Formato de solicitud de salida firmado por el área',
-              'Existencia verificada en inventario digital',
-              'Cantidad solicitada disponible físicamente en almacén'
-            ].map((item, i) => (
-              <label key={i} className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100 cursor-pointer transition">
-                <input type="checkbox" className="mt-0.5 w-4 h-4 text-[#7E1D3B] rounded border-slate-300 focus:ring-[#7E1D3B]" />
-                <p className="text-sm text-slate-700 flex-1">{item}</p>
-                <span className="text-[9px] uppercase tracking-wider font-bold px-2 py-1 rounded-md border text-slate-500 bg-white border-slate-200 shrink-0">Obligatorio</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Botones de acción */}
-        <div className="flex gap-3 pt-4 border-t border-slate-100 shrink-0">
-          <button onClick={() => setActiveTab('dashboard')} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-50 transition shadow-sm text-center">
-            Cancelar
-          </button>
-          <button onClick={() => setActiveTab('dashboard')} className="flex-[2] py-2.5 bg-[#7E1D3B] text-white rounded-xl font-semibold text-sm hover:bg-[#63162e] transition shadow-sm text-center">
-            📤 Registrar Baja y Despachar
-          </button>
+    <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm overflow-hidden">
+      {/* Encabezado */}
+      <div className="px-6 py-4 border-b border-orange-100 bg-orange-50/50 flex justify-between items-center">
+        <div>
+          <h2 className="text-lg font-bold text-orange-800 flex items-center gap-2">
+            <PackageMinus className="w-5 h-5" />
+            Paso 8: Baja de Consumibles
+          </h2>
+          <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mt-1">
+            Salida de Almacén a Departamentos
+          </p>
         </div>
       </div>
 
-      {/* ── Panel Derecho: Solicitudes y Bajas ── */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-1 overflow-hidden">
         
-        {/* Solicitudes Pendientes */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-fit">
-          <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
-            <AlertTriangle size={16} className="text-rose-600" />
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Solicitudes Pendientes</h3>
+        {/* COLUMNA IZQUIERDA: Buscador de Inventario */}
+        <div className="w-1/2 lg:w-5/12 border-r border-slate-100 flex flex-col bg-slate-50">
+          <div className="p-4 border-b border-slate-200 bg-white">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+              <input 
+                type="text"
+                placeholder="Buscar en inventario (ej: Cloro, Jeringa)..."
+                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 outline-none shadow-sm transition-all"
+                value={filtro}
+                onChange={(e) => setFiltro(e.target.value)}
+              />
+            </div>
           </div>
-          
-          <div className="p-5 flex flex-col gap-3">
-            {/* Solicitud Urgente */}
-            <div className="flex items-start gap-3 p-4 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 transition">
-              <div className="mt-0.5 h-6 w-6 rounded-full bg-rose-200 text-rose-700 font-black text-xs flex items-center justify-center shrink-0">!</div>
-              <div className="flex-1">
-                <div className="flex justify-between items-start mb-1">
-                  <p className="text-sm font-bold text-slate-800">Farmacia Interna — Buprenorfina 8mg</p>
-                  <span className="px-2 py-1 bg-rose-200 text-rose-800 text-[9px] rounded-full font-bold uppercase shrink-0">Urgente</span>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed">Solicitante: Q.F. Ana Méndez · Tratamiento de pacientes activos · Stock crítico (12 u.)</p>
-                <p className="text-xs font-black text-rose-700 mt-2">Cantidad: 20 u.</p>
-              </div>
-            </div>
 
-            {/* Solicitud Normal */}
-            <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 transition">
-              <div className="mt-0.5 h-6 w-6 rounded-full bg-amber-200 text-amber-700 font-black text-xs flex items-center justify-center shrink-0">!</div>
-              <div className="flex-1">
-                <div className="flex justify-between items-start mb-1">
-                  <p className="text-sm font-bold text-slate-800">Consulta Externa — Material curación</p>
-                  <span className="px-2 py-1 bg-amber-200 text-amber-800 text-[9px] rounded-full font-bold uppercase shrink-0">Normal</span>
+          <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+            {inventarioFiltrado.map((item) => {
+              const estaEnLista = listaSalida.some(ls => ls.id === item.id);
+              return (
+                <div key={item.id} className={`p-3 rounded-xl border flex justify-between items-center transition-all ${
+                  estaEnLista ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white border-slate-200 shadow-sm hover:border-orange-300'
+                }`}>
+                  <div>
+                    {/* ACTUALIZADO: item.nombreArticulo */}
+                    <p className="text-sm font-bold text-slate-700">{item.nombreArticulo}</p>
+                    <div className="flex gap-3 mt-1">
+                      {/* ACTUALIZADO: item.cantidadDisponible y item.unidadMedida */}
+                      <span className="text-[10px] text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded">
+                        Stock: {item.cantidadDisponible} {item.unidadMedida}
+                      </span>
+                      <span className="text-[10px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded uppercase">
+                        {item.categoria}
+                      </span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => agregarALista(item)}
+                    disabled={estaEnLista || item.cantidadDisponible === 0}
+                    className={`p-2 rounded-lg transition-colors ${
+                      estaEnLista || item.cantidadDisponible === 0
+                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                        : 'bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white'
+                    }`}
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed">Solicitante: Enfermería · Para atención del día</p>
-                <p className="text-xs font-black text-amber-700 mt-2">Cantidad: 3 kits</p>
+              );
+            })}
+            
+            {inventarioFiltrado.length === 0 && (
+              <div className="text-center py-10 text-slate-400">
+                <p className="text-xs font-bold uppercase tracking-widest">No hay coincidencias</p>
               </div>
-            </div>
-
-            {/* Solicitud Normal 2 */}
-            <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition">
-              <div className="mt-0.5 h-6 w-6 rounded-full bg-slate-100 text-slate-500 font-black text-xs flex items-center justify-center shrink-0">·</div>
-              <div className="flex-1">
-                <div className="flex justify-between items-start mb-1">
-                  <p className="text-sm font-bold text-slate-800">Cocina / Nutrición — Víveres del día</p>
-                  <span className="px-2 py-1 bg-slate-100 text-slate-500 text-[9px] rounded-full font-bold uppercase shrink-0">Normal</span>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed">Solicitante: Nutrióloga · Raciones para pacientes internos</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Bajas Registradas Hoy */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-fit">
-          <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
-            <ClipboardList size={16} className="text-[#7E1D3B]" />
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Bajas Registradas Hoy</h3>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <th className="px-4 py-3">Folio</th>
-                  <th className="px-4 py-3">Insumo</th>
-                  <th className="px-4 py-3">Área</th>
-                  <th className="px-4 py-3">Cant.</th>
-                  <th className="px-4 py-3">Estado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                <tr className="hover:bg-slate-50 transition">
-                  <td className="px-4 py-3 font-mono font-bold text-[#7E1D3B] text-xs">BAJ-0088</td>
-                  <td className="px-4 py-3 text-slate-700 font-medium text-xs">Mat. curación</td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">Consul. Externa</td>
-                  <td className="px-4 py-3 font-mono font-bold text-rose-600 text-xs">-5 kits</td>
-                  <td className="px-4 py-3"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[9px] rounded-full font-bold uppercase whitespace-nowrap">Despachado</span></td>
-                </tr>
-                <tr className="hover:bg-slate-50 transition">
-                  <td className="px-4 py-3 font-mono font-bold text-[#7E1D3B] text-xs">BAJ-0086</td>
-                  <td className="px-4 py-3 text-slate-700 font-medium text-xs">Guantes látex M</td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">Internamiento</td>
-                  <td className="px-4 py-3 font-mono font-bold text-rose-600 text-xs">-3 cajas</td>
-                  <td className="px-4 py-3"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[9px] rounded-full font-bold uppercase whitespace-nowrap">Despachado</span></td>
-                </tr>
-                <tr className="hover:bg-slate-50 transition">
-                  <td className="px-4 py-3 font-mono font-bold text-[#7E1D3B] text-xs">BAJ-0084</td>
-                  <td className="px-4 py-3 text-slate-700 font-medium text-xs">Naltrexona 50mg</td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">Farmacia Int.</td>
-                  <td className="px-4 py-3 font-mono font-bold text-rose-600 text-xs">-10 u.</td>
-                  <td className="px-4 py-3"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[9px] rounded-full font-bold uppercase whitespace-nowrap">Despachado</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* COLUMNA DERECHA: Formulario de Salida */}
+        <div className="w-1/2 lg:w-7/12 flex flex-col bg-white">
+          <form onSubmit={ejecutarBaja} className="flex flex-col h-full">
+            
+            {/* Datos de Entrega */}
+            <div className="p-6 border-b border-slate-100 bg-white grid grid-cols-2 gap-4 shadow-sm z-10">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <Building className="w-3 h-3" /> Área Destino
+                </label>
+                <select 
+                  required
+                  value={areaDestino}
+                  onChange={(e) => setAreaDestino(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/20 outline-none"
+                >
+                  <option value="">Seleccione un área...</option>
+                  <option value="Médico / Enfermería">Médico / Enfermería</option>
+                  <option value="Cocina / Comedor">Cocina / Comedor</option>
+                  <option value="Mantenimiento">Mantenimiento</option>
+                  <option value="Administración">Administración</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <ClipboardList className="w-3 h-3" /> Nombre de quien recibe
+                </label>
+                <input 
+                  required
+                  type="text"
+                  placeholder="Ej. Juan Pérez"
+                  value={quienRecibe}
+                  onChange={(e) => setQuienRecibe(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500/20 outline-none"
+                />
+              </div>
+            </div>
 
+            {/* Lista de Artículos a entregar (Carrito) */}
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+                Lista de Artículos a Entregar
+              </h3>
+              
+              {listaSalida.length > 0 ? (
+                <div className="space-y-3">
+                  {listaSalida.map((item) => (
+                    <div key={item.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between group">
+                      <div className="flex-1">
+                        {/* ACTUALIZADO: item.nombreArticulo */}
+                        <p className="text-sm font-bold text-slate-800">{item.nombreArticulo}</p>
+                        {/* ACTUALIZADO: item.cantidadDisponible y item.unidadMedida */}
+                        <p className="text-[10px] text-slate-500 mt-1">Disponible: {item.cantidadDisponible} {item.unidadMedida}</p>
+                      </div>
+                      
+                      <div className="flex items-center gap-6">
+                        {/* Selector de Cantidad */}
+                        <div className="flex flex-col items-end">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase mb-1">Cantidad salida</label>
+                          <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+                            <input 
+                              type="number"
+                              min="1"
+                              max={item.cantidadDisponible} // ACTUALIZADO
+                              value={item.cantidadSalida}
+                              onChange={(e) => actualizarCantidad(item.id, e.target.value)}
+                              className="w-16 text-center text-sm font-bold p-1 outline-none bg-transparent"
+                            />
+                            <span className="px-2 text-xs text-slate-500 font-medium bg-slate-100 border-l border-slate-200 h-full flex items-center">
+                              {item.unidadMedida /* ACTUALIZADO */}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <button 
+                          type="button"
+                          onClick={() => removerDeLista(item.id)}
+                          className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-slate-300 pb-10">
+                  <PackageMinus className="w-12 h-12 mb-3 opacity-20" />
+                  <p className="text-sm font-medium">No se han agregado artículos a la salida.</p>
+                  <p className="text-[10px] uppercase tracking-wider mt-2">Busca y selecciona artículos en el panel izquierdo.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Botón de Confirmación */}
+            <div className="p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+              {listaSalida.length > 0 && (
+                <div className="mb-3 flex items-start gap-2 p-3 bg-amber-50 text-amber-700 rounded-lg border border-amber-100">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <p className="text-[10px] leading-tight font-medium">
+                    Al confirmar, estos insumos se descontarán del inventario y se generará un vale de salida firmado por <strong>{quienRecibe || 'el receptor'}</strong>.
+                  </p>
+                </div>
+              )}
+              
+              <button 
+                type="submit"
+                disabled={procesando || listaSalida.length === 0 || !areaDestino || !quienRecibe}
+                className="w-full py-3.5 bg-orange-600 text-white rounded-xl font-bold shadow-lg shadow-orange-600/20 hover:bg-orange-700 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {procesando ? 'Procesando salida...' : (
+                  <>
+                    Autorizar Salida de Almacén
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            </div>
+            
+          </form>
+        </div>
       </div>
     </div>
   );
