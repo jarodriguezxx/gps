@@ -140,16 +140,18 @@ const RecMaterialesDashboard = () => {
               >
                 Requisiciones
               </button>
-              <button
-                onClick={() => goTo("/proveedores")} // Ruta relativa dinámica
-                className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
-                  isProveedoresActive
-                    ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
-                    : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                Proveedores
-              </button>
+              {(rol === "rec-materiales" || rol === "compras-inventario") && (
+                <button
+                  onClick={() => goTo("/proveedores")}
+                  className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                    isProveedoresActive
+                      ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
+                      : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  Proveedores
+                </button>
+              )}
               <button
                 onClick={() => goTo("/historial")}
                 className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
