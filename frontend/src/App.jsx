@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { API_BASE } from './config/api.ts';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
@@ -58,20 +58,33 @@ import DepositoBancario from './views/financiero/DepositoBancario';
 import ValidacionPagos from './views/financiero/ValidacionPagos';
 
 // Recursos Materiales
-import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
-import Proveedores from './views/rec-materiales/Proveedores';
-import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
-import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion';
-import OrdenCompra from './views/rec-materiales/OrdenCompra';
-import Historial from './views/rec-materiales/Historial';
+import RecMaterialesDashboard from './views/rec-materiales/Dashboard.tsx';
+import Proveedores from './views/rec-materiales/Proveedores.tsx';
+import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones.tsx';
+import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion.tsx';
+import OrdenCompra from './views/rec-materiales/OrdenCompra.tsx';
+import Historial from './views/rec-materiales/Historial.tsx';
 
 // Almacén
 import AlmacenDashboard from './views/almacen/AlmacenDashboard';
 
 const PrivateRoute = ({ children }) => {
-  const user = localStorage.getItem('marakame_user');
+  const [sessionReady, setSessionReady] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = window.localStorage.getItem('marakame_user');
+    console.log('[PrivateRoute] marakame_user:', storedUser);
+    setUser(storedUser);
+    setSessionReady(true);
+  }, []);
+
+  if (!sessionReady) return null;
+
   return user ? children : <Navigate to="/login" replace />;
 };
+
+const MATERIALS_DEFAULT_ROL = 'rec-materiales';
 
 const quickViews = [
   { label: 'Login',                  path: '/login' },
@@ -113,11 +126,17 @@ const quickViews = [
   { label: 'Fin - Requisiciones',    path: '/financiero/requisiciones-almacen' },
   { label: 'Fin - Depósito',         path: '/financiero/deposito-bancario' },
   { label: 'Fin - Validación',       path: '/financiero/validacion-pagos' },
-  { label: 'Rec. Materiales',        path: '/rec-materiales/rec-materiales' },
-  { label: 'Rec. Proveedores',       path: '/rec-materiales/rec-materiales/proveedores' },
-  { label: 'Rec. Historial',         path: '/rec-materiales/rec-materiales/historial' },
+  { label: 'Rec. Materiales',        path: `/materiales/${MATERIALS_DEFAULT_ROL}` },
+  { label: 'Rec. Proveedores',       path: `/materiales/${MATERIALS_DEFAULT_ROL}/proveedores` },
+  { label: 'Rec. Historial',         path: `/materiales/${MATERIALS_DEFAULT_ROL}/historial` },
   { label: 'Almacén',                path: '/almacen' },
 ];
+
+const LegacyRecMaterialesRedirect = () => {
+  const location = useLocation();
+  const legacySuffix = location.pathname.replace(/^\/rec-materiales/, '') || `/${MATERIALS_DEFAULT_ROL}`;
+  return <Navigate to={`/materiales${legacySuffix}`} replace />;
+};
 
 const QuickNavigator = () => {
   const navigate = useNavigate();
@@ -245,13 +264,15 @@ function App() {
         <Route path="/financiero/deposito-bancario"            element={<PrivateRoute><DepositoBancario /></PrivateRoute>} />
         <Route path="/financiero/validacion-pagos"             element={<PrivateRoute><ValidacionPagos /></PrivateRoute>} />
 
-{/* Rutas para Recursos Materiales y Compras/Inventario */}
-        <Route path='/materiales/:rol' element={<RecMaterialesDashboard/>}>
-          <Route index element={<ListaRequisiciones />}/>
-          <Route path='proveedores' element={<Proveedores/>}/>
-          <Route path='historial' element={<Historial />}/>
-          <Route path='requisicion/:id' element={<DetallesRequisicion />}/>
-          <Route path='orden-compra/:id' element={<OrdenCompra />}/>
+        {/* Rutas para Recursos Materiales y Compras/Inventario */}
+        <Route path="/rec-materiales" element={<LegacyRecMaterialesRedirect />} />
+        <Route path="/rec-materiales/*" element={<LegacyRecMaterialesRedirect />} />
+        <Route path="/materiales/:rol" element={<PrivateRoute><RecMaterialesDashboard /></PrivateRoute>}>
+          <Route index element={<PrivateRoute><ListaRequisiciones /></PrivateRoute>} />
+          <Route path="proveedores" element={<PrivateRoute><Proveedores /></PrivateRoute>} />
+          <Route path="historial" element={<PrivateRoute><Historial /></PrivateRoute>} />
+          <Route path="requisicion/:id" element={<PrivateRoute><DetallesRequisicion /></PrivateRoute>} />
+          <Route path="orden-compra/:id" element={<PrivateRoute><OrdenCompra /></PrivateRoute>} />
         </Route>
 
         {/* Almacén */}

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FolderOpen, ScanLine, AlertCircle, Receipt, FileCheck,
-  PackageSearch, Landmark, Send, X
+  PackageSearch, Landmark, CircleDollarSign, Send, X
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -14,6 +14,7 @@ const navItems = [
   { label: 'Comprobantes Fiscales',    icon: FileCheck,     key: 'comprobantes', path: '/financiero/comprobantes-fiscales' },
   { label: 'Requisiciones Almacén',    icon: PackageSearch, key: 'requisiciones',path: '/financiero/requisiciones-almacen' },
   { label: 'Depósito Bancario',        icon: Landmark,      key: 'deposito',     path: '/financiero/deposito-bancario' },
+  { label: 'Validación de Pagos',     icon: CircleDollarSign, key: 'validacion', path: '/financiero/validacion-pagos' },
 ];
 
 const areas = [

@@ -640,34 +640,58 @@ const ExpedienteAdmisiones = () => {
 			setExpedienteModo('prospecto');
 		}
 
-		// Autocompletar datos del recibo con formato correcto
+		// Autocompletar datos del recibo desde el prospecto y el solicitante
+		const sol = prospecto?.solicitante || {};
 		setDatosRecibo(prev => ({
 			...prev,
+			// Pagador → preferir solicitante (quien normalmente realiza el pago)
+			nombrePagador: sol.nombres || sol.nombre || '',
+			apellidoPaternoPagador: String(sol.apellidoPaterno || '').toUpperCase(),
+			apellidoMaternoPagador: String(sol.apellidoMaterno || '').toUpperCase(),
+			telefonoPagador: sol.telefono || sol.celular || prospecto.telefonoContacto || prospecto.telefono || '',
+			direccionCalle: sol.direccionCalle || prospecto.direccionCalle || '',
+			direccionNoExt: sol.direccionNoExt || prospecto.direccionNoExt || '',
+			direccionNoInt: sol.direccionNoInt || prospecto.direccionNoInt || '',
+			direccionColonia: sol.direccionColonia || prospecto.direccionColonia || '',
+			direccionMunicipioDelegacion: sol.direccionMunicipioDelegacion || prospecto.direccionMunicipioDelegacion || '',
+			codigoPostal: sol.direccionCp || prospecto.direccionCp || '',
+			direccionCiudadEstado: sol.direccionCiudadEstado || prospecto.direccionCiudadEstado || '',
+			// Paciente
 			nombrePaciente: construirNombrePacienteRecibo(prospecto),
 			apellidoPaternoPaciente: String(prospecto.apellidoPaterno || '').toUpperCase(),
 			apellidoMaternoPaciente: String(prospecto.apellidoMaterno || '').toUpperCase(),
 			clavePaciente: String(prospecto.clavePaciente || '--').toUpperCase(),
-			direccionCalle: prospecto.direccionCalle || '',
-			direccionNoExt: prospecto.direccionNoExt || '',
-			direccionNoInt: prospecto.direccionNoInt || '',
-			direccionColonia: prospecto.direccionColonia || '',
-			direccionMunicipioDelegacion: prospecto.direccionMunicipioDelegacion || '',
-			codigoPostal: prospecto.direccionCp || '',
-			direccionCiudadEstado: prospecto.direccionCiudadEstado || '',
 		}));
 	};
 
 	useEffect(() => {
 		if (!modalReciboAbierto || !prospectoSeleccionado?.id) return;
-
+		// Misma fusión que usa el resto del expediente: base + snapshot de llamada inicial
+		const solBase = prospectoSeleccionado?.solicitante || {};
+		const solLlamada = detalleExpediente?.llamadaInicial?.solicitante || {};
+		const sol = { ...solBase, ...solLlamada };
 		setDatosRecibo((prev) => ({
 			...prev,
+			// Paciente (siempre desde el expediente)
 			nombrePaciente: construirNombrePacienteRecibo(prospectoSeleccionado),
 			apellidoPaternoPaciente: String(prospectoSeleccionado.apellidoPaterno || '').toUpperCase(),
 			apellidoMaternoPaciente: String(prospectoSeleccionado.apellidoMaterno || '').toUpperCase(),
 			clavePaciente: String(prospectoSeleccionado.clavePaciente || prev.clavePaciente || '--').toUpperCase(),
+			// Pagador (solicitante fusionado — puede llegar más completo vía detalleExpediente)
+			nombrePagador: sol.nombres || sol.nombre || prev.nombrePagador || '',
+			apellidoPaternoPagador: String(sol.apellidoPaterno || '').toUpperCase() || prev.apellidoPaternoPagador || '',
+			apellidoMaternoPagador: String(sol.apellidoMaterno || '').toUpperCase() || prev.apellidoMaternoPagador || '',
+			telefonoPagador: sol.telefono || sol.celular || prospectoSeleccionado.telefonoContacto || prospectoSeleccionado.telefono || prev.telefonoPagador || '',
+			// Domicilio del solicitante
+			direccionCalle: sol.direccionCalle || prospectoSeleccionado.direccionCalle || prev.direccionCalle || '',
+			direccionNoExt: sol.direccionNoExt || prospectoSeleccionado.direccionNoExt || prev.direccionNoExt || '',
+			direccionNoInt: sol.direccionNoInt || prospectoSeleccionado.direccionNoInt || prev.direccionNoInt || '',
+			direccionColonia: sol.direccionColonia || prospectoSeleccionado.direccionColonia || prev.direccionColonia || '',
+			direccionMunicipioDelegacion: sol.direccionMunicipioDelegacion || prospectoSeleccionado.direccionMunicipioDelegacion || prev.direccionMunicipioDelegacion || '',
+			codigoPostal: sol.direccionCp || prospectoSeleccionado.direccionCp || prev.codigoPostal || '',
+			direccionCiudadEstado: sol.direccionCiudadEstado || prospectoSeleccionado.direccionCiudadEstado || prev.direccionCiudadEstado || '',
 		}));
-	}, [modalReciboAbierto, prospectoSeleccionado?.id]);
+	}, [modalReciboAbierto, prospectoSeleccionado, detalleExpediente]);
 
 	const descargarRecibo = () => {
 		if (!prospectoSeleccionado?.id) return;
@@ -1890,415 +1914,333 @@ const ExpedienteAdmisiones = () => {
 
 				{/* MODAL PARA GENERAR RECIBO */}
 				{modalReciboAbierto && (
-					<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-						<div className="flex max-h-[95vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.35)]">
-							<div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 md:px-6">
-								<div>
-									<p className="text-xs font-bold uppercase tracking-[0.3em] text-[#7E1D3B]">Generador de Recibos</p>
-									<h3 className="text-2xl font-black text-slate-900 md:text-3xl">Crear recibo de pago</h3>
-									<p className="mt-1 text-sm text-slate-500">Complete los datos y descargue el PDF. El recibo no se guardará en el sistema.</p>
+					<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+						<div className="flex max-h-[95vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_40px_120px_rgba(15,23,42,0.32)]">
+
+							{/* ── HEADER ─────────────────────────────────── */}
+							<div className="relative overflow-hidden bg-[#7E1D3B] px-6 py-5">
+								<div className="relative z-10 flex items-start justify-between gap-4">
+									<div>
+										<p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">Instituto Marakame · Admisiones</p>
+										<h3 className="mt-0.5 text-xl font-black text-white md:text-2xl">Generador de Recibo</h3>
+										<p className="mt-1 text-sm text-white/65">Los campos marcados se auto-completan desde el expediente.</p>
+									</div>
+									<button
+										type="button"
+										onClick={() => setModalReciboAbierto(false)}
+										className="flex-shrink-0 rounded-full border border-white/20 bg-white/10 p-2 text-white/80 transition hover:bg-white/20"
+									>
+										<X size={18} />
+									</button>
 								</div>
-								<button onClick={() => setModalReciboAbierto(false)} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-[#7E1D3B] hover:text-[#7E1D3B]">
-									<X size={20} />
-								</button>
+								<div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/5" />
+								<div className="pointer-events-none absolute -bottom-12 -right-4 h-24 w-24 rounded-full bg-white/5" />
 							</div>
 
-							<div className="flex-1 overflow-y-auto px-5 py-5 md:px-6">
-								<div className="space-y-6">
-									{/* SECCIÓN 1: Datos del Pagador */}
-									<div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-5">
-										<h4 className="mb-4 text-sm font-bold uppercase text-amber-900">Datos de la persona que realiza el pago</h4>
-										
-										{/* Nombres desglosados */}
-										<div className="mb-4">
-											<p className="text-xs font-semibold text-slate-600 mb-3">Nombre completo *</p>
-											<div className="grid gap-3 md:grid-cols-3">
+							{/* ── BODY ───────────────────────────────────── */}
+							<div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+								{/* Banner auto-completado */}
+								{(datosRecibo.nombrePagador || datosRecibo.nombrePaciente) && (
+									<div className="flex items-center gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+										<CheckCircle2 size={15} className="flex-shrink-0 text-emerald-600" />
+										<p className="text-sm text-emerald-800">
+											<span className="font-bold">Datos auto-completados</span> desde el expediente del paciente y del solicitante. Puedes editarlos si es necesario.
+										</p>
+									</div>
+								)}
+
+								{/* ── Sección 1: Quien paga ── */}
+								<section className="overflow-hidden rounded-[20px] border border-slate-200 bg-white">
+									<div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-3.5">
+										<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#7E1D3B]/10 text-[#7E1D3B]">
+											<User size={14} />
+										</div>
+										<div>
+											<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">Quien realiza el pago</p>
+											<p className="text-[11px] font-medium text-slate-400">Solicitante / familiar responsable</p>
+										</div>
+									</div>
+									<div className="space-y-4 p-5">
+										<div>
+											<p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Nombre completo *</p>
+											<div className="grid gap-3 sm:grid-cols-3">
 												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Nombre(s)</label>
-													<input
-														type="text"
-														value={datosRecibo.nombrePagador}
+													<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">Nombre(s)</label>
+													<input type="text" value={datosRecibo.nombrePagador}
 														onChange={(e) => setDatosRecibo({ ...datosRecibo, nombrePagador: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="Nombre"
-													/>
+														className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Nombre(s)" />
 												</div>
 												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Apellido paterno</label>
-													<input
-														type="text"
-														value={datosRecibo.apellidoPaternoPagador}
+													<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">Apellido paterno</label>
+													<input type="text" value={datosRecibo.apellidoPaternoPagador}
 														onChange={(e) => setDatosRecibo({ ...datosRecibo, apellidoPaternoPagador: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="Apellido paterno"
-													/>
+														className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Apellido paterno" />
 												</div>
 												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Apellido materno</label>
-													<input
-														type="text"
-														value={datosRecibo.apellidoMaternoPagador}
+													<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">Apellido materno</label>
+													<input type="text" value={datosRecibo.apellidoMaternoPagador}
 														onChange={(e) => setDatosRecibo({ ...datosRecibo, apellidoMaternoPagador: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="Apellido materno"
-													/>
+														className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Apellido materno" />
 												</div>
 											</div>
 										</div>
-
-										{/* Dirección desglosada */}
-										<div className="mb-4">
-											<p className="text-xs font-semibold text-slate-600 mb-3">Dirección</p>
-											<div className="grid gap-3 md:grid-cols-2 mb-3">
+										<div>
+											<p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Domicilio</p>
+											<div className="grid gap-3 sm:grid-cols-2">
 												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Calle</label>
-													<input
-														type="text"
-														value={datosRecibo.direccionCalle}
+													<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">Calle</label>
+													<input type="text" value={datosRecibo.direccionCalle}
 														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionCalle: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="Calle"
-													/>
+														className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Calle" />
 												</div>
-												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">No. Exterior</label>
-													<input
-														type="text"
-														value={datosRecibo.direccionNoExt}
-														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionNoExt: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="No. Ext."
-													/>
-												</div>
-												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">No. Interior</label>
-													<input
-														type="text"
-														value={datosRecibo.direccionNoInt}
-														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionNoInt: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="No. Int."
-													/>
-												</div>
-												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Colonia</label>
-													<input
-														type="text"
-														value={datosRecibo.direccionColonia}
-														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionColonia: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="Colonia"
-													/>
-												</div>
-												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Municipio/Delegación</label>
-													<input
-														type="text"
-														value={datosRecibo.direccionMunicipioDelegacion}
-														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionMunicipioDelegacion: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="Municipio/Delegación"
-													/>
-												</div>
-												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">C.P.</label>
-													<input
-														type="text"
-														value={datosRecibo.codigoPostal}
-														onChange={(e) => setDatosRecibo({ ...datosRecibo, codigoPostal: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="C.P."
-													/>
-												</div>
-												<div className="md:col-span-2">
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Ciudad/Estado</label>
-													<input
-														type="text"
-														value={datosRecibo.direccionCiudadEstado}
-														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionCiudadEstado: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="Ciudad/Estado"
-													/>
-												</div>
-											</div>
-										</div>
-
-										{/* Datos adicionales */}
-										<div className="grid gap-3 md:grid-cols-2">
-											<div>
-												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Fecha de pago</label>
-												<input
-													type="date"
-													value={datosRecibo.fechaPago}
-													onChange={(e) => setDatosRecibo({ ...datosRecibo, fechaPago: e.target.value })}
-													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-												/>
-											</div>
-											<div>
-												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">RFC</label>
-												<input
-													type="text"
-													value={datosRecibo.rfc}
-													onChange={(e) => setDatosRecibo({ ...datosRecibo, rfc: e.target.value })}
-													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-													placeholder="RFC"
-												/>
-											</div>
-											<div>
-												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Teléfono</label>
-												<input
-													type="tel"
-													value={datosRecibo.telefonoPagador}
-													onChange={(e) => setDatosRecibo({ ...datosRecibo, telefonoPagador: e.target.value })}
-													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-													placeholder="Teléfono"
-												/>
-											</div>
-										</div>
-									</div>
-
-									{/* SECCIÓN 2: Datos del Paciente */}
-									<div className="rounded-2xl border border-rose-100 bg-rose-50/60 p-5">
-										<h4 className="mb-4 text-sm font-bold uppercase text-rose-900">Datos del paciente</h4>
-										
-										{/* Nombres desglosados del paciente */}
-										<div className="mb-4">
-											<p className="text-xs font-semibold text-slate-600 mb-3">Nombre completo</p>
-											<div className="grid gap-3 md:grid-cols-3 mb-4">
-												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Nombre(s)</label>
-													<input
-														type="text"
-														value={datosRecibo.nombrePaciente}
-														onChange={(e) => setDatosRecibo({ ...datosRecibo, nombrePaciente: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="Nombre"
-													/>
-												</div>
-												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Apellido paterno</label>
-													<input
-														type="text"
-														value={datosRecibo.apellidoPaternoPaciente}
-														onChange={(e) => setDatosRecibo({ ...datosRecibo, apellidoPaternoPaciente: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="Apellido paterno"
-													/>
-												</div>
-												<div>
-													<label className="mb-2 ml-1 block text-xs font-semibold text-slate-600">Apellido materno</label>
-													<input
-														type="text"
-														value={datosRecibo.apellidoMaternoPaciente}
-														onChange={(e) => setDatosRecibo({ ...datosRecibo, apellidoMaternoPaciente: e.target.value })}
-														className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-														placeholder="Apellido materno"
-													/>
-												</div>
-											</div>
-										</div>
-										
-										<div className="grid gap-4 md:grid-cols-2">
-											<div>
-												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Clave del paciente</label>
-												<input
-													type="text"
-													value={datosRecibo.clavePaciente}
-													onChange={(e) => setDatosRecibo({ ...datosRecibo, clavePaciente: e.target.value })}
-													readOnly
-													className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-600 outline-none"
-													placeholder="Se autocompleta"
-												/>
-											</div>
-											<div>
-												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Concepto del pago</label>
-												<input
-													type="text"
-													value={datosRecibo.concepto}
-													onChange={(e) => setDatosRecibo({ ...datosRecibo, concepto: e.target.value })}
-													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-													placeholder="Concepto del pago"
-												/>
-											</div>
-										</div>
-									</div>
-
-									{/* SECCIÓN 3: Montos */}
-									<div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5">
-										<h4 className="mb-4 text-sm font-bold uppercase text-emerald-900">Detalles del pago</h4>
-										<div className="grid gap-4 md:grid-cols-3">
-											<div>
-												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Pago Tratamiento ($)</label>
-												<input
-													type="number"
-													value={datosRecibo.montoPago}
-													onChange={(e) => setDatosRecibo({ ...datosRecibo, montoPago: parseFloat(e.target.value) || 0 })}
-													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-													placeholder="0.00"
-													step="0.01"
-												/>
-											</div>
-											<div>
-												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Pago Programa Familiar ($)</label>
-												<input
-													type="number"
-													value={datosRecibo.montoPrograma}
-													onChange={(e) => setDatosRecibo({ ...datosRecibo, montoPrograma: parseFloat(e.target.value) || 0 })}
-													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-													placeholder="0.00"
-													step="0.01"
-												/>
-											</div>
-											<div>
-												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Total</label>
-												<div className="flex items-center rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-bold text-emerald-700">
-													${(parseFloat(datosRecibo.montoPago || 0) + parseFloat(datosRecibo.montoPrograma || 0)).toFixed(2)}
-												</div>
-											</div>
-										</div>
-									</div>
-
-									{/* SECCIÓN 4: Firmas */}
-									<div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-										<h4 className="mb-4 text-sm font-bold uppercase text-slate-700">Personas que firman</h4>
-										<div className="grid gap-4 md:grid-cols-2">
-											<div>
-												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Persona que recibe el pago</label>
-												<input
-													type="text"
-													value={datosRecibo.nombreRecibe}
-													onChange={(e) => setDatosRecibo({ ...datosRecibo, nombreRecibe: e.target.value })}
-													className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#7E1D3B] focus:ring-2 focus:ring-[#7E1D3B]/15"
-													placeholder="Nombre completo"
-												/>
-											</div>
-											<div>
-												<label className="mb-2 ml-1 block text-xs font-bold uppercase text-slate-600">Nota sobre firmas</label>
-												<div className="flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-500">
-													Las firmas se añadirán al documento impreso
-												</div>
-											</div>
-										</div>
-									</div>
-
-									{/* VISTA PREVIA */}
-									<div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-										<h4 className="mb-3 text-sm font-bold uppercase text-slate-700">Información del recibo</h4>
-										<div className="grid gap-3 md:grid-cols-3">
-											<div className="flex items-center gap-2 rounded-lg bg-white p-3 text-xs">
-												<div className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-100 text-cyan-700 font-bold text-lg">👤</div>
-												<div>
-													<p className="text-slate-500">Pagador</p>
-													<p className="font-semibold text-slate-900">{`${datosRecibo.nombrePagador || ''} ${datosRecibo.apellidoPaternoPagador || ''} ${datosRecibo.apellidoMaternoPagador || ''}`.trim() || 'No especificado'}</p>
-												</div>
-											</div>
-											<div className="flex items-center gap-2 rounded-lg bg-white p-3 text-xs">
-												<div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-lg">💰</div>
-												<div>
-													<p className="text-slate-500">Total</p>
-													<p className="font-semibold text-slate-900">${(parseFloat(datosRecibo.montoPago || 0) + parseFloat(datosRecibo.montoPrograma || 0)).toFixed(2)}</p>
-												</div>
-											</div>
-											<div className="flex items-center gap-2 rounded-lg bg-white p-3 text-xs">
-												<div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-lg">📅</div>
-												<div>
-													<p className="text-slate-500">Fecha</p>
-													<p className="font-semibold text-slate-900">{new Date(datosRecibo.fechaPago).toLocaleDateString('es-MX')}</p>
-												</div>
-											</div>
-										</div>
-									</div>
-
-									{/* RECIBOS SUBIDOS */}
-									{recibosSubidos.length > 0 && (
-										<div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5">
-											<h4 className="mb-3 text-sm font-bold uppercase text-emerald-900 flex items-center gap-2">
-												<FileText size={16} /> Recibos firmados subidos
-											</h4>
-											<div className="space-y-2">
-												{recibosSubidos.map((recibo, idx) => (
-													<div key={idx} className="flex flex-col rounded-lg bg-white p-3 text-sm space-y-3">
-														<div className="flex items-center justify-between">
-															<div className="flex items-center gap-3 flex-1 min-w-0">
-																<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 flex-shrink-0">
-																	<FileText size={18} />
-																</div>
-																<div className="min-w-0 flex-1">
-																	<p className="font-semibold text-slate-900 truncate">{recibo.nombre}</p>
-																	<p className="text-xs text-slate-500">{recibo.fecha} • {recibo.tamaño}</p>
-																</div>
-															</div>
-															<a
-																href={recibo.url}
-																target="_blank"
-																rel="noreferrer"
-																className="rounded-lg p-2 text-emerald-600 hover:bg-emerald-100 transition flex-shrink-0"
-															>
-																<Download size={16} />
-															</a>
-														</div>
-														{/* BOTÓN GENERAR TOKEN */}
-														<button
-															onClick={generarTokenIngreso}
-															disabled={generandoToken || tokenGenerado}
-															className={`rounded-xl px-4 py-3 text-sm font-bold transition flex items-center justify-center gap-2 border ${
-																tokenGenerado
-																	? 'bg-emerald-50 text-emerald-700 cursor-not-allowed border-emerald-200'
-																	: 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-105 border-cyan-400 active:scale-95'
-															}`}
-														>
-															{generandoToken ? (
-																<>
-																	<div className="animate-spin text-lg">⏳</div>
-																	<span>Generando token...</span>
-																</>
-															) : tokenGenerado ? (
-																<>
-																	<span className="text-lg">✅</span>
-																	<span>Token: <code className="bg-emerald-100 px-2 py-1 rounded text-xs font-mono">{tokenGenerado.substring(0, 10)}</code></span>
-																</>
-															) : (
-																<>
-																	<span className="text-lg">🔑</span>
-																	<span>Generar token para ingreso</span>
-																</>
-															)}
-														</button>
+												<div className="grid grid-cols-2 gap-3">
+													<div>
+														<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">No. Ext.</label>
+														<input type="text" value={datosRecibo.direccionNoExt}
+															onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionNoExt: e.target.value })}
+															className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+															placeholder="No. Ext." />
 													</div>
-												))}
+													<div>
+														<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">No. Int.</label>
+														<input type="text" value={datosRecibo.direccionNoInt}
+															onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionNoInt: e.target.value })}
+															className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+															placeholder="No. Int." />
+													</div>
+												</div>
+												<div>
+													<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">Colonia</label>
+													<input type="text" value={datosRecibo.direccionColonia}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionColonia: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Colonia" />
+												</div>
+												<div>
+													<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">Municipio / Delegación</label>
+													<input type="text" value={datosRecibo.direccionMunicipioDelegacion}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionMunicipioDelegacion: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Municipio / Delegación" />
+												</div>
+												<div>
+													<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">C.P.</label>
+													<input type="text" value={datosRecibo.codigoPostal}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, codigoPostal: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="C.P." />
+												</div>
+												<div>
+													<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">Ciudad / Estado</label>
+													<input type="text" value={datosRecibo.direccionCiudadEstado}
+														onChange={(e) => setDatosRecibo({ ...datosRecibo, direccionCiudadEstado: e.target.value })}
+														className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+														placeholder="Ciudad / Estado" />
+												</div>
 											</div>
 										</div>
-									)}
-								</div>
+										<div className="grid gap-3 sm:grid-cols-3">
+											<div>
+												<label className="mb-1.5 ml-0.5 block text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">RFC</label>
+												<input type="text" value={datosRecibo.rfc}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, rfc: e.target.value })}
+													className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+													placeholder="RFC del pagador" />
+											</div>
+											<div>
+												<label className="mb-1.5 ml-0.5 block text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">Teléfono</label>
+												<input type="tel" value={datosRecibo.telefonoPagador}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, telefonoPagador: e.target.value })}
+													className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+													placeholder="Teléfono" />
+											</div>
+											<div>
+												<label className="mb-1.5 ml-0.5 block text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">Fecha de pago</label>
+												<input type="date" value={datosRecibo.fechaPago}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, fechaPago: e.target.value })}
+													className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15" />
+											</div>
+										</div>
+									</div>
+								</section>
+
+								{/* ── Sección 2: Paciente ── */}
+								<section className="overflow-hidden rounded-[20px] border border-slate-200 bg-white">
+									<div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-3.5">
+										<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#7E1D3B]/10 text-[#7E1D3B]">
+											<HeartPulse size={14} />
+										</div>
+										<div>
+											<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">Datos del paciente</p>
+											<p className="text-[11px] font-medium text-slate-400">Auto-completado desde el expediente</p>
+										</div>
+									</div>
+									<div className="space-y-4 p-5">
+										<div className="grid gap-3 sm:grid-cols-3">
+											<div>
+												<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">Nombre(s)</label>
+												<input type="text" value={datosRecibo.nombrePaciente}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, nombrePaciente: e.target.value })}
+													className="w-full rounded-xl border border-slate-100 bg-slate-100 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-[#7E1D3B]/40 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/10"
+													placeholder="Auto-completado" />
+											</div>
+											<div>
+												<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">Apellido paterno</label>
+												<input type="text" value={datosRecibo.apellidoPaternoPaciente}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, apellidoPaternoPaciente: e.target.value })}
+													className="w-full rounded-xl border border-slate-100 bg-slate-100 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-[#7E1D3B]/40 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/10"
+													placeholder="Auto-completado" />
+											</div>
+											<div>
+												<label className="mb-1.5 ml-0.5 block text-[11px] font-semibold text-slate-500">Apellido materno</label>
+												<input type="text" value={datosRecibo.apellidoMaternoPaciente}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, apellidoMaternoPaciente: e.target.value })}
+													className="w-full rounded-xl border border-slate-100 bg-slate-100 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-[#7E1D3B]/40 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/10"
+													placeholder="Auto-completado" />
+											</div>
+										</div>
+										<div className="grid gap-3 sm:grid-cols-2">
+											<div>
+												<label className="mb-1.5 ml-0.5 block text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">Clave del paciente</label>
+												<input type="text" value={datosRecibo.clavePaciente} readOnly
+													className="w-full cursor-not-allowed rounded-xl border border-slate-100 bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-600 outline-none" />
+											</div>
+											<div>
+												<label className="mb-1.5 ml-0.5 block text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">Concepto del pago</label>
+												<input type="text" value={datosRecibo.concepto}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, concepto: e.target.value })}
+													className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+													placeholder="Ej. Tratamiento de desintoxicación" />
+											</div>
+										</div>
+									</div>
+								</section>
+
+								{/* ── Sección 3: Importes ── */}
+								<section className="overflow-hidden rounded-[20px] border border-slate-200 bg-white">
+									<div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-3.5">
+										<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#7E1D3B]/10 text-[#7E1D3B]">
+											<Briefcase size={14} />
+										</div>
+										<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">Importes del pago</p>
+									</div>
+									<div className="p-5">
+										<div className="grid items-end gap-4 sm:grid-cols-3">
+											<div>
+												<label className="mb-1.5 ml-0.5 block text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">Tratamiento ($)</label>
+												<input type="number" value={datosRecibo.montoPago}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, montoPago: parseFloat(e.target.value) || 0 })}
+													className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+													placeholder="0.00" step="0.01" min="0" />
+											</div>
+											<div>
+												<label className="mb-1.5 ml-0.5 block text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">Programa familiar ($)</label>
+												<input type="number" value={datosRecibo.montoPrograma}
+													onChange={(e) => setDatosRecibo({ ...datosRecibo, montoPrograma: parseFloat(e.target.value) || 0 })}
+													className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+													placeholder="0.00" step="0.01" min="0" />
+											</div>
+											<div className="rounded-2xl bg-[#7E1D3B] px-4 py-3.5 text-center">
+												<p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/60">Total</p>
+												<p className="mt-0.5 text-2xl font-black leading-none text-white">
+													${(parseFloat(datosRecibo.montoPago || 0) + parseFloat(datosRecibo.montoPrograma || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+												</p>
+											</div>
+										</div>
+									</div>
+								</section>
+
+								{/* ── Sección 4: Quien recibe ── */}
+								<section className="overflow-hidden rounded-[20px] border border-slate-200 bg-white">
+									<div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-3.5">
+										<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#7E1D3B]/10 text-[#7E1D3B]">
+											<Paperclip size={14} />
+										</div>
+										<div>
+											<p className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">Responsable de Admisiones</p>
+											<p className="text-[11px] font-medium text-slate-400">Quien firma el recibo como responsable</p>
+										</div>
+									</div>
+									<div className="p-5">
+										<label className="mb-1.5 ml-0.5 block text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">Nombre de quien recibe el pago</label>
+										<input type="text" value={datosRecibo.nombreRecibe}
+											onChange={(e) => setDatosRecibo({ ...datosRecibo, nombreRecibe: e.target.value })}
+											className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#7E1D3B]/50 focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/15"
+											placeholder="Nombre completo del responsable de admisiones" />
+									</div>
+								</section>
+
+								{/* ── Recibos subidos ── */}
+								{recibosSubidos.length > 0 && (
+									<section className="overflow-hidden rounded-[20px] border border-emerald-200 bg-emerald-50/50">
+										<div className="flex items-center gap-3 border-b border-emerald-100 px-5 py-3.5">
+											<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+												<FileText size={14} />
+											</div>
+											<p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-900">Recibos firmados subidos</p>
+										</div>
+										<div className="space-y-3 p-5">
+											{recibosSubidos.map((recibo, idx) => (
+												<div key={idx} className="space-y-2.5">
+													<div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-white px-4 py-3">
+														<div className="flex min-w-0 items-center gap-3">
+															<div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+																<FileText size={15} />
+															</div>
+															<div className="min-w-0">
+																<p className="truncate text-sm font-semibold text-slate-900">{recibo.nombre}</p>
+																<p className="text-xs text-slate-500">{recibo.fecha}</p>
+															</div>
+														</div>
+														<a href={recibo.url} target="_blank" rel="noreferrer"
+															className="flex-shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-emerald-700 transition hover:bg-emerald-100">
+															<Download size={14} />
+														</a>
+													</div>
+													<button onClick={generarTokenIngreso} disabled={generandoToken || tokenGenerado}
+														className={`flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition ${
+															tokenGenerado
+																? 'cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-700'
+																: 'border-cyan-400 bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:shadow-lg'
+														}`}>
+														{generandoToken ? 'Generando token...' : tokenGenerado ? (
+															<><CheckCircle2 size={15} /> Token: <code className="rounded bg-emerald-100 px-2 py-0.5 font-mono text-xs text-emerald-800">{tokenGenerado.substring(0, 10)}</code></>
+														) : 'Generar token para ingreso'}
+													</button>
+												</div>
+											))}
+										</div>
+									</section>
+								)}
 							</div>
 
-							<div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 md:px-6 md:flex-row md:items-center md:justify-between">
-								<button
-									type="button"
-									onClick={() => setModalReciboAbierto(false)}
-									className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-								>
+							{/* ── FOOTER ─────────────────────────────────── */}
+							<div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/80 px-6 py-4">
+								<button type="button" onClick={() => setModalReciboAbierto(false)}
+									className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">
 									Cancelar
 								</button>
-								<div className="flex gap-2 flex-wrap">
-									<label className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${pagoValidadoFinanzas ? 'border-cyan-300 bg-cyan-50 text-cyan-700 cursor-pointer hover:bg-cyan-100' : 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
-										<Upload size={16} />
-										Subir recibo firmado
-										<input
-											type="file"
-											accept=".pdf,.jpg,.jpeg,.png"
+								<div className="flex flex-wrap items-center gap-2">
+									<label className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${pagoValidadoFinanzas ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100' : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'}`}>
+										<Upload size={15} />
+										Subir firmado
+										<input type="file" accept=".pdf,.jpg,.jpeg,.png"
 											onChange={manejarCargaRecibo}
 											disabled={cargandoRecibo || !pagoValidadoFinanzas}
-											className="hidden"
-										/>
+											className="hidden" />
 									</label>
 									<button
 										type="button"
 										onClick={descargarRecibo}
 										disabled={generandoRecibo || !datosRecibo.nombrePagador || datosRecibo.montoPago + datosRecibo.montoPrograma === 0}
-										className="flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#63162e] disabled:opacity-50 disabled:cursor-not-allowed"
+										className="flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#63162e] disabled:cursor-not-allowed disabled:opacity-50"
 									>
-										<Download size={16} />
+										<Download size={15} />
 										{generandoRecibo ? 'Generando...' : 'Descargar PDF'}
 									</button>
 								</div>
