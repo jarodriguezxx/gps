@@ -15,6 +15,10 @@ public class EstadoConverter implements AttributeConverter<Estado, String> {
     @Override
     public Estado convertToEntityAttribute(String valor) {
         if (valor == null) return null;
-        return Estado.valueOf(valor.replace('-', '_'));
+        try {
+            return Estado.valueOf(valor.replace('-', '_'));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

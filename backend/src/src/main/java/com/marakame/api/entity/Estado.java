@@ -9,7 +9,8 @@ public enum Estado {
     EN_REVISION,
     AUTORIZADA,
     FINALIZADA,
-    RECHAZADA;
+    RECHAZADA,
+    RECIBIDA;
 
     @JsonValue
     public String toJson() {

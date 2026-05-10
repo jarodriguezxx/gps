@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { ui } from "../../config/theme";
-import * as tipos from "../../types/requisicion.ts";
+import * as tipos from "../../types/requisicion";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 
 interface OutletCtx {
