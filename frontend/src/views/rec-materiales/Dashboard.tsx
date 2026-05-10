@@ -19,15 +19,53 @@ const RecMaterialesDashboard = () => {
 
   const [requisiciones, setRequisiciones] = useState<Requisicion[]>([]);
 
-  const cargarRequisiciones = () => {
-    return fetch(`${API_BASE}/requisiciones`)
-      .then((res) => res.json())
-      .then((data) =>
-        setRequisiciones(
-          data.map((r: Requisicion) => ({ ...r, fecha: new Date(r.fecha) })),
-        ),
-      )
-      .catch((err) => console.error("Error cargando requisiciones:", err));
+  const cargarRequisiciones = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/requisiciones`);
+      const rawText = await res.text();
+
+      let payload: unknown = null;
+      try {
+        payload = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        payload = null;
+      }
+
+      if (!res.ok) {
+        console.error("Error cargando requisiciones:", {
+          status: res.status,
+          statusText: res.statusText,
+          payload,
+          rawText,
+        });
+        setRequisiciones([]);
+        return;
+      }
+
+      const requisicionesData = Array.isArray(payload)
+        ? payload
+        : Array.isArray((payload as { data?: unknown[] })?.data)
+          ? (payload as { data: unknown[] }).data
+          : Array.isArray((payload as { requisiciones?: unknown[] })?.requisiciones)
+            ? (payload as { requisiciones: unknown[] }).requisiciones
+            : [];
+
+      if (!Array.isArray(requisicionesData)) {
+        console.error("Respuesta inesperada en /requisiciones:", payload);
+        setRequisiciones([]);
+        return;
+      }
+
+      setRequisiciones(
+        requisicionesData.map((r: Requisicion) => ({
+          ...r,
+          fecha: new Date(r.fecha),
+        })),
+      );
+    } catch (err) {
+      console.error("Error cargando requisiciones:", err);
+      setRequisiciones([]);
+    }
   };
 
   useEffect(() => {

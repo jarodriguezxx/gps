@@ -2,10 +2,23 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Plus, Printer, Trash2, Save, ArrowLeft } from 'lucide-react';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
+import { API_BASE } from '../../config/api';
 
 const DEPARTAMENTOS = ['Admisiones', 'Médico', 'Psicología', 'Dirección', 'Trabajo Social', 'Enfermería', 'Administración'];
 const PRIORIDADES = ['Normal', 'Urgente', 'Crítica'];
 const UNIDADES = ['Pza', 'Caja', 'Paquete', 'Litro', 'Kg', 'Servicio', 'Botella', 'Bulto', 'Otro'];
+
+const UNIDAD_ENUM = {
+  Pza: 'PIEZA',
+  Caja: 'CAJA',
+  Paquete: 'PAQUETE',
+  Litro: 'LITRO',
+  Kg: 'KG',
+  Servicio: 'SERVICIO',
+  Botella: 'BOTELLA',
+  Bulto: 'BULTO',
+  Otro: 'OTRO',
+};
 
 const padNumero = (valor) => String(valor).padStart(2, '0');
 
@@ -72,31 +85,49 @@ const RequisicionesAdmisiones = () => {
     });
   };
 
-  const handleGuardar = () => {
-    const payload = {
-      ...formulario,
-      conceptos: lineas.map((linea) => {
-        const cantidad = Number(linea.cantidad) || 0;
-        const precioUnitario = Number(linea.precioUnitario) || 0;
+  const handleGuardar = async () => {
+    const articulosValidos = lineas.filter((l) => l.producto.trim() !== '');
+    if (!formulario.jefeArea.trim()) {
+      setMensajeGuardado('error:Ingresa el nombre del Jefe de Área antes de guardar.');
+      return;
+    }
+    if (articulosValidos.length === 0) {
+      setMensajeGuardado('error:Agrega al menos un concepto con nombre de producto.');
+      return;
+    }
 
-        return {
-          cantidad,
-          unidad: linea.unidad.trim(),
-          producto: linea.producto.trim(),
-          descripcion: linea.descripcion.trim(),
-          precioUnitario,
-          importe: cantidad * precioUnitario,
-        };
-      }),
-      subtotal: totales.subtotal,
-      iva: totales.iva,
-      total: totales.total,
-      modulo: 'Admisiones',
+    const payload = {
+      area: formulario.departamento,
+      solicitante: formulario.jefeArea.trim(),
+      responsableArea: formulario.jefeArea.trim(),
+      justificacion: formulario.observaciones.trim() || null,
+      estado: 'PENDIENTE',
+      tipo: formulario.prioridad === 'Normal' ? 'ORDINARIA' : 'EXTRAORDINARIA',
+      tamanio: 'INDEFINIDO',
+      articulos: articulosValidos.map((linea) => ({
+        articuloRequisitado: linea.producto.trim(),
+        unidad: UNIDAD_ENUM[linea.unidad] ?? 'PIEZA',
+        articulosSolicitados: Number(linea.cantidad) || 1,
+        articulosEntregados: 0,
+      })),
     };
 
-    console.log('POST /admisiones/requisiciones', payload);
-    console.log(JSON.stringify(payload, null, 2));
-    setMensajeGuardado('La requisición se simuló correctamente. Revisa la consola para el JSON final.');
+    try {
+      setMensajeGuardado('enviando');
+      const res = await fetch(`${API_BASE}/requisiciones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const texto = await res.text().catch(() => '');
+        setMensajeGuardado(`error:No se pudo guardar la requisición (${res.status}). ${texto}`);
+        return;
+      }
+      setMensajeGuardado('ok');
+    } catch (err) {
+      setMensajeGuardado(`error:Error de red: ${err.message}`);
+    }
   };
 
   const handleImprimir = () => {
@@ -174,9 +205,17 @@ const RequisicionesAdmisiones = () => {
                   </div>
                 </div>
 
-                {mensajeGuardado ? (
+                {mensajeGuardado === 'enviando' ? (
+                  <div className="mb-5 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800 print:hidden">
+                    Enviando requisición...
+                  </div>
+                ) : mensajeGuardado === 'ok' ? (
                   <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 print:hidden">
-                    {mensajeGuardado}
+                    Requisición enviada correctamente. Ya está visible en Rec. Materiales para su validación.
+                  </div>
+                ) : mensajeGuardado.startsWith('error:') ? (
+                  <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800 print:hidden">
+                    {mensajeGuardado.slice(6)}
                   </div>
                 ) : null}
 
@@ -386,7 +425,7 @@ const RequisicionesAdmisiones = () => {
                   </div>
 
                   <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
-                    Lista lista para impresión. Al guardar se imprime el JSON final en consola como simulación de POST.
+                    Al guardar, la requisición se envía a Rec. Materiales con estado <strong>Pendiente</strong> para su validación.
                   </div>
                 </aside>
               </div>

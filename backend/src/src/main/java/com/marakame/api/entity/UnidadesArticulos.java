@@ -2,5 +2,11 @@ package com.marakame.api.entity;
 public enum UnidadesArticulos {
     PIEZA,
     CAJA,
-    PAQUETE
+    PAQUETE,
+    LITRO,
+    KG,
+    SERVICIO,
+    BOTELLA,
+    BULTO,
+    OTRO
 }

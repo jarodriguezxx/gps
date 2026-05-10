@@ -31,11 +31,11 @@ public class Requisicion {
     @JsonProperty("estado")
     private Estado estado;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TamanioCompraConverter.class)
     @JsonProperty("tamanio")
     private TamanioCompra tamanio;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TipoCompraConverter.class)
     @JsonProperty("tipo")
     private TipoCompra tipo;
 
