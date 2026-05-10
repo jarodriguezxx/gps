@@ -283,4 +283,62 @@ public class RequisicionController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-leyendo-archivo");
         }
     }
+
+    
+    // ==========================================
+    // NUEVO MÉTODO: Actualizar artículos entregados
+    // ==========================================
+    @PutMapping("/articulos/{id}") 
+    public ResponseEntity<?> actualizarArticulosEntregados(
+            @PathVariable UUID id, 
+            @RequestBody Map<String, Integer> request) {
+        
+        Optional<ArticuloRequisicion> articuloOpt = articuloRepository.findById(id);
+        
+        if (articuloOpt.isPresent()) {
+            ArticuloRequisicion articulo = articuloOpt.get();
+            
+            Integer entregados = request.containsKey("articulos_entregados") ? 
+                                 request.get("articulos_entregados") : 
+                                 request.get("articulosEntregados");
+                                 
+            if (entregados != null) {
+                articulo.setArticulosEntregados(entregados);
+                articuloRepository.save(articulo);
+                return ResponseEntity.ok(articulo);
+            }
+        }
+        
+        return ResponseEntity.notFound().build();
+    }
+
+// ==========================================
+    // NUEVO MÉTODO: Actualizar estado general de la Requisición
+    // ==========================================
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> actualizarEstadoRequisicion(
+            @PathVariable UUID id, 
+            @RequestBody java.util.Map<String, String> body) {
+        try {
+            if (!body.containsKey("estado")) {
+                return ResponseEntity.badRequest().body("Falta el campo 'estado' en la petición.");
+            }
+            
+            // Convertimos el texto (ej. "INCOMPLETA") al valor del Enum
+            Estado nuevoEstado = Estado.fromJson(body.get("estado"));
+            
+            // Llamamos al servicio para guardar
+            Requisicion actualizada = service.actualizarEstado(id, nuevoEstado);
+            
+            return ResponseEntity.ok(actualizada);
+            
+        } catch (java.util.NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Estado no reconocido por el sistema: " + body.get("estado"));
+        } catch (Exception e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error inesperado: " + e.getMessage());
+        }
+    }
 }
