@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { API_BASE } from '../../config/api';
 import {
   Activity, BrainCircuit, CalendarDays, ClipboardList, FileBarChart, Folder,
   Inbox, LayoutDashboard, MessageSquare, PhoneCall, ShoppingCart,
@@ -81,13 +82,33 @@ const getUsuarioSesion = () => {
   try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
 };
 
+const LIMITE_PACIENTES = 40;
+
 export const AdmisionesSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [activos, setActivos] = useState(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/pacientes`)
+      .then(r => r.json())
+      .then(data => {
+        const count = Array.isArray(data)
+          ? data.filter(p => p.estadoPaciente === 'INGRESADO').length
+          : 0;
+        setActivos(count);
+      })
+      .catch(() => setActivos(0));
+  }, []);
 
   const puesto = getUsuarioSesion().puesto || '';
   const itemsOcultos = ADMISIONES_ITEMS_OCULTOS_POR_PUESTO[puesto] ?? [];
   const itemsVisibles = admisionesNavItems.filter(item => !itemsOcultos.includes(item.key));
+
+  const porcentaje = activos !== null ? Math.min((activos / LIMITE_PACIENTES) * 100, 100) : 0;
+  const restantes  = activos !== null ? LIMITE_PACIENTES - activos : null;
+  const colorBarra = activos >= 38 ? 'bg-rose-500' : activos >= 35 ? 'bg-amber-400' : 'bg-emerald-500';
+  const alerta     = activos !== null && activos >= 35;
 
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
@@ -111,6 +132,29 @@ export const AdmisionesSidebar = () => {
           </button>
         );
       })}
+
+      {activos !== null && (
+        <div className="mt-4 pt-4 border-t border-slate-200">
+          {alerta && (
+            <div className={`mb-2 rounded-xl px-3 py-2 text-xs font-bold flex items-center gap-1.5 ${
+              activos >= 38
+                ? 'bg-rose-50 border border-rose-200 text-rose-700'
+                : 'bg-amber-50 border border-amber-200 text-amber-800'
+            }`}>
+              {activos >= 38 ? '🔴' : '⚠️'}
+              {restantes === 0 ? 'Capacidad máxima' : `Quedan ${restantes} lugar${restantes === 1 ? '' : 'es'}`}
+            </div>
+          )}
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Capacidad</p>
+          <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+            <span>{activos} pacientes</span>
+            <span>/ {LIMITE_PACIENTES}</span>
+          </div>
+          <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${colorBarra}`} style={{ width: `${porcentaje}%` }} />
+          </div>
+        </div>
+      )}
     </aside>
   );
 };

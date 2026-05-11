@@ -1759,7 +1759,7 @@ const EstudioSocioeconomico = () => {
     tabs.forEach((tab) => {
       const reqFields = getActiveRequiredFields(tab.id);
       reqFields.forEach((name) => {
-        const msg = validateField(name, formData[name]);
+        const msg = validateField(name, getNestedFieldValue(formData, name));
         if (msg) {
           checklist.push({
             id: `required-${tab.id}-${name}`,
@@ -2328,7 +2328,14 @@ const EstudioSocioeconomico = () => {
         type: 'success',
         message: `Se actualizó Solicitante y Paciente y se generó el PDF ${pdfData?.nombreArchivo || ''}.`,
       });
-      navigate('/admisiones');
+      if (pacienteIdDeOrigen && Number.isInteger(Number(pacienteIdDeOrigen))) {
+        navigate(`/admisiones/expediente-digital/${pacienteIdDeOrigen}`, {
+          state: { pacienteIdPreseleccionado: pacienteIdDeOrigen },
+          replace: true,
+        });
+      } else {
+        navigate('/admisiones', { replace: true });
+      }
     } catch (error) {
       console.error('Error guardando estudio basico:', error);
       setGuardandoEstudio(false);

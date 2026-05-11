@@ -979,8 +979,6 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 
         private void escribirEncabezadoPrincipal(LocalDateTime generadoEn, Paciente paciente, PDFont bold, PDFont regular) throws IOException {
             asegurarEspacio(84f);
-            contentStream.addRect(LEFT_MARGIN + 70, cursorY - 22, CONTENT_WIDTH - 140, 24);
-            contentStream.stroke();
             escribirTextoCentrado("ESTUDIO SOCIOECONOMICO", bold, 15, cursorY - 6);
             cursorY -= 30;
             escribirLineaDoble("FECHA", formatearFechaHora(generadoEn), "FOLIO", construirFolio(paciente), regular);
@@ -1124,18 +1122,110 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
             escribirLineaDoble("Horario de trabajo", buscarValorFormulario(form, "formdata_laboralhorario", "horario"), "Dependientes economicos", buscarValorFormulario(form, "formdata_laboraldependientes", "dependienteseconomicos"), regular);
             escribirLineaDoble("Ingreso mensual neto", buscarValorFormulario(form, "formdata_laboralingresomensual", "ingresomensual", "ingresomensualneto"), "Otros ingresos", buscarValorFormulario(form, "formdata_laboralotrosingresos", "otrosingresos"), regular);
 
-            escribirSubtituloSimple("III. INGRESOS MENSUALES / EGRESOS MENSUALES", bold);
-            asegurarEspacio(130);
-            float tablaTop = cursorY;
-            dibujarCaja(LEFT_MARGIN, tablaTop - 120, 220, 120);
-            dibujarCaja(LEFT_MARGIN + 250, tablaTop - 120, 250, 120);
-            escribirTexto("Solicitante / Esposo(a) / Hijos / Otros", regular, 9, LEFT_MARGIN + 8, tablaTop - 12);
-            escribirTexto("Alimentacion, Renta, Luz, Agua, Transporte...", regular, 9, LEFT_MARGIN + 258, tablaTop - 12);
-            for (int i = 1; i <= 6; i++) {
-                dibujarLinea(LEFT_MARGIN, tablaTop - (i * 18), LEFT_MARGIN + 220);
-                dibujarLinea(LEFT_MARGIN + 250, tablaTop - (i * 18), LEFT_MARGIN + 500);
+            String conyugeOcup  = buscarValorFormulario(form, "formdata_conyugeOcupacion",      "conyugeocupacion");
+            String conyugeLugar = buscarValorFormulario(form, "formdata_conyugeLugarTrabajo",   "conyugelugartrabajo");
+            String conyugeAntig = buscarValorFormulario(form, "formdata_conyugeAntiguedad",     "conyugeantiguedad");
+            String conyugeIngr  = buscarValorFormulario(form, "formdata_conyugeIngresoMensual", "conyugeingresomensual");
+            if (!conyugeOcup.isBlank() || !conyugeLugar.isBlank() || !conyugeAntig.isBlank() || !conyugeIngr.isBlank()) {
+                escribirSubtituloSimple("DATOS LABORALES DEL CONYUGE", bold);
+                escribirLineaDoble("Ocupacion", conyugeOcup, "Lugar de trabajo", conyugeLugar, regular);
+                escribirLineaDoble("Antiguedad", conyugeAntig, "Ingreso mensual neto", conyugeIngr, regular);
             }
-            cursorY = tablaTop - 132;
+
+            String tieneAuto = buscarValorFormulario(form, "formdata_patrimonioCuentaAuto", "patrimoniocuentaauto");
+            if (!tieneAuto.isBlank()) {
+                escribirSubtituloSimple("TRANSPORTE / PATRIMONIO", bold);
+                String cantAutos = buscarValorFormulario(form, "formdata_patrimonioCantidad", "patrimoniocantidad");
+                String catVeh    = buscarValorFormulario(form, "formdata_vehiculoCategoria",  "vehiculocategoria");
+                escribirLineaTriple("Cuenta con automovil", tieneAuto, "Cantidad", cantAutos, "Categoria", catVeh, regular);
+                List<String[]> filasVeh = extraerFilasVehiculos(form);
+                if (!filasVeh.isEmpty()) {
+                    escribirTabla(
+                        new String[]{"Marca", "Anio", "Propietario"},
+                        Math.max(filasVeh.size(), 2),
+                        new float[]{170f, 80f, 165f},
+                        14f, bold, regular, filasVeh
+                    );
+                }
+            }
+
+            String familiarAporta = buscarValorFormulario(form, "formdata_familiarAportaIngreso", "familiaraportaingreso");
+            if (!familiarAporta.isBlank()) {
+                escribirSubtituloSimple("APORTACION FAMILIAR AL INGRESO", bold);
+                String numAporta = buscarValorFormulario(form, "formdata_numeroIntegrantesAportan", "numerointegratesaportan");
+                escribirLineaDoble("Otro miembro aporta al ingreso", familiarAporta, "Integrantes que aportan", numAporta, regular);
+                List<String[]> filasContrib = extraerFilasContribuidores(form);
+                if (!filasContrib.isEmpty()) {
+                    escribirTabla(
+                        new String[]{"Parentesco", "Cantidad mensual"},
+                        Math.max(filasContrib.size(), 2),
+                        new float[]{250f, 165f},
+                        14f, bold, regular, filasContrib
+                    );
+                }
+            }
+
+            escribirSubtituloSimple("III. INGRESOS MENSUALES / EGRESOS MENSUALES", bold);
+
+            String[] ingLabels = {"Solicitante", "Esposo(a)/Conyuge", "Hijos", "Otros"};
+            String[] ingKeys   = {"monthlyIncomes_solicitante", "monthlyIncomes_conyuge", "monthlyIncomes_hijos", "monthlyIncomes_otros"};
+            String[] egLabels  = {"Alimentacion", "Renta", "Luz", "Agua", "Combustible", "Transporte", "Educacion", "Telefono", "Gastos medicos", "Esparcimiento", "Otros"};
+            String[] egKeys    = {"monthlyExpenses_alimentacion", "monthlyExpenses_renta", "monthlyExpenses_luz", "monthlyExpenses_agua", "monthlyExpenses_combustible", "monthlyExpenses_transporte", "monthlyExpenses_educacion", "monthlyExpenses_telefono", "monthlyExpenses_gastosMedicos", "monthlyExpenses_esparcimiento", "monthlyExpenses_otros"};
+
+            int ingRows   = ingLabels.length;
+            int egRows    = egLabels.length;
+            int totalRows = Math.max(ingRows, egRows);
+            float rowH    = 14f;
+            float headerH = 16f;
+            float totalH  = headerH + (totalRows * rowH);
+
+            asegurarEspacio(totalH + 8);
+            float tablaTop = cursorY;
+
+            float ingBoxW  = 220f;
+            float ingLabelW = 148f;
+            float egBoxX   = LEFT_MARGIN + 250;
+            float egBoxW   = 260f;
+            float egLabelW = 172f;
+
+            dibujarCaja(LEFT_MARGIN, tablaTop - totalH, ingBoxW, totalH);
+            dibujarCaja(egBoxX, tablaTop - totalH, egBoxW, totalH);
+            dibujarLinea(LEFT_MARGIN, tablaTop - headerH, LEFT_MARGIN + ingBoxW);
+            dibujarLinea(egBoxX, tablaTop - headerH, egBoxX + egBoxW);
+            dibujarLineaVertical(LEFT_MARGIN + ingLabelW, tablaTop, tablaTop - totalH);
+            dibujarLineaVertical(egBoxX + egLabelW, tablaTop, tablaTop - totalH);
+
+            for (int i = 1; i <= totalRows; i++) {
+                float lineY = tablaTop - headerH - (i * rowH);
+                dibujarLinea(LEFT_MARGIN, lineY, LEFT_MARGIN + ingBoxW);
+                dibujarLinea(egBoxX, lineY, egBoxX + egBoxW);
+            }
+
+            escribirTexto("INGRESOS MENSUALES", bold, 9, LEFT_MARGIN + 4, tablaTop - 12);
+            escribirTexto("EGRESOS MENSUALES",  bold, 9, egBoxX + 4,      tablaTop - 12);
+
+            float ingValW = ingBoxW - ingLabelW;
+            float egValW  = egBoxW - egLabelW;
+
+            for (int i = 0; i < ingLabels.length; i++) {
+                float y = tablaTop - headerH - (i * rowH) - (rowH * 0.7f);
+                String val = buscarValorFormulario(form, ingKeys[i]);
+                escribirTextoRecortado(ingLabels[i], regular, 8.5f, LEFT_MARGIN + 3, y, ingLabelW - 6);
+                if (!val.isBlank()) {
+                    escribirTextoRecortado("$ " + val, regular, 8.5f, LEFT_MARGIN + ingLabelW + 2, y, ingValW - 4);
+                }
+            }
+
+            for (int i = 0; i < egLabels.length; i++) {
+                float y = tablaTop - headerH - (i * rowH) - (rowH * 0.7f);
+                String val = buscarValorFormulario(form, egKeys[i]);
+                escribirTextoRecortado(egLabels[i], regular, 8.5f, egBoxX + 3, y, egLabelW - 6);
+                if (!val.isBlank()) {
+                    escribirTextoRecortado("$ " + val, regular, 8.5f, egBoxX + egLabelW + 2, y, egValW - 4);
+                }
+            }
+
+            cursorY = tablaTop - totalH - 8;
         }
 
         private void escribirBloqueSaludAdicciones(Map<String, String> form, PDFont bold, PDFont regular) throws IOException {
@@ -1257,7 +1347,7 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
             escribirTituloSeccion("VI. DIAGNOSTICO", bold);
             escribirCajaTexto(
                 valorDisponible(
-                    buscarValorFormulario(form, "diagnostico", "diagnosticovisual"),
+                    buscarValorFormulario(form, "formdata_familiarDiagnostico", "familiardiagnostico", "diagnosticovisual"),
                     ""
                 ),
                 120f,
@@ -1494,6 +1584,33 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
                 }
             }
             return false;
+        }
+
+        private List<String[]> extraerFilasVehiculos(Map<String, String> form) {
+            List<String[]> filas = new ArrayList<>();
+            for (int i = 1; i <= 5; i++) {
+                String marca       = buscarValorFormulario(form, "vehicleAssets_" + i + "_marca");
+                String ano         = buscarValorFormulario(form, "vehicleAssets_" + i + "_ano");
+                String propietario = buscarValorFormulario(form, "vehicleAssets_" + i + "_propietario");
+                String[] fila = new String[]{marca, ano, propietario};
+                if (tieneContenido(fila)) {
+                    filas.add(fila);
+                }
+            }
+            return filas;
+        }
+
+        private List<String[]> extraerFilasContribuidores(Map<String, String> form) {
+            List<String[]> filas = new ArrayList<>();
+            for (int i = 1; i <= 5; i++) {
+                String parentesco = buscarValorFormulario(form, "incomeContributors_" + i + "_parentesco");
+                String cantidad   = buscarValorFormulario(form, "incomeContributors_" + i + "_cantidadMensual");
+                String[] fila = new String[]{parentesco, cantidad};
+                if (tieneContenido(fila)) {
+                    filas.add(fila);
+                }
+            }
+            return filas;
         }
 
         private List<String[]> extraerFilasIndexadas(
