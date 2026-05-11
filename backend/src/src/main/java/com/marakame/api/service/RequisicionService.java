@@ -266,7 +266,10 @@ public class RequisicionService {
     @Transactional
     public Requisicion firmarAdministradora(UUID id) {
         Requisicion req = repository.findById(id).orElseThrow(NoSuchElementException::new);
-        if (req.getEstado() != Estado.PRE_AUTORIZADA)
+        boolean puedeFiremar =
+                (req.getEstado() == Estado.EN_REVISION && req.getTipo() == TipoCompra.ORDINARIA) ||
+                (req.getEstado() == Estado.PRE_AUTORIZADA && req.getTipo() == TipoCompra.EXTRAORDINARIA);
+        if (!puedeFiremar)
             throw new IllegalStateException("estado-invalido");
         req.setFirmaAdministradora(true);
         return repository.save(req);
@@ -275,8 +278,6 @@ public class RequisicionService {
     @Transactional
     public Requisicion firmarDirectoraGral(UUID id) {
         Requisicion req = repository.findById(id).orElseThrow(NoSuchElementException::new);
-        if (req.getEstado() != Estado.PRE_AUTORIZADA)
-            throw new IllegalStateException("estado-invalido");
         if (!Boolean.TRUE.equals(req.getFirmaAdministradora()))
             throw new IllegalStateException("firma-administradora-requerida");
         req.setFirmaDirectoraGral(true);
@@ -289,7 +290,13 @@ public class RequisicionService {
         if (observaciones == null || observaciones.isBlank())
             throw new IllegalArgumentException("motivo-requerido");
         Requisicion req = repository.findById(id).orElseThrow(NoSuchElementException::new);
-        if (req.getEstado() != Estado.PRE_AUTORIZADA)
+        boolean puedeRechazar =
+                (rol.equals("administracion") && (
+                        (req.getEstado() == Estado.EN_REVISION && req.getTipo() == TipoCompra.ORDINARIA) ||
+                        (req.getEstado() == Estado.PRE_AUTORIZADA && req.getTipo() == TipoCompra.EXTRAORDINARIA)
+                )) ||
+                (rol.equals("direccion-general") && Boolean.TRUE.equals(req.getFirmaAdministradora()));
+        if (!puedeRechazar)
             throw new IllegalStateException("estado-invalido");
         req.setObservacionesRechazo(observaciones);
         req.setRechazadoPor(rol);

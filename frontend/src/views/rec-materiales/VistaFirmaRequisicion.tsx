@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { ui } from "../../config/theme";
 import { API_BASE } from "../../config/api";
 import * as tipos from "../../types/requisicion";
@@ -17,6 +17,7 @@ type Toast = { msg: string; ok: boolean } | null;
 const VistaFirmaRequisicion = ({ rol }: Props) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { refrescar } = useOutletContext<{ refrescar: () => Promise<void> }>();
 
   const [req, setReq] = useState<tipos.Requisicion | null>(null);
   const [adjuntos, setAdjuntos] = useState<AdjuntoAPI[]>([]);
@@ -65,7 +66,7 @@ const VistaFirmaRequisicion = ({ rol }: Props) => {
   const puedeFirmar =
     !esRechazada &&
     ((rol === "administracion" && !yaFirmoAdmin) ||
-      (rol === "direccion-general" && !yaFirmoDir));
+      (rol === "direccion-general" && yaFirmoAdmin && !yaFirmoDir));
 
   const firmar = async () => {
     setProcesando(true);
@@ -79,7 +80,8 @@ const VistaFirmaRequisicion = ({ rol }: Props) => {
       if (res.ok) {
         mostrarToast("Requisición firmada correctamente", true);
         setModalFirma(false);
-        cargar();
+        await cargar();
+        refrescar();
       } else {
         const txt = await res.text();
         if (txt === "firma-administradora-requerida") {
@@ -107,7 +109,8 @@ const VistaFirmaRequisicion = ({ rol }: Props) => {
         mostrarToast("Requisición rechazada", true);
         setModalRechazo(false);
         setObservaciones("");
-        cargar();
+        await cargar();
+        refrescar();
       } else {
         mostrarToast("No se pudo rechazar: " + (await res.text()), false);
         setModalRechazo(false);
@@ -117,13 +120,31 @@ const VistaFirmaRequisicion = ({ rol }: Props) => {
     }
   };
 
-  const descargarCotizacionLegacy = () => {
-    window.open(`${API_BASE}/requisiciones/${id}/cotizacion/descargar`, "_blank");
+  const descargarArchivo = async (url: string, nombre: string) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        const msg = await res.text().catch(() => "");
+        mostrarToast(msg || "No se pudo descargar el archivo.", false);
+        return;
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = nombre;
+      a.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      mostrarToast("Error de conexión al descargar el archivo.", false);
+    }
   };
 
-  const descargarAdjunto = (adjId: string) => {
-    window.open(`${API_BASE}/requisiciones/${id}/adjuntos/${adjId}/descargar`, "_blank");
-  };
+  const descargarCotizacionLegacy = () =>
+    descargarArchivo(`${API_BASE}/requisiciones/${id}/cotizacion/descargar`, "cotizacion.pdf");
+
+  const descargarAdjunto = (adjId: string, nombre: string) =>
+    descargarArchivo(`${API_BASE}/requisiciones/${id}/adjuntos/${adjId}/descargar`, nombre);
 
   if (cargando) {
     return (
@@ -180,6 +201,7 @@ const VistaFirmaRequisicion = ({ rol }: Props) => {
       <div className="flex flex-wrap gap-2 items-center">
         <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold border ${
           req.estado === "PRE-AUTORIZADA" ? "bg-purple-100 text-purple-800 border-purple-300" :
+          req.estado === "EN-REVISION" ? "bg-orange-100 text-orange-800 border-orange-300" :
           req.estado === "AUTORIZADA" ? "bg-blue-100 text-blue-800 border-blue-300" :
           req.estado === "RECHAZADA" ? "bg-red-100 text-red-800 border-red-300" :
           "bg-slate-100 text-slate-700 border-slate-300"
@@ -282,7 +304,7 @@ const VistaFirmaRequisicion = ({ rol }: Props) => {
               >
                 <span className="text-sm text-slate-700 break-all">{adj.nombreOriginal}</span>
                 <button
-                  onClick={() => descargarAdjunto(adj.id)}
+                  onClick={() => descargarAdjunto(adj.id, adj.nombreOriginal)}
                   className="ml-3 flex-shrink-0 rounded-lg bg-[#7E1D3B] px-3 py-1 text-xs font-semibold text-white hover:bg-[#63162e] transition"
                 >
                   Descargar

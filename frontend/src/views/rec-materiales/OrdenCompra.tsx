@@ -457,13 +457,56 @@ const OrdenCompra = () => {
                 <label className="text-sm font-semibold text-slate-700">
                   Proveedor / Razón Social
                 </label>
-                <div className="rounded-xl bg-slate-100 px-3 py-2 font-semibold text-slate-900">
-                  {orden.proveedor?.nombre ?? "—"}
-                </div>
-                {orden.proveedor && (
-                  <p className="text-sm text-slate-500">
-                    RFC: {orden.proveedor.rfc} | Tel: {orden.proveedor.telefono} | Contacto: {orden.proveedor.contactoNombre}
-                  </p>
+                {enviada ? (
+                  <>
+                    <div className="rounded-xl bg-slate-100 px-3 py-2 font-semibold text-slate-900">
+                      {orden.proveedor?.nombre ?? "—"}
+                    </div>
+                    {orden.proveedor && (
+                      <p className="text-sm text-slate-500">
+                        RFC: {orden.proveedor.rfc} | Tel: {orden.proveedor.telefono} | Contacto: {orden.proveedor.contactoNombre}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <select
+                      value={orden.proveedor?.id ?? ""}
+                      onChange={(e) => {
+                        const seleccionado = proveedoresLista.find((p) => p.id === e.target.value);
+                        setOrden((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                proveedor: seleccionado
+                                  ? {
+                                      id: seleccionado.id,
+                                      nombre: seleccionado.nombre,
+                                      rfc: seleccionado.rfc,
+                                      telefono: seleccionado.contacto.telefono,
+                                      correo: seleccionado.contacto.correo,
+                                      contactoNombre: seleccionado.contacto.nombreEncargado,
+                                    }
+                                  : null,
+                              }
+                            : prev
+                        );
+                      }}
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#7E1D3B]"
+                    >
+                      <option value="">— Selecciona un proveedor —</option>
+                      {proveedoresLista.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    {orden.proveedor && (
+                      <p className="text-sm text-slate-500">
+                        RFC: {orden.proveedor.rfc} | Tel: {orden.proveedor.telefono} | Contacto: {orden.proveedor.contactoNombre}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

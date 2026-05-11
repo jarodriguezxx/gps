@@ -91,6 +91,51 @@ public class RequisicionController {
         }
     }
 
+    @GetMapping("/{id}/cotizacion/descargar")
+    public ResponseEntity<?> descargarCotizacion(@PathVariable UUID id) {
+        try {
+            Requisicion req = service.obtenerPorId(id).orElseThrow(NoSuchElementException::new);
+            if (req.getCotizacionPath() == null)
+                return ResponseEntity.notFound().build();
+            java.nio.file.Path path = Paths.get(req.getCotizacionPath());
+            if (!Files.exists(path))
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body("El archivo fue eliminado y ya no está disponible.");
+            byte[] bytes = Files.readAllBytes(path);
+            String filename = path.getFileName().toString();
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .body(new ByteArrayResource(bytes));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-leyendo-archivo");
+        }
+    }
+
+    @GetMapping("/{id}/adjuntos/{adjuntoId}/descargar")
+    public ResponseEntity<?> descargarAdjunto(@PathVariable UUID id, @PathVariable UUID adjuntoId) {
+        try {
+            AdjuntoRequisicion adjunto = service.obtenerAdjunto(id, adjuntoId);
+            java.nio.file.Path path = Paths.get(adjunto.getRutaArchivo());
+            if (!Files.exists(path))
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body("El archivo fue eliminado y ya no está disponible.");
+            byte[] bytes = Files.readAllBytes(path);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + adjunto.getNombreOriginal() + "\"")
+                    .body(new ByteArrayResource(bytes));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error-leyendo-archivo");
+        }
+    }
+
     @GetMapping("/{id}/adjuntos")
     public ResponseEntity<?> getAdjuntos(@PathVariable UUID id) {
         try {
@@ -271,24 +316,17 @@ public class RequisicionController {
             @PathVariable UUID id,
             @RequestBody Map<String, String> body) {
         try {
-            if (!body.containsKey("estado")) {
-                return ResponseEntity.badRequest().body("Falta el campo 'estado' en la petición.");
-            }
-            
-            // Convertimos el texto (ej. "INCOMPLETA") al valor del Enum
-            Estado nuevoEstado = Estado.fromJson(body.get("estado"));
-            
-            // Llamamos al servicio para guardar
-            Requisicion actualizada = service.actualizarEstado(id, nuevoEstado);
-            
-            return ResponseEntity.ok(actualizada);
-            
-        } catch (java.util.NoSuchElementException e) {
+            if (!body.containsKey("tamanio"))
+                return ResponseEntity.badRequest().body("Falta el campo 'tamanio' en la petición.");
+            com.marakame.api.entity.TamanioCompra tamanio =
+                    com.marakame.api.entity.TamanioCompra.valueOf(body.get("tamanio"));
+            return ResponseEntity.ok(service.actualizarTamanio(id, tamanio));
+        } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Estado no reconocido por el sistema: " + body.get("estado"));
+            return ResponseEntity.badRequest().body("Tamaño no reconocido: " + body.get("tamanio"));
         } catch (Exception e) {
-            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error inesperado: " + e.getMessage());
         }
     }

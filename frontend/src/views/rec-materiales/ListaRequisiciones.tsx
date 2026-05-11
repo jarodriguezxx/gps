@@ -16,25 +16,29 @@ const ListaRequisiciones = () => {
   // Validar el rol del usuario
   const { rol } = useParams<{ rol: string }>();
   const requisicionesAMostrar = useMemo(() => {
+    const ocultas = new Set(["FINALIZADA", "INCOMPLETA", "RECIBIDA"]);
     if (rol === "rec-materiales") {
-      return requisiciones.filter((r) => r.estado !== "INCOMPLETA");
+      return requisiciones.filter((r) => !ocultas.has(r.estado));
     } else if (rol === "administracion") {
       return requisiciones.filter(
-        (r) => r.estado === "PRE-AUTORIZADA" && !r.firmaAdminsitradora,
+        (r) =>
+          !r.firmaAdminsitradora &&
+          ((r.tipo === "ORDINARIA" && r.estado === "EN-REVISION") ||
+            (r.tipo === "EXTRAORDINARIA" && r.estado === "PRE-AUTORIZADA")),
       );
     } else if (rol === "direccion-general") {
       return requisiciones.filter(
-        (r) => r.estado === "PRE-AUTORIZADA" && !r.firmaDirectoraGral,
+        (r) => r.firmaAdminsitradora === true && !r.firmaDirectoraGral,
       );
     } else {
       // compras-inventario
       const ordinarias = requisiciones.filter(
-        (r) => r.tipo === "ORDINARIA" && r.estado !== "PENDIENTE",
+        (r) => r.tipo === "ORDINARIA" && r.estado !== "PENDIENTE" && !ocultas.has(r.estado),
       );
       const extraordinarias = requisiciones.filter(
         (r) =>
           r.tipo === "EXTRAORDINARIA" &&
-          (r.estado === "AUTORIZADA" || r.estado === "EN-REVISION" || r.estado === "FINALIZADA"),
+          (r.estado === "AUTORIZADA" || r.estado === "EN-REVISION"),
       );
       return [...ordinarias, ...extraordinarias];
     }
