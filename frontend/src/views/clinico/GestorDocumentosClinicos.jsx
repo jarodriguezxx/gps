@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, ClipboardCheck, BrainCircuit, MessageSquare, 
-  Users2, ChevronRight, FileText, FileUp, CheckCircle2, 
-  ArrowLeft, Brain, ShieldCheck, Heart, AlertTriangle
+  LayoutDashboard, Users, ClipboardCheck, BrainCircuit, MessageSquare,
+  Users2, ChevronRight, FileText, FileUp, CheckCircle2,
+  ArrowLeft, Brain, ShieldCheck, Heart, AlertTriangle, ShoppingCart
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -31,6 +31,7 @@ const GestorDocumentosClinicos = ({ rolActivo = 'psicologia' }) => {
   const navItems = [
     { label: 'Inicio Jefatura Clínica', icon: LayoutDashboard, path: '/clinico/inicio-jefe-clinico' },
     { label: 'Censo de Pacientes',      icon: Users,           path: '/clinico/pacientes' },
+    { label: 'Requisiciones',           icon: ShoppingCart,    path: '/clinico/requisiciones' },
   ];
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-400 font-bold">Cargando...</div>;

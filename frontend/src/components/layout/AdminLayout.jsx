@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, BrainCircuit, CalendarDays, ClipboardList, Folder,
+  Activity, BrainCircuit, CalendarDays, ClipboardList, FileBarChart, Folder,
   Inbox, LayoutDashboard, MessageSquare, PhoneCall, ShoppingCart,
   Stethoscope, UserPlus, Users, Users2,
 } from 'lucide-react';
@@ -63,22 +63,35 @@ export const AdminSidebar = ({ navItems, activeKey }) => {
 };
 
 const admisionesNavItems = [
-  { label: 'Dashboard de Inicio', icon: LayoutDashboard, key: 'dashboard', path: '/admisiones' },
-  { label: 'Bandeja Operativa', icon: Inbox, key: 'bandeja', path: '/admisiones/bandeja-operativa' },
-  { label: 'Expediente', icon: Folder, key: 'expediente', path: '/admisiones/expediente' },
-  { label: 'Requisiciones', icon: ClipboardList, key: 'requisiciones', path: '/admisiones/requisiciones' },
-{ label: 'Agenda de Citas', icon: CalendarDays, key: 'agenda', path: '/admisiones/agenda-citas' },
-  { label: 'Seguimiento Telefónico', icon: PhoneCall, key: 'seguimiento', path: '/admisiones/seguimiento-telefonico' },
+  { label: 'Dashboard de Inicio',   icon: LayoutDashboard, key: 'dashboard',    path: '/admisiones' },
+  { label: 'Bandeja Operativa',     icon: Inbox,           key: 'bandeja',      path: '/admisiones/bandeja-operativa' },
+  { label: 'Expediente',            icon: Folder,          key: 'expediente',   path: '/admisiones/expediente' },
+  { label: 'Requisiciones',         icon: ClipboardList,   key: 'requisiciones',path: '/admisiones/requisiciones' },
+  { label: 'Agenda de Citas',       icon: CalendarDays,    key: 'agenda',       path: '/admisiones/agenda-citas' },
+  { label: 'Seguimiento Telefónico',icon: PhoneCall,       key: 'seguimiento',  path: '/admisiones/seguimiento-telefonico' },
   // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
 ];
+
+// Ítems del sidebar que cada puesto NO puede ver
+const ADMISIONES_ITEMS_OCULTOS_POR_PUESTO = {
+  'RECEPCIÓN': ['requisiciones'],
+};
+
+const getUsuarioSesion = () => {
+  try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
+};
 
 export const AdmisionesSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const puesto = getUsuarioSesion().puesto || '';
+  const itemsOcultos = ADMISIONES_ITEMS_OCULTOS_POR_PUESTO[puesto] ?? [];
+  const itemsVisibles = admisionesNavItems.filter(item => !itemsOcultos.includes(item.key));
+
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {admisionesNavItems.map(({ label, icon, key, path }) => {
+      {itemsVisibles.map(({ label, icon, key, path }) => {
         const active = location.pathname === path || location.pathname.startsWith(`${path}/`);
         const NavIcon = icon;
 
@@ -175,11 +188,13 @@ export const AdminSuccessAlert = ({ message }) =>
 
 // ── Sidebar Médico ────────────────────────────────────────────────
 const medicoNavItems = [
-  { label: 'Inicio Jefatura',    icon: Activity,      path: '/medico/inicio-jefe-medico' },
-  { label: 'Prospectos',         icon: UserPlus,      path: '/medico/prospectos' },
-  { label: 'Pacientes Activos',  icon: Users,         path: '/medico/pacientes' },
-  { label: 'Expedientes',        icon: ClipboardList, path: '/medico/expedientes' },
-  { label: 'Requisiciones',      icon: ShoppingCart,  path: '/medico/requisiciones' },
+  { label: 'Inicio Jefatura',         icon: Activity,      path: '/medico/inicio-jefe-medico' },
+  { label: 'Prospectos',              icon: UserPlus,      path: '/medico/prospectos' },
+  { label: 'Pacientes Activos',       icon: Users,         path: '/medico/pacientes' },
+  { label: 'Expedientes Clínicos',    icon: ClipboardList, path: '/medico/expedientes' },
+  { label: 'Requisiciones',           icon: ShoppingCart,  path: '/medico/requisiciones' },
+  { label: 'Personal Médico',         icon: Stethoscope,   path: '/medico/personal' },
+  { label: 'Reportes y Estadísticas', icon: FileBarChart,  path: '/medico/reportes' },
 ];
 
 export const MedicoSidebar = () => {

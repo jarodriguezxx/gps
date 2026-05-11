@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Calendar as CalendarIcon, Users, AlertTriangle, Activity, 
+  Calendar as CalendarIcon, Users, AlertTriangle, Activity,
   Clock, CheckCircle2, FileWarning, PlusCircle, LayoutDashboard,
-  ChevronRight
+  ChevronRight, ShoppingCart
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -11,7 +11,8 @@ const navItems = [
   { label: 'Mi Agenda de Hoy',       icon: LayoutDashboard, key: 'inicio',      path: '/terapeuta/inicio' },
   { label: 'Calendario Mensual',     icon: CalendarIcon,    key: 'calendario',  path: '/terapeuta/calendario' },
   { label: 'Registro de Incidencias',icon: AlertTriangle,   key: 'incidencias', path: '/terapeuta/incidencias' },
-  { label: 'Pacientes Activos',      icon: Users,           key: 'pacientes',   path: '/terapeuta/pacientes' },
+  { label: 'Pacientes Activos',      icon: Users,           key: 'pacientes',     path: '/terapeuta/pacientes' },
+  { label: 'Requisiciones',         icon: ShoppingCart,    key: 'requisiciones', path: '/clinico/requisiciones' },
 ];
 
 const InicioTerapeuta = () => {

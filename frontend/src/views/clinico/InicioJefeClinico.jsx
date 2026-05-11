@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, ClipboardCheck, BrainCircuit, MessageSquare, 
+  LayoutDashboard, Users, ClipboardCheck, BrainCircuit, MessageSquare,
   Users2, Search, ChevronRight, AlertTriangle, CheckCircle2, BarChart3,
-  Calendar as CalendarIcon, ClipboardList, Activity
+  Calendar as CalendarIcon, ClipboardList, Activity, ShoppingCart
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -14,7 +14,8 @@ const navItems = [
   { label: 'Auditoría Consejería',    icon: MessageSquare,   key: 'consejeria', path: '/clinico/pacientes' },
   { label: 'Auditoría Familia',       icon: Users2,          key: 'familia',    path: '/clinico/pacientes' },
   { label: 'Calendario Terapias',     icon: CalendarIcon,    key: 'calendario', path: '/clinico/inicio-terapeuta' },
-  { label: 'Expedientes Clínicos',    icon: ClipboardList,   key: 'expedientes',path: '/clinico/pacientes' },
+  { label: 'Expedientes Clínicos',    icon: ClipboardList,   key: 'expedientes',   path: '/clinico/pacientes' },
+  { label: 'Requisiciones',           icon: ShoppingCart,    key: 'requisiciones', path: '/clinico/requisiciones' },
 ];
 
 const InicioJefeClinico = () => {

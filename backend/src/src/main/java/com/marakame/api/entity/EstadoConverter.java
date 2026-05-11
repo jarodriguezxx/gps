@@ -50,7 +50,6 @@ public class EstadoConverter implements AttributeConverter<Estado, String> {
     public Estado convertToEntityAttribute(String valor) {
         if (valor == null) return null;
 
-
         String normalizado = normalizar(valor);
         Estado directo = ALIASES.get(normalizado);
         if (directo != null) return directo;
@@ -63,11 +62,6 @@ public class EstadoConverter implements AttributeConverter<Estado, String> {
         } catch (IllegalArgumentException ex) {
             log.warn("Valor de estado no reconocido en BD '{}' , se usa PENDIENTE", valor);
             return Estado.PENDIENTE;
-
-        try {
-            return Estado.valueOf(valor.replace('-', '_'));
-        } catch (IllegalArgumentException e) {
-            return null;
         }
     }
 }

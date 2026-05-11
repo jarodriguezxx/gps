@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Stethoscope, Users, ClipboardList, Activity, FileBarChart,
-  UserCheck, AlertTriangle, Search, Save, FileSignature, CheckCircle2, XCircle
+  UserCheck, AlertTriangle, Search, Save, FileSignature, CheckCircle2, XCircle, ShoppingCart
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -12,9 +12,10 @@ const navItems = [
   { label: 'Prospectos',            icon: Users,          key: 'prospectos',  path: '/medico/prospectos' },
   { label: 'Pacientes Activos',     icon: Users,          key: 'pacientes',   path: '/medico/pacientes' },
   { label: 'Valoración Inicial',    icon: FileSignature,  key: 'valoracion',  path: '/medico/valoracion' },
-  { label: 'Expedientes Clínicos',  icon: ClipboardList,  key: 'expedientes', path: '/medico/expedientes' },
-  { label: 'Personal Médico',       icon: Stethoscope,    key: 'personal',    path: '/medico/personal' },
-  { label: 'Reportes y Estadísticas',icon: FileBarChart,  key: 'reportes',    path: '/medico/reportes' },
+  { label: 'Expedientes Clínicos',    icon: ClipboardList, key: 'expedientes',   path: '/medico/expedientes' },
+  { label: 'Requisiciones',           icon: ShoppingCart,  key: 'requisiciones', path: '/medico/requisiciones' },
+  { label: 'Personal Médico',         icon: Stethoscope,   key: 'personal',      path: '/medico/personal' },
+  { label: 'Reportes y Estadísticas', icon: FileBarChart,  key: 'reportes',      path: '/medico/reportes' },
 ];
 
 const ValoracionMedica = () => {

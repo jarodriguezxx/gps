@@ -6,6 +6,7 @@ import {
   useParams,
   Navigate,
 } from "react-router-dom";
+import { ArrowLeftRight } from "lucide-react";
 import marakameLogo from "../../assets/marakame.jpeg";
 import { ui } from "../../config/theme";
 import { ROLES_PERMITIDOS } from "../../types/roles";
@@ -162,6 +163,26 @@ const RecMaterialesDashboard = () => {
               >
                 Historial
               </button>
+
+              {(rol === "rec-materiales" || rol === "compras-inventario") && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <button
+                    onClick={() =>
+                      navigate(
+                        rol === "rec-materiales"
+                          ? "/materiales/compras-inventario"
+                          : "/materiales/rec-materiales"
+                      )
+                    }
+                    className="w-full rounded-xl px-3 py-3 text-sm font-semibold transition border border-[#7E1D3B]/30 bg-[#7E1D3B]/5 text-[#7E1D3B] hover:bg-[#7E1D3B]/10 flex items-center gap-2"
+                  >
+                    <ArrowLeftRight size={14} />
+                    {rol === "rec-materiales"
+                      ? "Compras e Inventario"
+                      : "Recursos Materiales"}
+                  </button>
+                </div>
+              )}
             </aside>
 
             {/* Este es el contenedor que se estirará */}

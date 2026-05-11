@@ -47,11 +47,15 @@ public class AuthController {
                 .body(Map.of("error", "Credenciales incorrectas."));
         }
 
+        String puesto = (usuario.getPersonal() != null && usuario.getPersonal().getPuesto() != null)
+            ? usuario.getPersonal().getPuesto() : "";
+
         return ResponseEntity.ok(Map.of(
             "id",             usuario.getId(),
             "username",       usuario.getUsername(),
             "rol",            usuario.getRol() != null ? usuario.getRol() : "",
-            "nombreCompleto", usuario.getNombreCompleto() != null ? usuario.getNombreCompleto() : ""
+            "nombreCompleto", usuario.getNombreCompleto() != null ? usuario.getNombreCompleto() : "",
+            "puesto",         puesto
         ));
     }
 }

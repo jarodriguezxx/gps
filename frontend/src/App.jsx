@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { API_BASE } from './config/api.ts';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
@@ -70,140 +70,56 @@ import Historial from './views/rec-materiales/Historial.tsx';
 // Almacén
 import AlmacenDashboard from './views/almacen/AlmacenDashboard';
 
+const getUsuarioSesion = () => {
+  try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
+};
+
 const PrivateRoute = ({ children }) => {
-  const [sessionReady, setSessionReady] = useState(false);
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const storedUser = window.localStorage.getItem('marakame_user');
-    console.log('[PrivateRoute] marakame_user:', storedUser);
-    setUser(storedUser);
-    setSessionReady(true);
-  }, []);
-
-  if (!sessionReady) return null;
-
+  const user = window.localStorage.getItem('marakame_user');
   return user ? children : <Navigate to="/login" replace />;
 };
 
-const MATERIALS_DEFAULT_ROL = 'rec-materiales';
-
-const quickViews = [
-  { label: 'Login',                  path: '/login' },
-  { label: 'Admisiones',             path: '/admisiones' },
-  { label: 'Bandeja Operativa',      path: '/admisiones/bandeja-operativa' },
-  { label: 'Agenda Citas',           path: '/admisiones/agenda-citas' },
-  { label: 'Seguimiento Tel.',       path: '/admisiones/seguimiento-telefonico' },
-  { label: 'Exp. Admisiones',        path: '/admisiones/expediente' },
-  { label: 'Requisiciones',          path: '/admisiones/requisiciones' },
-  { label: 'Estudio Socioeconómico', path: '/admisiones/estudio-socioeconomico' },
-  { label: 'Valoración Diagnóstica', path: '/admisiones/valoracion-diagnostica' },
-  { label: 'Médico - Inicio',        path: '/medico/inicio-jefe-medico' },
-  { label: 'Médico - Pacientes',     path: '/medico/pacientes' },
-  { label: 'Médico - Expedientes',   path: '/medico/expedientes' },
-  { label: 'Médico - Prospectos',    path: '/medico/prospectos' },
-  { label: 'Medico - Historia '  ,   path: '/medico/historia-medica' },
-  { label: 'Medico - Nueva ',        path: '/medico/nueva-evolucion/1' },
-  { label: 'Medico - Monitoreo',     path: '/medico/monitoreo/1' },
-  { label: 'Nutriólogo - Inicio',    path: '/nutriologo/inicio' },
-  { label: 'Nutriólogo - Pacientes', path: '/nutriologo/pacientes' },
-  { label: 'Nutriólogo  Evaluación', path: '/nutriologo/evaluacion/1' },
-  { label: 'Nutri - Expedientes',    path: '/nutriologo/expedientes' },
-  { label: "Clínico - Inicio",       path: '/clinico/inicio-jefe-clinico' },
-  { label: "Clinico - Gestor",       path: '/clinico/gestor' },
-  { label: "Clínico - Pacientes",    path: '/clinico/pacientes' },
-  { label: "Clínico - Psicología",   path: '/clinico/psicologia/1' },
-  { label: "Clínico - Consejería",   path: '/clinico/consejeria/1' },
-  { label: "Clínico - Familia",      path: '/clinico/familia/1' },
-  { label: "Clínico - Terapeuta",    path: '/clinico/inicio-terapeuta' },
-  { label: 'RH - Alta',              path: '/rh/alta-personal' },
-  { label: 'RH - Baja',              path: '/rh/baja-personal' },
-  { label: 'RH - Catálogo',          path: '/rh/catalogo-roles' },
-  { label: 'RH - Asignación',        path: '/rh/asignacion-roles' },
-  { label: 'Fin - Archivo',          path: '/financiero/archivo-contable' },
-  { label: 'Fin - Digitalizar',      path: '/financiero/digitalizar-comprobantes' },
-  { label: 'Fin - Correcciones',     path: '/financiero/gestionar-correcciones' },
-  { label: 'Fin - Factura',          path: '/financiero/factura-electronica' },
-  { label: 'Fin - Comprobantes',     path: '/financiero/comprobantes-fiscales' },
-  { label: 'Fin - Requisiciones',    path: '/financiero/requisiciones-almacen' },
-  { label: 'Fin - Depósito',         path: '/financiero/deposito-bancario' },
-  { label: 'Rec. Materiales',        path: '/materiales/rec-materiales' },
-  { label: 'Rec. Proveedores',       path: '/materiales/rec-materiales/proveedores' },
-  { label: 'Rec. Historial',         path: '/materiales/rec-materiales/historial' },
-  { label: 'Administración',         path: '/materiales/administracion' },
-  { label: 'Dirección Gral.',        path: '/materiales/direccion-general' },
-  { label: 'Compras-Inventario',     path: '/materiales/compras-inventario' },
-  { label: 'Fin - Validación',       path: '/financiero/validacion-pagos' },
-  { label: 'Rec. Materiales',        path: `/materiales/${MATERIALS_DEFAULT_ROL}` },
-  { label: 'Rec. Proveedores',       path: `/materiales/${MATERIALS_DEFAULT_ROL}/proveedores` },
-  { label: 'Rec. Historial',         path: `/materiales/${MATERIALS_DEFAULT_ROL}/historial` },
-  { label: 'Almacén',                path: '/almacen' },
-];
+// Redirige a `fallback` si el puesto del usuario está en `puestosExcluidos`
+const PuestoRoute = ({ children, puestosExcluidos = [], fallback = '/admisiones' }) => {
+  const puesto = getUsuarioSesion().puesto || '';
+  if (puestosExcluidos.includes(puesto)) return <Navigate to={fallback} replace />;
+  return children;
+};
 
 const LegacyRecMaterialesRedirect = () => {
   const location = useLocation();
-  const legacySuffix = location.pathname.replace(/^\/rec-materiales/, '') || `/${MATERIALS_DEFAULT_ROL}`;
+  const legacySuffix = location.pathname.replace(/^\/rec-materiales/, '') || '/rec-materiales';
   return <Navigate to={`/materiales${legacySuffix}`} replace />;
 };
 
-const QuickNavigator = () => {
-  const navigate = useNavigate();
+const LogoutButton = () => {
   const location = useLocation();
-  const [abierto, setAbierto] = useState(false);
-  const uniqueQuickViews = Array.from(new Map(quickViews.map((v) => [v.path, v])).values());
+  const navigate  = useNavigate();
+
+  if (location.pathname === '/login') return null;
+  if (!localStorage.getItem('marakame_user')) return null;
+
+  const handleLogout = () => {
+    localStorage.removeItem('marakame_user');
+    navigate('/login', { replace: true });
+  };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      {abierto && (
-        <div className="mb-2 w-[220px] rounded-2xl border border-slate-200 bg-white/95 p-3
-                        shadow-[0_12px_30px_rgba(15,23,42,0.14)] backdrop-blur
-                        max-h-[70vh] overflow-y-auto">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">
-            Vistas rápidas
-          </p>
-          <div className="grid gap-1.5">
-            {uniqueQuickViews.map((view) => {
-              const active = location.pathname === view.path;
-              return (
-                <button
-                  key={`${view.label}-${view.path}`}
-                  onClick={() => { navigate(view.path); setAbierto(false); }}
-                  className={`w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${
-                    active
-                      ? 'bg-[#7E1D3B] text-white shadow-sm'
-                      : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {view.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <button
-        onClick={() => setAbierto(prev => !prev)}
-        className="ml-auto flex items-center gap-2 px-4 py-2.5 bg-[#7E1D3B] text-white
-                   rounded-2xl font-semibold text-xs shadow-lg hover:bg-[#63162e] transition-all"
-      >
-        {abierto ? (
-          <>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-            Cerrar
-          </>
-        ) : (
-          <>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-            Vistas
-          </>
-        )}
-      </button>
-    </div>
+    <button
+      onClick={handleLogout}
+      title="Cerrar sesión"
+      className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5
+                 bg-white border border-slate-200 text-slate-600 rounded-2xl
+                 text-xs font-semibold shadow-lg hover:bg-rose-50 hover:text-rose-600
+                 hover:border-rose-200 transition-all"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Cerrar sesión
+    </button>
   );
 };
 
@@ -211,6 +127,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <LogoutButton />
       <Routes>
         <Route path="/"      element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
@@ -222,7 +139,7 @@ function App() {
         <Route path="/admisiones/seguimiento-telefonico"       element={<PrivateRoute><SeguimientoTelefonico /></PrivateRoute>} />
         <Route path="/admisiones/expediente"                   element={<PrivateRoute><DirectorioAdmisiones /></PrivateRoute>} />
         <Route path="/admisiones/expediente-digital/:id"       element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
-        <Route path="/admisiones/requisiciones"                element={<PrivateRoute><RequisicionesAdmisiones /></PrivateRoute>} />
+        <Route path="/admisiones/requisiciones"                element={<PrivateRoute><PuestoRoute puestosExcluidos={['RECEPCIÓN']} fallback="/admisiones"><RequisicionesAdmisiones /></PuestoRoute></PrivateRoute>} />
 <Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
         <Route path="/admisiones/valoracion-diagnostica"       element={<PrivateRoute><ValoracionDiagnostica /></PrivateRoute>} />
         <Route path="/admisiones/bandeja"                      element={<Navigate to="/admisiones/bandeja-operativa" replace />} />
@@ -290,7 +207,6 @@ function App() {
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-      <QuickNavigator />
     </BrowserRouter>
   );
 }
