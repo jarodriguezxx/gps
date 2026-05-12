@@ -73,9 +73,10 @@ const HistoriaMedica = () => {
       for (let p of ingresados) {
         try {
           const checkRes = await fetch(`http://localhost:4000/api/historia-medica/paciente/${p.id}`);
-          if (!checkRes.ok) pendientes.push(p);
+          const checkData = checkRes.ok ? await checkRes.json() : null;
+          if (!checkData || !checkData.id) pendientes.push(p);
         } catch (e) {
-          pendientes.push(p); 
+          pendientes.push(p);
         }
       }
       setPacientesPendientes(pendientes);

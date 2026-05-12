@@ -22,11 +22,9 @@ public class HistoriaMedicaController {
         return ResponseEntity.ok(nuevaHistoria);
     }
 
-    // GET: React usa esto para saber si quita al paciente de la lista de pendientes
+    // GET: devuelve 200+null cuando no existe (evita 404 en consola del browser)
     @GetMapping("/paciente/{pacienteId}")
-    public ResponseEntity<HistoriaMedica> obtenerPorPaciente(@PathVariable Long pacienteId) {
-        return repository.findByPacienteId(pacienteId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build()); // Este es el famoso 404 que usa el ComboBox
+    public ResponseEntity<?> obtenerPorPaciente(@PathVariable Long pacienteId) {
+        return ResponseEntity.ok(repository.findByPacienteId(pacienteId).orElse(null));
     }
 }

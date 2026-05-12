@@ -70,6 +70,10 @@ import Historial from './views/rec-materiales/Historial.tsx';
 // Almacén
 import AlmacenDashboard from './views/almacen/AlmacenDashboard';
 
+// Enfermería
+import EnfermeriaDashboard from './views/enfermeria/EnfermeriaDashboard';
+import FarmaciaMedico from './views/medico/FarmaciaMedico';
+
 const getUsuarioSesion = () => {
   try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
 };
@@ -156,6 +160,7 @@ function App() {
         <Route path="/medico/nueva-evolucion/:id"              element={<PrivateRoute><NuevaEvolucion /></PrivateRoute>} />
         <Route path="/medico/monitoreo/:id"                    element={<PrivateRoute><ControlMonitoreo /></PrivateRoute>} />
         <Route path="/medico/requisiciones"                    element={<PrivateRoute><RequisicionesMedico /></PrivateRoute>} />
+        <Route path="/medico/farmacia"                         element={<PrivateRoute><FarmaciaMedico /></PrivateRoute>} />
 
         <Route path="/nutriologo/pacientes"                    element={<PrivateRoute><PacientesNutricion /></PrivateRoute>} />
         <Route path="/nutriologo/inicio"                       element={<PrivateRoute><InicioNutricion /></PrivateRoute>} />
@@ -204,6 +209,9 @@ function App() {
 
         {/* Almacén */}
         <Route path="/almacen" element={<PrivateRoute><AlmacenDashboard /></PrivateRoute>} />
+
+        {/* Enfermería */}
+        <Route path="/enfermeria" element={<PrivateRoute><EnfermeriaDashboard /></PrivateRoute>} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

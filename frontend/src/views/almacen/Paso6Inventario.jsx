@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, AlertTriangle, Edit2, Save, X, RefreshCw } from 'lucide-react';
+import { Search, Filter, AlertTriangle, Edit2, Save, X, RefreshCw, Plus } from 'lucide-react';
+
+const FORM_VACIO = {
+  nombreArticulo: '', categoria: '', cantidadDisponible: '', unidadMedida: '',
+  lote: '', fechaCaducidad: '', nivelMinimoAlerta: '', zonaAlmacen: '', estante: '',
+};
 
 const Paso6Inventario = () => {
   const [items, setItems] = useState([]);
@@ -8,6 +13,10 @@ const Paso6Inventario = () => {
   const [filtroTipo, setFiltroTipo] = useState('Todos');
   const [editandoId, setEditandoId] = useState(null);
   const [nuevoStockMinimo, setNuevoStockMinimo] = useState('');
+  const [modalAgregar, setModalAgregar] = useState(false);
+  const [formNuevo, setFormNuevo] = useState(FORM_VACIO);
+  const [guardando, setGuardando] = useState(false);
+  const [errorModal, setErrorModal] = useState('');
 
   const cargar = async () => {
     setLoading(true);
@@ -65,6 +74,41 @@ const Paso6Inventario = () => {
     }
   };
 
+  const agregarArticulo = async () => {
+    if (!formNuevo.nombreArticulo.trim()) { setErrorModal('El nombre es obligatorio.'); return; }
+    if (!formNuevo.cantidadDisponible || Number(formNuevo.cantidadDisponible) < 0) {
+      setErrorModal('Ingresa una cantidad válida.'); return;
+    }
+    setGuardando(true);
+    setErrorModal('');
+    try {
+      const payload = {
+        nombreArticulo:    formNuevo.nombreArticulo.trim(),
+        categoria:         formNuevo.categoria.trim() || null,
+        cantidadDisponible: Number(formNuevo.cantidadDisponible),
+        unidadMedida:      formNuevo.unidadMedida.trim() || null,
+        lote:              formNuevo.lote.trim() || null,
+        fechaCaducidad:    formNuevo.fechaCaducidad || null,
+        nivelMinimoAlerta: formNuevo.nivelMinimoAlerta ? Number(formNuevo.nivelMinimoAlerta) : null,
+        zonaAlmacen:       formNuevo.zonaAlmacen.trim() || null,
+        estante:           formNuevo.estante.trim() || null,
+      };
+      const res = await fetch('http://localhost:4000/api/almacen/inventario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) { setErrorModal(await res.text()); return; }
+      setModalAgregar(false);
+      setFormNuevo(FORM_VACIO);
+      cargar();
+    } catch {
+      setErrorModal('No se pudo conectar con el servidor.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   const filtrados = items.filter(item => {
     const texto = `${item.nombreArticulo || ''} ${item.categoria || ''}`.toLowerCase();
     const coincideTexto = texto.includes(busqueda.toLowerCase());
@@ -98,6 +142,12 @@ const Paso6Inventario = () => {
           </div>
           <button onClick={cargar} className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">
             <RefreshCw size={14} /> Actualizar
+          </button>
+          <button
+            onClick={() => { setModalAgregar(true); setFormNuevo(FORM_VACIO); setErrorModal(''); }}
+            className="flex items-center gap-1.5 rounded-xl bg-[#7E1D3B] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#63162e]"
+          >
+            <Plus size={14} /> Agregar artículo
           </button>
         </div>
       </div>
@@ -235,6 +285,127 @@ const Paso6Inventario = () => {
               · {filtrados.filter(i => (i.cantidadDisponible ?? 0) <= (i.nivelMinimoAlerta ?? 0)).length} con stock crítico
             </span>
           )}
+        </div>
+      )}
+
+      {/* Modal: Agregar artículo */}
+      {modalAgregar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-slate-800">Agregar artículo al inventario</h3>
+              <button onClick={() => setModalAgregar(false)}><X size={18} className="text-slate-400" /></button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Nombre del artículo *</label>
+                <input
+                  value={formNuevo.nombreArticulo}
+                  onChange={e => setFormNuevo(f => ({ ...f, nombreArticulo: e.target.value }))}
+                  placeholder="Ej: Paracetamol 500mg"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Categoría</label>
+                <select
+                  value={formNuevo.categoria}
+                  onChange={e => setFormNuevo(f => ({ ...f, categoria: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30"
+                >
+                  <option value="">Sin categoría</option>
+                  <option value="MEDICO">MEDICO</option>
+                  <option value="LIMPIEZA">LIMPIEZA</option>
+                  <option value="OFICINA">OFICINA</option>
+                  <option value="COCINA">COCINA</option>
+                  <option value="MANTENIMIENTO">MANTENIMIENTO</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Unidad de medida</label>
+                <input
+                  value={formNuevo.unidadMedida}
+                  onChange={e => setFormNuevo(f => ({ ...f, unidadMedida: e.target.value }))}
+                  placeholder="pieza, caja, litro…"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Cantidad inicial *</label>
+                <input
+                  type="number" min={0}
+                  value={formNuevo.cantidadDisponible}
+                  onChange={e => setFormNuevo(f => ({ ...f, cantidadDisponible: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Stock mínimo alerta</label>
+                <input
+                  type="number" min={0}
+                  value={formNuevo.nivelMinimoAlerta}
+                  onChange={e => setFormNuevo(f => ({ ...f, nivelMinimoAlerta: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Lote</label>
+                <input
+                  value={formNuevo.lote}
+                  onChange={e => setFormNuevo(f => ({ ...f, lote: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de caducidad</label>
+                <input
+                  type="date"
+                  value={formNuevo.fechaCaducidad}
+                  onChange={e => setFormNuevo(f => ({ ...f, fechaCaducidad: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Zona almacén</label>
+                <input
+                  value={formNuevo.zonaAlmacen}
+                  onChange={e => setFormNuevo(f => ({ ...f, zonaAlmacen: e.target.value }))}
+                  placeholder="Ej: Médico - Estante A"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Estante</label>
+                <input
+                  value={formNuevo.estante}
+                  onChange={e => setFormNuevo(f => ({ ...f, estante: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30"
+                />
+              </div>
+            </div>
+
+            {errorModal && (
+              <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{errorModal}</p>
+            )}
+
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setModalAgregar(false)} className="flex-1 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">
+                Cancelar
+              </button>
+              <button onClick={agregarArticulo} disabled={guardando} className="flex-1 py-2 rounded-xl bg-[#7E1D3B] text-white text-sm font-bold hover:bg-[#63162e] transition disabled:opacity-50">
+                {guardando ? 'Guardando...' : 'Agregar al inventario'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

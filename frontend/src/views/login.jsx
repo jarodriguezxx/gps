@@ -22,6 +22,10 @@ const RUTAS_POR_PUESTO = {
   'CONSEJERA (O) ASIGNADO':       '/clinico/inicio-terapeuta',
   'DIRECTORA GENERAL':            '/materiales/direccion-general',
   'ENCARGADA (O) DE ALMACÉN':    '/almacen',
+  'ENFERMERO (A)':                '/enfermeria',
+  'ENFERMERA (O)':                '/enfermeria',
+  'ENFERMERO':                    '/enfermeria',
+  'ENFERMERA':                    '/enfermeria',
 };
 
 const getRutaInicial = (rol, puesto) => RUTAS_POR_PUESTO[puesto] ?? RUTAS_POR_ROL[rol] ?? '/admisiones';

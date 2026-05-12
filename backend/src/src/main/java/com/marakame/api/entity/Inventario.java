@@ -42,6 +42,15 @@ public class Inventario {
     @Column(name = "cuidados_especiales")
     private String cuidadosEspeciales;
 
+    // Campos para módulo de enfermería
+    @Column(name = "stock_enfermeria")
+    private Integer stockEnfermeria;
+
+    // Factor de conversión: cuántas unidades de dispensación hay por empaque de almacén
+    // Future: puede ligarse a una transferencia formal cuando se implemente ese flujo
+    @Column(name = "unidades_por_empaque")
+    private Integer unidadesPorEmpaque;
+
     // Getters y Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -75,4 +84,10 @@ public class Inventario {
 
     public String getCuidadosEspeciales() { return cuidadosEspeciales; }
     public void setCuidadosEspeciales(String cuidadosEspeciales) { this.cuidadosEspeciales = cuidadosEspeciales; }
+
+    public Integer getStockEnfermeria() { return stockEnfermeria; }
+    public void setStockEnfermeria(Integer stockEnfermeria) { this.stockEnfermeria = stockEnfermeria; }
+
+    public Integer getUnidadesPorEmpaque() { return unidadesPorEmpaque; }
+    public void setUnidadesPorEmpaque(Integer unidadesPorEmpaque) { this.unidadesPorEmpaque = unidadesPorEmpaque; }
 }
