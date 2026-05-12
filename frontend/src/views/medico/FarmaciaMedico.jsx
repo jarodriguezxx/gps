@@ -62,7 +62,10 @@ const FarmaciaMedico = () => {
       const res = await fetch(`${API_BASE}/enfermeria/medicamentos/${modalConfig.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unidadesPorEmpaque: Number(formConfig.unidadesPorEmpaque) }),
+        body: JSON.stringify({
+          unidadesPorEmpaque: Number(formConfig.unidadesPorEmpaque),
+          unidadMinima: formConfig.unidadMinima || null,
+        }),
       });
       if (!res.ok) { setError(await res.text()); return; }
       setModalConfig(null);
@@ -145,7 +148,7 @@ const FarmaciaMedico = () => {
                         <td className="px-5 py-3 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button
-                              onClick={() => { setModalConfig(med); setFormConfig({ unidadesPorEmpaque: med.unidadesPorEmpaque || 1 }); setError(''); }}
+                              onClick={() => { setModalConfig(med); setFormConfig({ unidadesPorEmpaque: med.unidadesPorEmpaque || 1, unidadMinima: med.unidadMinima || '' }); setError(''); }}
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
                             >
                               <Settings size={11} /> Config
@@ -219,11 +222,20 @@ const FarmaciaMedico = () => {
             <p className="text-xs text-slate-400 mb-4">
               Define cuántas unidades de dispensación (ej. pastillas) contiene cada empaque de almacén (ej. caja).
             </p>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Unidades por empaque</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Nombre de la unidad mínima</label>
+            <input
+              type="text"
+              value={formConfig.unidadMinima || ''}
+              onChange={e => setFormConfig(f => ({ ...f, unidadMinima: e.target.value }))}
+              placeholder="pastilla, ampolleta, ml, tableta…"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30"
+            />
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Unidades mínimas por empaque</label>
             <input
               type="number" min={1}
               value={formConfig.unidadesPorEmpaque}
-              onChange={e => setFormConfig({ unidadesPorEmpaque: e.target.value })}
+              onChange={e => setFormConfig(f => ({ ...f, unidadesPorEmpaque: e.target.value }))}
+              placeholder="Ej: 30 pastillas por caja"
               className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30"
             />
             {error && <p className="text-xs text-red-600 mb-3">{error}</p>}

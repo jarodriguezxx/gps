@@ -144,9 +144,10 @@ const MedicamentosEnfermeria = () => {
                       <span className={`text-xl font-black ${bajo ? 'text-amber-500' : 'text-emerald-600'}`}>
                         {stock}
                       </span>
+                      <span className="ml-1 text-xs text-slate-400">{med.unidadMinima || med.unidadMedida || 'uds.'}</span>
                     </td>
                     <td className="px-5 py-3 text-center text-slate-500">
-                      {med.unidadMedida || 'unidad'}
+                      {med.unidadMinima ? `${med.unidadMinima} (${med.unidadMedida || 'empaque'})` : med.unidadMedida || '—'}
                     </td>
                     <td className="px-5 py-3 text-center">
                       <button
@@ -180,7 +181,8 @@ const MedicamentosEnfermeria = () => {
               <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Medicamento</p>
               <p className="font-bold text-slate-800">{modal.nombreArticulo}</p>
               <p className="text-xs text-slate-500 mt-1">
-                Stock disponible: <span className="font-bold text-emerald-600">{modal.stockEnfermeria ?? 0}</span> {modal.unidadMedida || 'unidades'}
+                Stock disponible: <span className="font-bold text-emerald-600">{modal.stockEnfermeria ?? 0}</span>{' '}
+                {modal.unidadMinima || modal.unidadMedida || 'unidades'}
               </p>
             </div>
 

@@ -42,14 +42,20 @@ public class Inventario {
     @Column(name = "cuidados_especiales")
     private String cuidadosEspeciales;
 
-    // Campos para módulo de enfermería
+    // Campos para inventario médico y dispensación en enfermería
+    // stockMedico: cantidad en unidades mínimas disponible en el área médica
     @Column(name = "stock_enfermeria")
     private Integer stockEnfermeria;
 
-    // Factor de conversión: cuántas unidades de dispensación hay por empaque de almacén
+    // Factor de conversión: cuántas unidades mínimas contiene cada empaque normal
+    // Ej: 1 caja = 30 pastillas  →  unidadesPorEmpaque = 30
     // Future: puede ligarse a una transferencia formal cuando se implemente ese flujo
     @Column(name = "unidades_por_empaque")
     private Integer unidadesPorEmpaque;
+
+    // Nombre de la unidad mínima de dispensación (pastilla, ampolleta, ml, etc.)
+    @Column(name = "unidad_minima")
+    private String unidadMinima;
 
     // Getters y Setters
     public Long getId() { return id; }
@@ -90,4 +96,7 @@ public class Inventario {
 
     public Integer getUnidadesPorEmpaque() { return unidadesPorEmpaque; }
     public void setUnidadesPorEmpaque(Integer unidadesPorEmpaque) { this.unidadesPorEmpaque = unidadesPorEmpaque; }
+
+    public String getUnidadMinima() { return unidadMinima; }
+    public void setUnidadMinima(String unidadMinima) { this.unidadMinima = unidadMinima; }
 }

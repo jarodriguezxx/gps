@@ -32,7 +32,8 @@ public class EnfermeriaController {
             .collect(Collectors.toList());
     }
 
-    // Jefe Médico registra recepción de empaques y convierte a unidades de dispensación
+    // Movimiento de inventario general → inventario médico
+    // Descuenta empaques del stock general y los convierte a unidades mínimas en el área médica
     // Future: el body puede incluir "transferenciaId" para ligar a una transferencia formal
     @PostMapping("/recibir/{inventarioId}")
     @Transactional
@@ -46,16 +47,31 @@ public class EnfermeriaController {
             }
 
             Inventario item = itemOpt.get();
-            int cantidadEmpaques = ((Number) body.get("cantidadEmpaques")).intValue();
-            int upe = item.getUnidadesPorEmpaque() != null ? item.getUnidadesPorEmpaque() : 1;
+            Object cantObj = body.get("cantidadEmpaques");
+            if (cantObj == null) return ResponseEntity.badRequest().body("Falta el campo cantidadEmpaques");
+            int cantidadEmpaques = ((Number) cantObj).intValue();
+            Integer upeBoxed = item.getUnidadesPorEmpaque();
+            int upe = upeBoxed != null ? upeBoxed : 1;
 
-            int stockActual = item.getStockEnfermeria() != null ? item.getStockEnfermeria() : 0;
-            item.setStockEnfermeria(stockActual + (cantidadEmpaques * upe));
+            Integer cantDispBoxed = item.getCantidadDisponible();
+            int stockGeneral = cantDispBoxed != null ? cantDispBoxed : 0;
+            if (stockGeneral < cantidadEmpaques) {
+                return ResponseEntity.badRequest()
+                    .body("Stock insuficiente en inventario general. Disponible: " + stockGeneral
+                        + " " + (item.getUnidadMedida() != null ? item.getUnidadMedida() : "empaques"));
+            }
+
+            // Descuenta del inventario general
+            item.setCantidadDisponible(stockGeneral - cantidadEmpaques);
+            // Suma al inventario médico en unidades mínimas
+            Integer stockMedicoBoxed = item.getStockEnfermeria();
+            int stockMedico = stockMedicoBoxed != null ? stockMedicoBoxed : 0;
+            item.setStockEnfermeria(stockMedico + (cantidadEmpaques * upe));
 
             inventarioRepository.save(item);
             return ResponseEntity.ok(item);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error al registrar recepción: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error al registrar movimiento: " + e.getMessage());
         }
     }
 
@@ -72,8 +88,12 @@ public class EnfermeriaController {
             }
 
             Inventario item = itemOpt.get();
-            if (body.containsKey("unidadesPorEmpaque")) {
-                item.setUnidadesPorEmpaque(((Number) body.get("unidadesPorEmpaque")).intValue());
+            Object upeObj = body.get("unidadesPorEmpaque");
+            if (upeObj != null) {
+                item.setUnidadesPorEmpaque(((Number) upeObj).intValue());
+            }
+            if (body.containsKey("unidadMinima")) {
+                item.setUnidadMinima((String) body.get("unidadMinima"));
             }
             inventarioRepository.save(item);
             return ResponseEntity.ok(item);
@@ -93,14 +113,18 @@ public class EnfermeriaController {
             }
 
             Inventario item = itemOpt.get();
-            int stockActual = item.getStockEnfermeria() != null ? item.getStockEnfermeria() : 0;
+            Integer stockBox = item.getStockEnfermeria();
+            int stockActual = stockBox != null ? stockBox : 0;
 
-            if (stockActual < dispensacion.getCantidad()) {
+            Integer cantidadBox = dispensacion.getCantidad();
+            int cantidad = cantidadBox != null ? cantidadBox : 0;
+
+            if (stockActual < cantidad) {
                 return ResponseEntity.badRequest()
                     .body("Stock insuficiente en enfermería. Disponible: " + stockActual);
             }
 
-            item.setStockEnfermeria(stockActual - dispensacion.getCantidad());
+            item.setStockEnfermeria(stockActual - cantidad);
             inventarioRepository.save(item);
 
             dispensacion.setMedicamentoNombre(item.getNombreArticulo());
