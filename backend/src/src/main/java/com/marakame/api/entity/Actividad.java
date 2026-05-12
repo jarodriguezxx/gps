@@ -14,12 +14,12 @@ public class Actividad {
     @Column(nullable = false)
     private String titulo;
 
-    private String fecha; // "YYYY-MM-DD"
-    private String hora;  // "HH:mm"
+    private String fecha;     // "YYYY-MM-DD"
+    private String hora;      // "HH:mm"
+    private String duracion;  // "60 min", "1.5 hrs", etc.
 
-    private String terapeuta;   // "Psicología", "Consejería", "Familia", "Terapeuta Operativo"
-    private String estado;      // "Pendiente", "Aprobada", "Rechazada"
-    private String duracion;    // ej. "60 min", "1.5 hrs"
+    private String terapeuta; // nombre del terapeuta que propone
+    private String estado;    // "Pendiente", "Aprobada", "Rechazada"
 
     @Column(columnDefinition = "TEXT")
     private String descripcion;
@@ -45,18 +45,18 @@ public class Actividad {
     public String getHora() { return hora; }
     public void setHora(String hora) { this.hora = hora; }
 
+    public String getDuracion() { return duracion; }
+    public void setDuracion(String duracion) { this.duracion = duracion; }
+
     public String getTerapeuta() { return terapeuta; }
     public void setTerapeuta(String terapeuta) { this.terapeuta = terapeuta; }
 
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
 
-    public OffsetDateTime getFechaCreacion() { return fechaCreacion; }
-    public void setFechaCreacion(OffsetDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
-
     public String getDescripcion() { return descripcion; }
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
 
-    public String getDuracion() { return duracion; }
-    public void setDuracion(String duracion) { this.duracion = duracion; }
+    public OffsetDateTime getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(OffsetDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 }
