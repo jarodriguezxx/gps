@@ -5,7 +5,7 @@ import marakameLogo from '../assets/marakame.jpeg';
 const RUTAS_POR_ROL = {
   'ADMISIONES': '/admisiones',
   'MÉDICO':     '/medico/inicio-jefe-medico',
-  'CLINICO':    '/clinico/inicio-jefe-clinico',
+  'CLINICO':    '/clinico/inicio',
   'RH':         '/rh/alta-personal',
   'FINANCIERO': '/financiero/archivo-contable',
   'MATERIALES': '/materiales/rec-materiales',
@@ -26,6 +26,26 @@ const RUTAS_POR_PUESTO = {
   'ENFERMERA (O)':                '/enfermeria',
   'ENFERMERO':                    '/enfermeria',
   'ENFERMERA':                    '/enfermeria',
+  'NUTRIÓLOGA (O)':                        '/nutriologo/inicio',
+  'JEFA (E) DEP. ADMINISTRACIÓN':          '/materiales/administracion',
+  'DIRECTORA GENERAL':                     '/materiales/direccion-general',
+  'ENCARGADA (O) DE ALMACÉN':              '/almacen',
+  // Clínico — jefatura
+  'JEFA (E) DEP. CLÍNICO':                '/clinico/inicio',
+  // Clínico — psicología
+  'PSICÓLOGA (O)':                         '/psicologia/inicio',
+  // Clínico — familia
+  'TERAPEUTA FAMILIAR':                    '/familia/inicio',
+  'ENCARGADA (O) DE FAMILIA':              '/familia/inicio',
+  // Clínico — consejería
+  'CONSEJERA (O) ASIGNADO':               '/consejeria/inicio',
+  'ENCARGADA (O) DE CONSEJEROS ASIGNADOS':'/consejeria/inicio',
+  // Clínico — terapeutas operativos
+  'TERAPEUTA DE GRUPO':                    '/clinico/inicio-terapeuta',
+  'COTERAPEUTA':                           '/clinico/inicio-terapeuta',
+  'TERAPEUTA DE POST-TRATAMIENTO':         '/clinico/inicio-terapeuta',
+  'ENCARGADA (O) DE POST TRATAMIENTO':     '/clinico/inicio-terapeuta',
+  'AUXILIAR ADMINISTRATIVO':               '/clinico/inicio-terapeuta',
 };
 
 const getRutaInicial = (rol, puesto) => RUTAS_POR_PUESTO[puesto] ?? RUTAS_POR_ROL[rol] ?? '/admisiones';

@@ -1,195 +1,201 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Calendar as CalendarIcon, Users, AlertTriangle, Activity,
-  Clock, CheckCircle2, FileWarning, PlusCircle, LayoutDashboard,
-  ChevronRight, ShoppingCart
-} from 'lucide-react';
+import { Send, LayoutDashboard, CheckCircle, Calendar, Clock, AlignLeft, Sparkles, Info, Timer } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
-const navItems = [
-  { label: 'Mi Agenda de Hoy',       icon: LayoutDashboard, key: 'inicio',      path: '/terapeuta/inicio' },
-  { label: 'Calendario Mensual',     icon: CalendarIcon,    key: 'calendario',  path: '/terapeuta/calendario' },
-  { label: 'Registro de Incidencias',icon: AlertTriangle,   key: 'incidencias', path: '/terapeuta/incidencias' },
-  { label: 'Pacientes Activos',      icon: Users,           key: 'pacientes',     path: '/terapeuta/pacientes' },
-  { label: 'Requisiciones',         icon: ShoppingCart,    key: 'requisiciones', path: '/clinico/requisiciones' },
-];
+const FORM_VACIO = { titulo: '', fecha: '', hora: '', duracion: '', descripcion: '' };
+
+const Label = ({ children }) => (
+  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-1.5">{children}</p>
+);
+
+const inputCls = "w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#7E1D3B]/30 focus:border-[#7E1D3B]/40 transition placeholder:text-slate-400";
 
 const InicioTerapeuta = () => {
-  const navigate = useNavigate();
-  const [activeNav, setActiveNav] = useState('inicio');
-  
-  // Datos simulados para la agenda del terapeuta
-  const [estadisticas] = useState({
-    actividadesHoy: 3,
-    pacientesAsignados: 18,
-    incidenciasReportadas: 1
-  });
+  const usuario = (() => { try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; } })();
+  const nombreTerapeuta = usuario.nombre || usuario.nombreCompleto || usuario.puesto || 'Terapeuta Operativo';
+  const iniciales = nombreTerapeuta.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
-  const [agendaHoy] = useState([
-    { id: 1, hora: '10:00 AM', actividad: 'Terapia Grupal: Prevención de Recaídas', tipo: 'Grupal', estado: 'Completada', pacientes: 15 },
-    { id: 2, hora: '13:00 PM', actividad: 'Terapia de Arte y Expresión Emocional', tipo: 'Taller', estado: 'En curso', pacientes: 18 },
-    { id: 3, hora: '17:00 PM', actividad: 'Dinámica de Integración y Reflexión', tipo: 'Dinámica', estado: 'Pendiente', pacientes: 18 }
-  ]);
+  const [form, setForm] = useState(FORM_VACIO);
+  const [enviando, setEnviando] = useState(false);
+  const [exito, setExito] = useState(false);
 
-  const handleNavClick = (item) => { 
-    setActiveNav(item.key); 
-    navigate(item.path); 
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const enviar = async (e) => {
+    e.preventDefault();
+    setEnviando(true);
+    try {
+      await fetch('http://localhost:4000/api/actividades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, terapeuta: nombreTerapeuta }),
+      });
+      setExito(true);
+      setForm(FORM_VACIO);
+      setTimeout(() => setExito(false), 4000);
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 relative">
+    <div className="min-h-screen bg-slate-100 text-slate-900">
       <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
 
-        {/* HEADER CORPORATIVO */}
+        {/* Header */}
         <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
           <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
             <div className="flex items-center gap-3">
               <img src={marakameLogo} alt="Logo" className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" />
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
-                <h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema de Gestión Clínica</h1>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo Operativo: Terapia</p>
+                <h1 className="text-xl font-black md:text-2xl text-slate-800">Área Terapéutica</h1>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Propuesta de Dinámicas</p>
               </div>
             </div>
             <div className="flex items-center gap-3 self-end md:self-auto">
               <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center">
-                <Users size={18} className="text-[#7E1D3B]" />
+                <span className="text-[13px] font-black text-[#7E1D3B]">{iniciales}</span>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Sesión activa</p>
-                <p className="font-semibold text-slate-700">Terapeuta</p>
+                <p className="font-semibold text-slate-700 text-sm">{nombreTerapeuta}</p>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6">
-            
-            {/* SIDEBAR OFICIAL ROJIZO */}
+          {/* Body */}
+          <div className="grid gap-5 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6">
+
+            {/* Sidebar */}
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-              {navItems.map(({ label, icon, key, path }) => (
-                <button key={key} onClick={() => handleNavClick({ key, path })}
-                  className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition flex items-center gap-2.5 text-left ${
-                    activeNav === key ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
-                  }`}>
-                  {React.createElement(icon, { size: 16, className: 'shrink-0' })}
-                  <span>{label}</span>
-                </button>
-              ))}
+              <button className="w-full rounded-xl px-3 py-3 text-sm font-semibold bg-[#7E1D3B] text-white shadow-md flex items-center gap-2.5 text-left">
+                <LayoutDashboard size={16} className="shrink-0" />
+                <span>Proponer Dinámica</span>
+              </button>
             </aside>
 
-            <main className="space-y-5">
-              
-              {/* KPIs OPERATIVOS SOBRIOS */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between group hover:border-slate-400 transition-colors cursor-default border-l-4 border-l-slate-800">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="text-slate-500"><CalendarIcon size={20} /></div>
-                  </div>
-                  <div>
-                    <h3 className="text-3xl font-black text-slate-800">{estadisticas.actividadesHoy}</h3>
-                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Actividades Hoy</p>
-                  </div>
+            {/* Main */}
+            <main className="grid gap-5 lg:grid-cols-[1fr_280px]">
+
+              {/* Form card */}
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-200 bg-slate-50/50">
+                  <div className="h-5 w-1 rounded-full bg-[#7E1D3B]" />
+                  <h2 className="text-sm font-black uppercase tracking-[0.15em] text-slate-700">Nueva Propuesta</h2>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between group hover:border-slate-400 transition-colors cursor-default border-l-4 border-l-slate-500">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="text-slate-500"><Users size={20} /></div>
-                  </div>
+                <form onSubmit={enviar} className="p-5 space-y-4">
+
+                  {/* Título */}
                   <div>
-                    <h3 className="text-3xl font-black text-slate-800">{estadisticas.pacientesAsignados}</h3>
-                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Pacientes en Grupo</p>
-                  </div>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between group hover:border-[#7E1D3B]/50 transition-colors cursor-default border-l-4 border-l-[#7E1D3B]">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="text-[#7E1D3B]"><FileWarning size={20} /></div>
-                  </div>
-                  <div>
-                    <h3 className="text-3xl font-black text-[#7E1D3B]">{estadisticas.incidenciasReportadas}</h3>
-                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Incidencias Reportadas</p>
-                  </div>
-                </div>
-
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                
-                {/* AGENDA DEL DÍA ESTILO CORPORATIVO */}
-                <section className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                  <div className="flex items-center gap-2 p-5 border-b border-slate-200 bg-slate-50/50">
-                    <div className="h-5 w-1 rounded-full bg-[#7E1D3B]" />
-                    <div>
-                      <h2 className="text-base font-black uppercase tracking-[0.2em] text-slate-700">Agenda Programada</h2>
-                      <p className="text-xs text-slate-500 mt-0.5">Control de actividades y toma de asistencia</p>
+                    <Label>Nombre de la dinámica</Label>
+                    <div className="relative">
+                      <Sparkles size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input type="text" placeholder="Ej. Terapia grupal de integración" required
+                        value={form.titulo} onChange={e => set('titulo', e.target.value)}
+                        className={`${inputCls} pl-9`} />
                     </div>
                   </div>
-                  
-                  <div className="p-0">
-                    <div className="divide-y divide-slate-100">
-                      {agendaHoy.map(act => (
-                        <div key={act.id} className="p-5 hover:bg-slate-50 transition-colors flex items-start gap-5">
-                          <div className="w-20 text-center shrink-0">
-                            <p className="text-xl font-black text-slate-800">{act.hora.split(' ')[0]}</p>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{act.hora.split(' ')[1]}</p>
-                          </div>
-                          
-                          <div className="flex-1 border-l border-slate-200 pl-5">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{act.tipo}</p>
-                                <h3 className="text-sm font-bold text-slate-800">{act.actividad}</h3>
-                                <p className="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1.5">
-                                  <Users size={14}/> {act.pacientes} pacientes
-                                </p>
-                              </div>
-                              
-                              {/* Insignias Sobrias */}
-                              {act.estado === 'Completada' && <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-1 rounded text-[10px] font-bold uppercase flex items-center gap-1"><CheckCircle2 size={12}/> Terminada</span>}
-                              {act.estado === 'En curso' && <span className="bg-[#7E1D3B] text-white px-2.5 py-1 rounded shadow-sm text-[10px] font-bold uppercase animate-pulse">En Curso</span>}
-                              {act.estado === 'Pendiente' && <span className="bg-white text-slate-400 border border-slate-200 px-2.5 py-1 rounded text-[10px] font-bold uppercase">Pendiente</span>}
-                            </div>
-                            
-                            {act.estado !== 'Completada' && (
-                              <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-                                <button className="text-xs font-bold text-slate-600 border border-slate-200 hover:border-[#7E1D3B] hover:text-[#7E1D3B] bg-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 shadow-sm">
-                                  Asistencia y Notas <ChevronRight size={14} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
+
+                  {/* Fecha + Hora + Duración en grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Fecha</Label>
+                      <div className="relative">
+                        <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input type="date" required value={form.fecha}
+                          onChange={e => set('fecha', e.target.value)}
+                          className={`${inputCls} pl-9`} />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Hora de inicio</Label>
+                      <div className="relative">
+                        <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input type="time" required value={form.hora}
+                          onChange={e => set('hora', e.target.value)}
+                          className={`${inputCls} pl-9`} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Duración */}
+                  <div>
+                    <Label>Duración</Label>
+                    <div className="relative">
+                      <Timer size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <select value={form.duracion} onChange={e => set('duracion', e.target.value)}
+                        className={`${inputCls} pl-9`}>
+                        <option value="">— Seleccionar duración —</option>
+                        <option value="30 min">30 minutos</option>
+                        <option value="45 min">45 minutos</option>
+                        <option value="60 min">1 hora</option>
+                        <option value="90 min">1 hora 30 min</option>
+                        <option value="120 min">2 horas</option>
+                        <option value="Día completo">Día completo</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Descripción */}
+                  <div>
+                    <Label>Descripción de la actividad</Label>
+                    <div className="relative">
+                      <AlignLeft size={14} className="absolute left-3 top-3 text-slate-400" />
+                      <textarea rows={4} placeholder="Describe el objetivo, materiales necesarios o cualquier detalle relevante para la jefatura..."
+                        value={form.descripcion} onChange={e => set('descripcion', e.target.value)}
+                        className={`${inputCls} pl-9 resize-none`} />
+                    </div>
+                  </div>
+
+                  {/* Feedback éxito */}
+                  {exito && (
+                    <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm font-semibold">
+                      <CheckCircle size={16} className="shrink-0" />
+                      Propuesta enviada a jefatura correctamente
+                    </div>
+                  )}
+
+                  <button type="submit" disabled={enviando}
+                    className="w-full py-3 bg-[#7E1D3B] text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#63162e] transition-colors disabled:opacity-60">
+                    <Send size={15} /> {enviando ? 'Enviando...' : 'Enviar a Jefatura'}
+                  </button>
+                </form>
+              </section>
+
+              {/* Info lateral */}
+              <aside className="space-y-4">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3.5 border-b border-slate-200 bg-slate-50/50">
+                    <Info size={14} className="text-[#7E1D3B]" />
+                    <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-700">Flujo de Aprobación</h3>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    {[
+                      { n: '1', label: 'Terapeuta propone', desc: 'Completa el formulario y envía la dinámica.' },
+                      { n: '2', label: 'Jefatura revisa', desc: 'El Jefe Clínico la aprueba o rechaza desde el calendario.' },
+                      { n: '3', label: 'Confirmación', desc: 'La actividad queda registrada con su estado final.' },
+                    ].map(s => (
+                      <div key={s.n} className="flex gap-3">
+                        <div className="h-6 w-6 rounded-full bg-[#7E1D3B]/10 border border-[#7E1D3B]/20 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-[10px] font-black text-[#7E1D3B]">{s.n}</span>
                         </div>
-                      ))}
-                    </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-700">{s.label}</p>
+                          <p className="text-[11px] text-slate-500 leading-snug">{s.desc}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </section>
+                </div>
 
-                {/* PANEL DE INCIDENCIAS ESTILO ALERTA CORPORATIVA */}
-                <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                  <div className="p-5 border-b border-slate-200 bg-slate-50/50">
-                    <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-700 flex items-center gap-2">
-                      <AlertTriangle size={16} className="text-[#7E1D3B]" /> Incidencias Clínicas
-                    </h2>
-                  </div>
-                  
-                  <div className="p-6 flex flex-col h-full justify-between">
-                    <div>
-                      <p className="text-xs text-slate-600 mb-6 font-medium leading-relaxed">
-                        Utilice este módulo únicamente para reportar eventos críticos, altercados o crisis emocionales severas durante las actividades terapéuticas. 
-                        <br/><br/>
-                        <span className="font-bold text-slate-800">Nota:</span> Estos reportes se anexan directamente al expediente y son notificados a la Jefatura Clínica.
-                      </p>
-                    </div>
-                    
-                    <button onClick={() => navigate('/terapeuta/incidencias')} className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-[#7E1D3B] text-white px-4 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm">
-                      <PlusCircle size={16} /> Crear Nuevo Reporte
-                    </button>
-                  </div>
-                </section>
+                <div className="bg-[#7E1D3B]/5 border border-[#7E1D3B]/15 rounded-2xl p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#7E1D3B] mb-1">Propuesto como</p>
+                  <p className="text-sm font-bold text-slate-800">{nombreTerapeuta}</p>
+                </div>
+              </aside>
 
-              </div>
             </main>
           </div>
         </header>
