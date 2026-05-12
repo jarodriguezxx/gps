@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, ClipboardCheck, ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { LayoutDashboard, Users, ClipboardCheck, UserCog, ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
   { label: 'Tablero de Control',     icon: LayoutDashboard, path: '/clinico/inicio' },
   { label: 'Auditoría Clínica',      icon: Users,           path: '/clinico/directorio' },
+  { label: 'Asignación Terapéutica', icon: UserCog,         path: '/clinico/asignaciones' },
   { label: 'Validación Terapéutica', icon: ClipboardCheck,  path: '/clinico/calendario' },
 ];
 
@@ -25,7 +26,12 @@ const CalendarioJefeClinico = () => {
     return dias;
   };
 
-  const cargarActividades = () => { fetch('http://localhost:4000/api/actividades').then(res => res.json()).then(setPropuestas); };
+  const cargarActividades = () => {
+    fetch('http://localhost:4000/api/actividades')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setPropuestas(Array.isArray(data) ? data : []))
+      .catch(() => setPropuestas([]));
+  };
   useEffect(() => { cargarActividades(); }, []);
 
   const cambiarMes = (offset) => {
@@ -40,10 +46,11 @@ const CalendarioJefeClinico = () => {
     cargarActividades();
   };
 
+  const toYMD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
   const getActividadesDia = (fecha) => {
     if (!fecha) return [];
-    const fechaStr = fecha.toISOString().split('T')[0];
-    return propuestas.filter(p => p.fecha === fechaStr);
+    return propuestas.filter(p => p.fecha === toYMD(fecha));
   };
 
   return (
@@ -136,7 +143,18 @@ const CalendarioJefeClinico = () => {
                         <div key={a.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
                           <p className="text-[10px] font-black text-[#7E1D3B] uppercase mb-1">{a.terapeuta}</p>
                           <h4 className="text-sm font-bold text-slate-800 leading-tight">{a.titulo}</h4>
-                          <p className="text-[10px] font-bold text-slate-500 mt-2 flex items-center gap-1"><Clock size={12}/> {a.hora}</p>
+                          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                            <p className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Clock size={12}/> {a.hora}</p>
+                            {a.duracion && (
+                              <span className="text-[9px] font-black uppercase bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{a.duracion}</span>
+                            )}
+                          </div>
+                          <div className="mt-2 border-t border-slate-200 pt-2">
+                            {a.descripcion
+                              ? <p className="text-[11px] text-slate-600 leading-snug">{a.descripcion}</p>
+                              : <p className="text-[10px] text-slate-300 italic">Sin descripción</p>
+                            }
+                          </div>
                           {a.estado === 'Pendiente' ? (
                             <div className="grid grid-cols-2 gap-2 mt-4">
                               <button onClick={() => resolverActividad(a.id, 'Rechazada')} className="py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-[10px] font-black uppercase hover:bg-rose-50 shadow-sm flex items-center justify-center gap-1"><XCircle size={14}/> Rechazar</button>

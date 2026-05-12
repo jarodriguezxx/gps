@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, ClipboardCheck, Search, ShieldCheck, FileSignature } from 'lucide-react';
+import { LayoutDashboard, Users, ClipboardCheck, UserCog, Search, ShieldCheck } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
   { label: 'Tablero de Control',     icon: LayoutDashboard, path: '/clinico/inicio' },
   { label: 'Auditoría Clínica',      icon: Users,           path: '/clinico/directorio' },
+  { label: 'Asignación Terapéutica', icon: UserCog,         path: '/clinico/asignaciones' },
   { label: 'Validación Terapéutica', icon: ClipboardCheck,  path: '/clinico/calendario' },
 ];
 
@@ -15,18 +16,38 @@ const DirectorioJefeClinico = () => {
   const [pacientes, setPacientes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
 
+  const PASOS_PSI = 9;
+  const PASOS_CON = 7;
+  const PASOS_FAM = 7;
+
   useEffect(() => {
-    fetch('http://localhost:4000/api/pacientes')
-      .then(res => res.json())
-      .then(data => {
-        const pacientesConProgreso = data.filter(p => (p.estadoPaciente || '').toUpperCase() === 'INGRESADO').map(p => ({
-          ...p,
-          progresoPsi: Math.floor(Math.random() * 40) + 60,
-          progresoCon: Math.floor(Math.random() * 50) + 30,
-          progresoFam: Math.floor(Math.random() * 60) + 40,
+    const cargar = async () => {
+      try {
+        const resPacientes = await fetch('http://localhost:4000/api/pacientes');
+        const todos = await resPacientes.json();
+        const ingresados = todos.filter(p => (p.estadoPaciente || '').toUpperCase() === 'INGRESADO');
+
+        const conProgreso = await Promise.all(ingresados.map(async (p) => {
+          try {
+            const resDocs = await fetch(`http://localhost:4000/api/documentos/paciente/${p.id}`);
+            const docs = resDocs.ok ? await resDocs.json() : [];
+            const pasos = (dep) => new Set(docs.filter(d => d.departamento === dep).map(d => d.nombrePaso)).size;
+            return {
+              ...p,
+              progresoPsi: Math.round((pasos('Psicología') / PASOS_PSI) * 100),
+              progresoCon: Math.round((pasos('Consejería') / PASOS_CON) * 100),
+              progresoFam: Math.round((pasos('Familia')    / PASOS_FAM) * 100),
+            };
+          } catch {
+            return { ...p, progresoPsi: 0, progresoCon: 0, progresoFam: 0 };
+          }
         }));
-        setPacientes(pacientesConProgreso);
-      });
+        setPacientes(conProgreso);
+      } catch (err) {
+        console.error('Error cargando directorio clínico:', err);
+      }
+    };
+    cargar();
   }, []);
 
   const getProgressColor = (percent) => percent >= 90 ? 'bg-emerald-500' : percent >= 60 ? 'bg-amber-400' : 'bg-rose-500';
