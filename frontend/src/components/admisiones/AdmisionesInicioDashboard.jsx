@@ -91,6 +91,19 @@ const AdmisionesInicioDashboard = ({
 									<Icon size={18} />
 								</div>
 							</div>
+							{item.progress && (
+								<div className="mt-3">
+									<div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+										<div
+											className={`h-full rounded-full transition-all ${item.progress.colorBar}`}
+											style={{ width: `${Math.min((item.progress.value / item.progress.max) * 100, 100)}%` }}
+										/>
+									</div>
+									<p className="mt-1 text-[10px] font-semibold text-slate-400">
+										{item.progress.value} / {item.progress.max} ocupados
+									</p>
+								</div>
+							)}
 						</article>
 					);
 				})}

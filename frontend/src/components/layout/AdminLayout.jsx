@@ -1,6 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CalendarDays, FileText, Folder, Inbox, LayoutDashboard, PhoneCall } from 'lucide-react';
+import { API_BASE } from '../../config/api';
+import {
+  Activity, BrainCircuit, CalendarDays, ClipboardList, FileBarChart, Folder,
+  Inbox, LayoutDashboard, MessageSquare, PhoneCall, ShoppingCart,
+  Stethoscope, UserPlus, Users, Users2,
+} from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 export const AdminHeader = ({ submodule = 'Módulo de Admisiones' }) => (
@@ -59,21 +64,55 @@ export const AdminSidebar = ({ navItems, activeKey }) => {
 };
 
 const admisionesNavItems = [
-  { label: 'Dashboard de Inicio', icon: LayoutDashboard, key: 'dashboard', path: '/admisiones' },
-  { label: 'Bandeja Operativa', icon: Inbox, key: 'bandeja', path: '/admisiones/bandeja-operativa' },
-  { label: 'Expediente', icon: Folder, key: 'expediente', path: '/admisiones/expediente' },
-  { label: 'Agenda de Citas', icon: CalendarDays, key: 'agenda', path: '/admisiones/agenda-citas' },
-  { label: 'Seguimiento Telefónico', icon: PhoneCall, key: 'seguimiento', path: '/admisiones/seguimiento-telefonico' },
+  { label: 'Dashboard de Inicio',   icon: LayoutDashboard, key: 'dashboard',    path: '/admisiones' },
+  { label: 'Bandeja Operativa',     icon: Inbox,           key: 'bandeja',      path: '/admisiones/bandeja-operativa' },
+  { label: 'Expediente',            icon: Folder,          key: 'expediente',   path: '/admisiones/expediente' },
+  { label: 'Requisiciones',         icon: ClipboardList,   key: 'requisiciones',path: '/admisiones/requisiciones' },
+  { label: 'Agenda de Citas',       icon: CalendarDays,    key: 'agenda',       path: '/admisiones/agenda-citas' },
+  { label: 'Seguimiento Telefónico',icon: PhoneCall,       key: 'seguimiento',  path: '/admisiones/seguimiento-telefonico' },
   // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
 ];
+
+// Ítems del sidebar que cada puesto NO puede ver
+const ADMISIONES_ITEMS_OCULTOS_POR_PUESTO = {
+  'RECEPCIÓN': ['requisiciones'],
+};
+
+const getUsuarioSesion = () => {
+  try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
+};
+
+const LIMITE_PACIENTES = 40;
 
 export const AdmisionesSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [activos, setActivos] = useState(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/pacientes`)
+      .then(r => r.json())
+      .then(data => {
+        const count = Array.isArray(data)
+          ? data.filter(p => p.estadoPaciente === 'INGRESADO').length
+          : 0;
+        setActivos(count);
+      })
+      .catch(() => setActivos(0));
+  }, []);
+
+  const puesto = getUsuarioSesion().puesto || '';
+  const itemsOcultos = ADMISIONES_ITEMS_OCULTOS_POR_PUESTO[puesto] ?? [];
+  const itemsVisibles = admisionesNavItems.filter(item => !itemsOcultos.includes(item.key));
+
+  const porcentaje = activos !== null ? Math.min((activos / LIMITE_PACIENTES) * 100, 100) : 0;
+  const restantes  = activos !== null ? LIMITE_PACIENTES - activos : null;
+  const colorBarra = activos >= 38 ? 'bg-rose-500' : activos >= 35 ? 'bg-amber-400' : 'bg-emerald-500';
+  const alerta     = activos !== null && activos >= 35;
 
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {admisionesNavItems.map(({ label, icon, key, path }) => {
+      {itemsVisibles.map(({ label, icon, key, path }) => {
         const active = location.pathname === path || location.pathname.startsWith(`${path}/`);
         const NavIcon = icon;
 
@@ -93,6 +132,29 @@ export const AdmisionesSidebar = () => {
           </button>
         );
       })}
+
+      {activos !== null && (
+        <div className="mt-4 pt-4 border-t border-slate-200">
+          {alerta && (
+            <div className={`mb-2 rounded-xl px-3 py-2 text-xs font-bold flex items-center gap-1.5 ${
+              activos >= 38
+                ? 'bg-rose-50 border border-rose-200 text-rose-700'
+                : 'bg-amber-50 border border-amber-200 text-amber-800'
+            }`}>
+              {activos >= 38 ? '🔴' : '⚠️'}
+              {restantes === 0 ? 'Capacidad máxima' : `Quedan ${restantes} lugar${restantes === 1 ? '' : 'es'}`}
+            </div>
+          )}
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Capacidad</p>
+          <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+            <span>{activos} pacientes</span>
+            <span>/ {LIMITE_PACIENTES}</span>
+          </div>
+          <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${colorBarra}`} style={{ width: `${porcentaje}%` }} />
+          </div>
+        </div>
+      )}
     </aside>
   );
 };
@@ -167,3 +229,71 @@ export const AdminSuccessAlert = ({ message }) =>
       {message}
     </div>
   ) : null;
+
+// ── Sidebar Médico ────────────────────────────────────────────────
+const medicoNavItems = [
+  { label: 'Inicio Jefatura',         icon: Activity,      path: '/medico/inicio-jefe-medico' },
+  { label: 'Prospectos',              icon: UserPlus,      path: '/medico/prospectos' },
+  { label: 'Pacientes Activos',       icon: Users,         path: '/medico/pacientes' },
+  { label: 'Expedientes Clínicos',    icon: ClipboardList, path: '/medico/expedientes' },
+  { label: 'Requisiciones',           icon: ShoppingCart,  path: '/medico/requisiciones' },
+  { label: 'Personal Médico',         icon: Stethoscope,   path: '/medico/personal' },
+  { label: 'Reportes y Estadísticas', icon: FileBarChart,  path: '/medico/reportes' },
+];
+
+export const MedicoSidebar = () => {
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  return (
+    <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+      {medicoNavItems.map(({ label, icon, path }) => {
+        const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon  = icon;
+        return (
+          <button key={path} type="button" onClick={() => navigate(path)}
+            className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5
+              ${active
+                ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+                : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+            {React.createElement(NavIcon, { size: 15, className: 'shrink-0' })}
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </aside>
+  );
+};
+
+// ── Sidebar Clínico ───────────────────────────────────────────────
+const clinicoNavItems = [
+  { label: 'Inicio Jefatura',   icon: LayoutDashboard, path: '/clinico/inicio-jefe-clinico' },
+  { label: 'Pacientes',         icon: Users,           path: '/clinico/pacientes' },
+  { label: 'Auditoría Psico.',  icon: BrainCircuit,    path: '/clinico/pacientes' },
+  { label: 'Auditoría Consej.', icon: MessageSquare,   path: '/clinico/pacientes' },
+  { label: 'Auditoría Familia', icon: Users2,          path: '/clinico/pacientes' },
+  { label: 'Terapeuta',         icon: Stethoscope,     path: '/clinico/inicio-terapeuta' },
+  { label: 'Requisiciones',     icon: ShoppingCart,    path: '/clinico/requisiciones' },
+];
+
+export const ClinicoSidebar = () => {
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  return (
+    <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+      {clinicoNavItems.map(({ label, icon, path }) => {
+        const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon  = icon;
+        return (
+          <button key={`${label}-${path}`} type="button" onClick={() => navigate(path)}
+            className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5
+              ${active
+                ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+                : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+            {React.createElement(NavIcon, { size: 15, className: 'shrink-0' })}
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </aside>
+  );
+};

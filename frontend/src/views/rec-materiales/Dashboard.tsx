@@ -6,6 +6,7 @@ import {
   useParams,
   Navigate,
 } from "react-router-dom";
+import { ArrowLeftRight } from "lucide-react";
 import marakameLogo from "../../assets/marakame.jpeg";
 import { ui } from "../../config/theme";
 import { ROLES_PERMITIDOS } from "../../types/roles";
@@ -19,15 +20,53 @@ const RecMaterialesDashboard = () => {
 
   const [requisiciones, setRequisiciones] = useState<Requisicion[]>([]);
 
-  const cargarRequisiciones = () => {
-    return fetch(`${API_BASE}/requisiciones`)
-      .then((res) => res.json())
-      .then((data) =>
-        setRequisiciones(
-          data.map((r: Requisicion) => ({ ...r, fecha: new Date(r.fecha) })),
-        ),
-      )
-      .catch((err) => console.error("Error cargando requisiciones:", err));
+  const cargarRequisiciones = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/requisiciones`);
+      const rawText = await res.text();
+
+      let payload: unknown = null;
+      try {
+        payload = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        payload = null;
+      }
+
+      if (!res.ok) {
+        console.error("Error cargando requisiciones:", {
+          status: res.status,
+          statusText: res.statusText,
+          payload,
+          rawText,
+        });
+        setRequisiciones([]);
+        return;
+      }
+
+      const requisicionesData = Array.isArray(payload)
+        ? payload
+        : Array.isArray((payload as { data?: unknown[] })?.data)
+          ? (payload as { data: unknown[] }).data
+          : Array.isArray((payload as { requisiciones?: unknown[] })?.requisiciones)
+            ? (payload as { requisiciones: unknown[] }).requisiciones
+            : [];
+
+      if (!Array.isArray(requisicionesData)) {
+        console.error("Respuesta inesperada en /requisiciones:", payload);
+        setRequisiciones([]);
+        return;
+      }
+
+      setRequisiciones(
+        requisicionesData.map((r: Requisicion) => ({
+          ...r,
+          fecha: new Date(r.fecha),
+        })),
+      );
+    } catch (err) {
+      console.error("Error cargando requisiciones:", err);
+      setRequisiciones([]);
+    }
   };
 
   useEffect(() => {
@@ -102,16 +141,18 @@ const RecMaterialesDashboard = () => {
               >
                 Requisiciones
               </button>
-              <button
-                onClick={() => goTo("/proveedores")} // Ruta relativa dinámica
-                className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
-                  isProveedoresActive
-                    ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
-                    : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                Proveedores
-              </button>
+              {(rol === "rec-materiales" || rol === "compras-inventario") && (
+                <button
+                  onClick={() => goTo("/proveedores")}
+                  className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                    isProveedoresActive
+                      ? "bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]"
+                      : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  Proveedores
+                </button>
+              )}
               <button
                 onClick={() => goTo("/historial")}
                 className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
@@ -122,6 +163,26 @@ const RecMaterialesDashboard = () => {
               >
                 Historial
               </button>
+
+              {(rol === "rec-materiales" || rol === "compras-inventario") && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <button
+                    onClick={() =>
+                      navigate(
+                        rol === "rec-materiales"
+                          ? "/materiales/compras-inventario"
+                          : "/materiales/rec-materiales"
+                      )
+                    }
+                    className="w-full rounded-xl px-3 py-3 text-sm font-semibold transition border border-[#7E1D3B]/30 bg-[#7E1D3B]/5 text-[#7E1D3B] hover:bg-[#7E1D3B]/10 flex items-center gap-2"
+                  >
+                    <ArrowLeftRight size={14} />
+                    {rol === "rec-materiales"
+                      ? "Compras e Inventario"
+                      : "Recursos Materiales"}
+                  </button>
+                </div>
+              )}
             </aside>
 
             {/* Este es el contenedor que se estirará */}

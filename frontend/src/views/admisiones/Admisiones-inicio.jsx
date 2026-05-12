@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
-import { ArrowRight, Bell, CalendarDays, CheckCircle2, Clock3, ChevronLeft, ChevronRight, Search, X, FileText, Briefcase, Phone } from 'lucide-react';
+import { ArrowRight, Bell, CalendarDays, CheckCircle2, Clock3, ChevronLeft, ChevronRight, Search, X, FileText, Briefcase, Phone, Users } from 'lucide-react';
 import { AdminHeader, AdmisionesSidebar, AdminMainTitle } from '../../components/layout/AdminLayout';
 import AdmisionesInicioDashboard from '../../components/admisiones/AdmisionesInicioDashboard';
 import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
@@ -36,10 +36,19 @@ const esHorarioPasadoParaHoy = (fecha, hora) => {
 };
 
 
+const LIMITE_PACIENTES = 40;
+
+const getCapacidadTone = (n) => {
+	if (n >= 38) return { tone: 'rose',    colorBar: 'bg-rose-500' };
+	if (n >= 35) return { tone: 'amber',   colorBar: 'bg-amber-400' };
+	return            { tone: 'emerald', colorBar: 'bg-emerald-500' };
+};
+
 const AdmisionesInicio = () => {
 	const navigate = useNavigate();
 	const [citasHoy, setCitasHoy] = useState([]);
 	const [seguimiento, setSeguimiento] = useState([]);
+	const [pacientesIngresados, setPacientesIngresados] = useState(0);
 	const [loadingTablas, setLoadingTablas] = useState(true);
 	const [errorTablas, setErrorTablas] = useState('');
 	const [agendaAbierta, setAgendaAbierta] = useState(false);
@@ -148,6 +157,15 @@ const AdmisionesInicio = () => {
 
 	useEffect(() => {
 		cargarTablas();
+		fetch(`${API_BASE}/pacientes`)
+			.then(r => r.json())
+			.then(data => {
+				const count = Array.isArray(data)
+					? data.filter(p => p.estadoPaciente === 'INGRESADO').length
+					: 0;
+				setPacientesIngresados(count);
+			})
+			.catch(() => {});
 	}, []);
 
 	useEffect(() => {
@@ -319,12 +337,26 @@ const AdmisionesInicio = () => {
 			.slice(0, 8);
 	}, [citasHoy, seguimiento]);
 
-	const dashboardKpis = useMemo(() => ([
-		{ label: 'Casos en Bandeja', value: String(bandejaTrabajo.length), helper: 'Casos activos por prioridad', tone: 'emerald', icon: FileText },
-		{ label: 'Citas Activas', value: String(citasHoy.length), helper: 'Programadas para atender hoy', tone: 'sky', icon: CalendarDays },
-		{ label: 'Seguimientos', value: String(seguimiento.length), helper: 'Llamadas y contactos registrados', tone: 'amber', icon: Phone },
-		{ label: 'Pendientes Hoy', value: String(resumen.pendientes), helper: 'Casos que requieren acción', tone: 'rose', icon: Bell },
-	]), [bandejaTrabajo.length, citasHoy.length, seguimiento.length, resumen.pendientes]);
+	const dashboardKpis = useMemo(() => {
+		const restantes = LIMITE_PACIENTES - pacientesIngresados;
+		const capTone   = getCapacidadTone(pacientesIngresados);
+		return [
+			{ label: 'Casos en Bandeja', value: String(bandejaTrabajo.length), helper: 'Casos activos por prioridad', tone: 'emerald', icon: FileText },
+			{ label: 'Citas Activas', value: String(citasHoy.length), helper: 'Programadas para atender hoy', tone: 'sky', icon: CalendarDays },
+			{ label: 'Seguimientos', value: String(seguimiento.length), helper: 'Llamadas y contactos registrados', tone: 'amber', icon: Phone },
+			{ label: 'Pendientes Hoy', value: String(resumen.pendientes), helper: 'Casos que requieren acción', tone: 'rose', icon: Bell },
+			{
+				label: 'Capacidad Clínica',
+				value: `${pacientesIngresados} / ${LIMITE_PACIENTES}`,
+				helper: restantes > 0
+					? `${restantes} lugar${restantes === 1 ? '' : 'es'} disponibles`
+					: '⚠ Capacidad máxima alcanzada',
+				tone: capTone.tone,
+				icon: Users,
+				progress: { value: pacientesIngresados, max: LIMITE_PACIENTES, colorBar: capTone.colorBar },
+			},
+		];
+	}, [bandejaTrabajo.length, citasHoy.length, seguimiento.length, resumen.pendientes, pacientesIngresados]);
 
 	const cambiarMes = (delta) => {
 		setMesCalendario((prev) => {

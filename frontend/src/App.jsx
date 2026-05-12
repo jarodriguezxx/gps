@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { API_BASE } from './config/api.ts';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
@@ -14,6 +14,9 @@ import ExpedienteAdmisiones from './views/admisiones/ExpedienteAdmisiones';
 import DirectorioAdmisiones from './views/admisiones/DirectorioAdmisiones';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
 import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
+import RequisicionesAdmisiones from './views/admisiones/RequisicionesAdmisiones';
+import RequisicionesMedico     from './views/medico/RequisicionesMedico';
+import RequisicionesClinico    from './views/clinico/RequisicionesClinico';
 
 // Médico
 import InicioJefeMedico from './views/medico/InicioJefeMedico';
@@ -68,22 +71,26 @@ import DepositoBancario from './views/financiero/DepositoBancario';
 import ValidacionPagos from './views/financiero/ValidacionPagos';
 
 // Recursos Materiales
-import RecMaterialesDashboard from './views/rec-materiales/Dashboard';
-import Proveedores from './views/rec-materiales/Proveedores';
-import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones';
-import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion';
-import OrdenCompra from './views/rec-materiales/OrdenCompra';
-import Historial from './views/rec-materiales/Historial';
+import RecMaterialesDashboard from './views/rec-materiales/Dashboard.tsx';
+import Proveedores from './views/rec-materiales/Proveedores.tsx';
+import ListaRequisiciones from './views/rec-materiales/ListaRequisiciones.tsx';
+import DetallesRequisicion from './views/rec-materiales/DetallesRequisicion.tsx';
+import OrdenCompra from './views/rec-materiales/OrdenCompra.tsx';
+import Historial from './views/rec-materiales/Historial.tsx';
 
 // Almacén
 import AlmacenDashboard from './views/almacen/AlmacenDashboard';
 
+const getUsuarioSesion = () => {
+  try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
+};
+
 const PrivateRoute = ({ children }) => {
-  const user = localStorage.getItem('marakame_user');
+  const user = window.localStorage.getItem('marakame_user');
   return user ? children : <Navigate to="/login" replace />;
 };
 
-const quickViews = [
+const QUICK_VIEWS = [
   { label: 'Login',                  path: '/login' },
   { label: 'Admisiones',             path: '/admisiones' },
   { label: 'Bandeja Operativa',      path: '/admisiones/bandeja-operativa' },
@@ -130,64 +137,46 @@ const quickViews = [
   { label: 'Almacén',                path: '/almacen' },
 ];
 
-const QuickNavigator = () => {
-  const navigate = useNavigate();
+const PuestoRoute = ({ children, puestosExcluidos = [], fallback = '/admisiones' }) => {
+  const puesto = getUsuarioSesion().puesto || '';
+  if (puestosExcluidos.includes(puesto)) return <Navigate to={fallback} replace />;
+  return children;
+};
+
+const LegacyRecMaterialesRedirect = () => {
   const location = useLocation();
-  const [abierto, setAbierto] = useState(false);
-  const uniqueQuickViews = Array.from(new Map(quickViews.map((v) => [v.path, v])).values());
+  const legacySuffix = location.pathname.replace(/^\/rec-materiales/, '') || '/rec-materiales';
+  return <Navigate to={`/materiales${legacySuffix}`} replace />;
+};
+
+const LogoutButton = () => {
+  const location = useLocation();
+  const navigate  = useNavigate();
+
+  if (location.pathname === '/login') return null;
+  if (!localStorage.getItem('marakame_user')) return null;
+
+  const handleLogout = () => {
+    localStorage.removeItem('marakame_user');
+    navigate('/login', { replace: true });
+  };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      {abierto && (
-        <div className="mb-2 w-[220px] rounded-2xl border border-slate-200 bg-white/95 p-3
-                        shadow-[0_12px_30px_rgba(15,23,42,0.14)] backdrop-blur
-                        max-h-[70vh] overflow-y-auto">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">
-            Vistas rápidas
-          </p>
-          <div className="grid gap-1.5">
-            {uniqueQuickViews.map((view) => {
-              const active = location.pathname === view.path;
-              return (
-                <button
-                  key={`${view.label}-${view.path}`}
-                  onClick={() => { navigate(view.path); setAbierto(false); }}
-                  className={`w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${
-                    active
-                      ? 'bg-[#7E1D3B] text-white shadow-sm'
-                      : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {view.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <button
-        onClick={() => setAbierto(prev => !prev)}
-        className="ml-auto flex items-center gap-2 px-4 py-2.5 bg-[#7E1D3B] text-white
-                   rounded-2xl font-semibold text-xs shadow-lg hover:bg-[#63162e] transition-all"
-      >
-        {abierto ? (
-          <>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-            Cerrar
-          </>
-        ) : (
-          <>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-            Vistas
-          </>
-        )}
-      </button>
-    </div>
+    <button
+      onClick={handleLogout}
+      title="Cerrar sesión"
+      className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5
+                 bg-white border border-slate-200 text-slate-600 rounded-2xl
+                 text-xs font-semibold shadow-lg hover:bg-rose-50 hover:text-rose-600
+                 hover:border-rose-200 transition-all"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Cerrar sesión
+    </button>
   );
 };
 
@@ -195,6 +184,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <LogoutButton />
       <Routes>
         <Route path="/"      element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
@@ -206,7 +196,8 @@ function App() {
         <Route path="/admisiones/seguimiento-telefonico"       element={<PrivateRoute><SeguimientoTelefonico /></PrivateRoute>} />
         <Route path="/admisiones/expediente"                   element={<PrivateRoute><DirectorioAdmisiones /></PrivateRoute>} />
         <Route path="/admisiones/expediente-digital/:id"       element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
-        <Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
+        <Route path="/admisiones/requisiciones"                element={<PrivateRoute><PuestoRoute puestosExcluidos={['RECEPCIÓN']} fallback="/admisiones"><RequisicionesAdmisiones /></PuestoRoute></PrivateRoute>} />
+<Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
         <Route path="/admisiones/valoracion-diagnostica"       element={<PrivateRoute><ValoracionDiagnostica /></PrivateRoute>} />
         <Route path="/admisiones/bandeja"                      element={<Navigate to="/admisiones/bandeja-operativa" replace />} />
 
@@ -221,6 +212,7 @@ function App() {
         <Route path="/medico/historia-medica"                  element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
         <Route path="/medico/nueva-evolucion/:id"              element={<PrivateRoute><NuevaEvolucion /></PrivateRoute>} />
         <Route path="/medico/monitoreo/:id"                    element={<PrivateRoute><ControlMonitoreo /></PrivateRoute>} />
+        <Route path="/medico/requisiciones"                    element={<PrivateRoute><RequisicionesMedico /></PrivateRoute>} />
 
         <Route path="/nutriologo/pacientes"                    element={<PrivateRoute><PacientesNutricion /></PrivateRoute>} />
         <Route path="/nutriologo/inicio"                       element={<PrivateRoute><InicioNutricion /></PrivateRoute>} />
@@ -233,8 +225,9 @@ function App() {
         <Route path="/clinico/inicio-terapeuta"                element={<PrivateRoute><InicioTerapeuta /></PrivateRoute>} />
         <Route path="/clinico/directorio"                      element={<PrivateRoute><DirectorioJefeClinico /></PrivateRoute>} />
         <Route path="/clinico/calendario"                      element={<PrivateRoute><CalendarioJefeClinico /></PrivateRoute>} />
-        <Route path="/clinico/asignaciones"                   element={<PrivateRoute><AsignacionesTerapeutas /></PrivateRoute>} />
+        <Route path="/clinico/asignaciones"                    element={<PrivateRoute><AsignacionesTerapeutas /></PrivateRoute>} />
         <Route path="/clinico/auditoria/:id"                   element={<PrivateRoute><AuditoriaExpediente /></PrivateRoute>} />
+        <Route path="/clinico/requisiciones"                   element={<PrivateRoute><RequisicionesClinico /></PrivateRoute>} />
         <Route path="/psicologia/inicio"                       element={<PrivateRoute><InicioPsicologia /></PrivateRoute>} />
         <Route path="/psicologia/expediente/:id"               element={<PrivateRoute><ExpedientePsicologia /></PrivateRoute>} />
         <Route path="/psicologia/agendar"                      element={<PrivateRoute><AgendaPsicologia /></PrivateRoute>} />
@@ -244,8 +237,6 @@ function App() {
         <Route path="/familia/inicio"                          element={<PrivateRoute><InicioFamilia /></PrivateRoute>} />
         <Route path="/familia/expediente/:id"                  element={<PrivateRoute><ExpedienteFamilia /></PrivateRoute>} />
         <Route path="/familia/agendar"                         element={<PrivateRoute><AgendaFamilia /></PrivateRoute>} />
-
-
 
         {/* Recursos Humanos */}
         <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
@@ -263,13 +254,15 @@ function App() {
         <Route path="/financiero/deposito-bancario"            element={<PrivateRoute><DepositoBancario /></PrivateRoute>} />
         <Route path="/financiero/validacion-pagos"             element={<PrivateRoute><ValidacionPagos /></PrivateRoute>} />
 
-{/* Rutas para Recursos Materiales y Compras/Inventario */}
-        <Route path='/materiales/:rol' element={<RecMaterialesDashboard/>}>
-          <Route index element={<ListaRequisiciones />}/>
-          <Route path='proveedores' element={<Proveedores/>}/>
-          <Route path='historial' element={<Historial />}/>
-          <Route path='requisicion/:id' element={<DetallesRequisicion />}/>
-          <Route path='orden-compra/:id' element={<OrdenCompra />}/>
+        {/* Rutas para Recursos Materiales y Compras/Inventario */}
+        <Route path="/rec-materiales" element={<LegacyRecMaterialesRedirect />} />
+        <Route path="/rec-materiales/*" element={<LegacyRecMaterialesRedirect />} />
+        <Route path="/materiales/:rol" element={<PrivateRoute><RecMaterialesDashboard /></PrivateRoute>}>
+          <Route index element={<PrivateRoute><ListaRequisiciones /></PrivateRoute>} />
+          <Route path="proveedores" element={<PrivateRoute><Proveedores /></PrivateRoute>} />
+          <Route path="historial" element={<PrivateRoute><Historial /></PrivateRoute>} />
+          <Route path="requisicion/:id" element={<PrivateRoute><DetallesRequisicion /></PrivateRoute>} />
+          <Route path="orden-compra/:id" element={<PrivateRoute><OrdenCompra /></PrivateRoute>} />
         </Route>
 
         {/* Almacén */}
@@ -277,7 +270,6 @@ function App() {
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-      <QuickNavigator />
     </BrowserRouter>
   );
 }

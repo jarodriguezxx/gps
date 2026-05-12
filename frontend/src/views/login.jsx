@@ -2,6 +2,30 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import marakameLogo from '../assets/marakame.jpeg';
 
+const RUTAS_POR_ROL = {
+  'ADMISIONES': '/admisiones',
+  'MÉDICO':     '/medico/inicio-jefe-medico',
+  'CLINICO':    '/clinico/inicio-jefe-clinico',
+  'RH':         '/rh/alta-personal',
+  'FINANCIERO': '/financiero/archivo-contable',
+  'MATERIALES': '/materiales/rec-materiales',
+  'ALMACÉN':    '/almacen',
+  'ADMIN':      '/admisiones',
+};
+
+// Puestos con ruta propia — tienen prioridad sobre el rol
+const RUTAS_POR_PUESTO = {
+  'NUTRIÓLOGA (O)':               '/nutriologo/inicio',
+  'JEFA (E) DEP. ADMINISTRACIÓN': '/materiales/administracion',
+  'TERAPEUTA FAMILIAR':           '/clinico/inicio-terapeuta',
+  'TERAPEUTA DE GRUPO':           '/clinico/inicio-terapeuta',
+  'CONSEJERA (O) ASIGNADO':       '/clinico/inicio-terapeuta',
+  'DIRECTORA GENERAL':            '/materiales/direccion-general',
+  'ENCARGADA (O) DE ALMACÉN':    '/almacen',
+};
+
+const getRutaInicial = (rol, puesto) => RUTAS_POR_PUESTO[puesto] ?? RUTAS_POR_ROL[rol] ?? '/admisiones';
+
 const Login = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
@@ -29,7 +53,7 @@ const Login = () => {
       }
 
       localStorage.setItem('marakame_user', JSON.stringify(data));
-      navigate('/admisiones', { replace: true });
+      navigate(getRutaInicial(data.rol, data.puesto), { replace: true });
     } catch {
       setError('No se pudo conectar con el servidor.');
     } finally {

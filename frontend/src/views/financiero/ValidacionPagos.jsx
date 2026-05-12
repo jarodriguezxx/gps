@@ -29,11 +29,21 @@ const formatDateOnlyEs = (value) => {
   return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(date);
 };
 
-const getPacienteNombre = (paciente) => [
-  paciente.nombres || paciente.nombreCompleto || '',
-  paciente.apellidoPaterno || '',
-  paciente.apellidoMaterno || '',
-].join(' ').replace(/\s+/g, ' ').trim() || 'Sin nombre';
+const getPacienteNombre = (paciente) => {
+  const nombre = [
+    paciente.nombres || paciente.nombreCompleto || '',
+    paciente.apellidoPaterno || '',
+    paciente.apellidoMaterno || '',
+  ].join(' ').replace(/\s+/g, ' ').trim() || 'Sin nombre';
+  return nombre.replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const getFolioCorto = (folio) => {
+  if (!folio) return '--';
+  const partes = folio.split('-');
+  if (partes.length >= 3) return `${partes[0]}-${partes[1]}`;
+  return folio;
+};
 
 const ValidacionPagos = () => {
   const navigate = useNavigate();
@@ -182,128 +192,158 @@ const ValidacionPagos = () => {
             </aside>
 
             <main className="space-y-5">
-              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                {/* Encabezado */}
-                <div className="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-center md:justify-between">
+              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+                {/* ── Encabezado de sección ── */}
+                <div className="flex flex-col gap-3 border-b border-slate-100 px-6 py-5 md:flex-row md:items-center md:justify-between">
                   <div>
                     <h2 className="text-2xl font-black text-slate-800">Validación de Pagos</h2>
-                    <p className="text-sm text-slate-500">Pacientes con pagos pendientes de validación por Finanzas.</p>
+                    <p className="mt-0.5 text-sm text-slate-400">Pagos pendientes de confirmación por el área de Finanzas.</p>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-2 rounded-2xl border border-[#7E1D3B]/15 bg-[#7E1D3B]/5 px-4 py-2 text-sm font-bold text-[#7E1D3B]">
-                      <span className={`h-2.5 w-2.5 rounded-full ${pendientesCount > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                      {pendientesCount} pendiente{pendientesCount === 1 ? '' : 's'}
+                  <div className="flex flex-col items-end gap-1.5">
+                    <div className={`flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-bold ${
+                      pendientesCount > 0
+                        ? 'border-rose-200 bg-rose-50 text-rose-700'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    }`}>
+                      <span className={`h-2 w-2 rounded-full ${pendientesCount > 0 ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
+                      {pendientesCount > 0 ? `${pendientesCount} pendiente${pendientesCount === 1 ? '' : 's'}` : 'Sin pendientes'}
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-slate-400">
-                      <Clock size={12} />
-                      Ult. actualización: {lastUpdate.toLocaleTimeString('es-MX')}
+                    <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                      <Clock size={11} />
+                      Actualizado: {lastUpdate.toLocaleTimeString('es-MX')}
                     </div>
                   </div>
                 </div>
 
-                {/* Banner de Error */}
+                {/* ── Banner de Error ── */}
                 {error && (
-                  <div className="mb-4 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="mx-6 mt-4 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                     <AlertCircle size={16} className="mt-0.5 shrink-0" />
                     <div className="flex-1">
                       <p className="font-semibold">Error de conexión</p>
-                      <p className="text-xs text-rose-600 mt-1">{error}</p>
+                      <p className="mt-0.5 text-xs text-rose-600">{error}</p>
                     </div>
-                    <button type="button" onClick={dismissError} className="shrink-0 text-rose-600 hover:text-rose-800">
-                      <X size={16} />
+                    <button type="button" onClick={dismissError} className="shrink-0 text-rose-400 hover:text-rose-700 transition">
+                      <X size={15} />
                     </button>
                   </div>
                 )}
 
-                {/* Contenedor de Tabla Responsivo */}
-                <div className="w-full overflow-x-auto rounded-xl border border-slate-200">
-                  <table className="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-[0.15em] text-slate-500 whitespace-nowrap">ID Paciente</th>
-                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-[0.15em] text-slate-500 min-w-[200px]">Nombre del Paciente</th>
-                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-[0.15em] text-slate-500 whitespace-nowrap">Folio Recibo</th>
-                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-[0.15em] text-slate-500 whitespace-nowrap">Fecha Solicitud</th>
-                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-[0.15em] text-slate-500 whitespace-nowrap">Estado</th>
-                        <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-[0.15em] text-slate-500 whitespace-nowrap">Acción</th>
+                {/* ── Tabla ── */}
+                <div className="w-full overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50">
+                        <th className="w-20 px-6 py-3.5 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">#</th>
+                        <th className="px-4 py-3.5 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Paciente</th>
+                        <th className="px-4 py-3.5 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Folio</th>
+                        <th className="px-4 py-3.5 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Fecha</th>
+                        <th className="px-4 py-3.5 text-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Estado</th>
+                        <th className="px-6 py-3.5 text-right text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Acción</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
+                    <tbody>
                       {loading && pendientes.length === 0 ? (
                         <tr>
-                          <td className="px-4 py-8 text-center text-slate-400" colSpan={6}>
-                            <div className="flex items-center justify-center gap-2">
-                              <RefreshCw size={16} className="animate-spin" />
-                              Cargando registros...
+                          <td colSpan={6} className="px-6 py-12 text-center">
+                            <div className="flex flex-col items-center gap-3 text-slate-400">
+                              <RefreshCw size={22} className="animate-spin text-[#7E1D3B]/40" />
+                              <span className="text-sm font-medium">Cargando registros...</span>
                             </div>
                           </td>
                         </tr>
                       ) : pendientes.length === 0 ? (
                         <tr>
-                          <td className="px-4 py-8 text-center text-slate-400" colSpan={6}>
-                            <div className="flex flex-col items-center gap-2">
-                              <CheckCircle2 size={24} className="text-emerald-500" />
-                              <span>✓ No hay pagos pendientes por validar</span>
+                          <td colSpan={6} className="px-6 py-12 text-center">
+                            <div className="flex flex-col items-center gap-3">
+                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+                                <CheckCircle2 size={22} className="text-emerald-600" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-slate-600">Todo validado</p>
+                                <p className="text-xs text-slate-400">No hay pagos pendientes por validar</p>
+                              </div>
                             </div>
                           </td>
                         </tr>
                       ) : (
-                        pendientes.map((paciente) => {
-                          const isCompleted = completado === paciente.id;
-                          const isProcessing = accionId === paciente.id;
-                          
+                        pendientes.map((paciente, idx) => {
+                          const isCompleted  = completado === paciente.id;
+                          const isProcessing = accionId  === paciente.id;
                           return (
                             <tr
                               key={paciente.id}
-                              className={`transition-all duration-500 ${
+                              className={`border-b border-slate-100 transition-all duration-500 ${
                                 isCompleted
-                                  ? 'animate-success border-l-4 border-emerald-500'
-                                  : 'hover:bg-slate-50/70'
+                                  ? 'bg-emerald-50 animate-success'
+                                  : idx % 2 === 0 ? 'bg-white hover:bg-[#7E1D3B]/[0.025]' : 'bg-slate-50/60 hover:bg-[#7E1D3B]/[0.025]'
                               }`}
                             >
-                              <td className="px-4 py-3 font-bold text-[#7E1D3B] whitespace-nowrap">{paciente.id}</td>
-                              <td className="px-4 py-3 font-medium text-slate-700 truncate max-w-xs">{getPacienteNombre(paciente)}</td>
-                              <td className="px-4 py-3 font-mono text-xs text-slate-600 bg-slate-50 rounded px-2 py-1 whitespace-nowrap">{paciente.folioRecibo || '--'}</td>
-                              <td className="px-4 py-3 text-slate-600 text-xs whitespace-nowrap">{formatDateOnlyEs(paciente.fechaRegistroRecibo || paciente.fechaIngreso)}</td>
-                              <td className="px-4 py-3 whitespace-nowrap">
+                              {/* ID */}
+                              <td className="px-6 py-4">
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#7E1D3B]/8 text-xs font-black text-[#7E1D3B]">
+                                  {paciente.id}
+                                </span>
+                              </td>
+
+                              {/* Nombre */}
+                              <td className="px-4 py-4">
+                                <p className="font-semibold text-slate-800">{getPacienteNombre(paciente)}</p>
+                              </td>
+
+                              {/* Folio */}
+                              <td className="px-4 py-4">
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="inline-block rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1 font-mono text-[11px] font-semibold text-slate-600 whitespace-nowrap">
+                                    {getFolioCorto(paciente.folioRecibo)}
+                                  </span>
+                                  {paciente.folioRecibo && paciente.folioRecibo.split('-').length > 2 && (
+                                    <span className="ml-0.5 text-[10px] text-slate-300 font-mono">
+                                      {paciente.folioRecibo.split('-').slice(2).join('-').substring(0, 10)}…
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Fecha */}
+                              <td className="px-4 py-4 text-sm text-slate-500 whitespace-nowrap">
+                                {formatDateOnlyEs(paciente.fechaRegistroRecibo || paciente.fechaIngreso)}
+                              </td>
+
+                              {/* Estado */}
+                              <td className="px-4 py-4 text-center">
                                 {isCompleted ? (
-                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase text-emerald-700 animate-in fade-in">
-                                    <CheckCircle2 size={12} />
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700">
+                                    <CheckCircle2 size={11} />
                                     Validado
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase text-amber-700">
-                                    <Clock size={12} />
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-700">
+                                    <Clock size={11} />
                                     Pendiente
                                   </span>
                                 )}
                               </td>
-                              <td className="px-4 py-3 text-right whitespace-nowrap">
+
+                              {/* Acción */}
+                              <td className="px-6 py-4 text-right">
                                 <button
                                   type="button"
                                   onClick={() => confirmarPago(paciente.id)}
                                   disabled={isProcessing || isCompleted}
-                                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-sm transition ${
+                                  className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-sm transition-all ${
                                     isCompleted
                                       ? 'bg-emerald-500 cursor-default'
-                                      : 'bg-[#7E1D3B] hover:bg-[#63162e] disabled:cursor-not-allowed disabled:opacity-60'
+                                      : 'bg-[#7E1D3B] hover:bg-[#63162e] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50'
                                   }`}
                                 >
                                   {isCompleted ? (
-                                    <>
-                                      <CheckCircle2 size={14} />
-                                      Validado
-                                    </>
+                                    <><CheckCircle2 size={13} /> Validado</>
                                   ) : isProcessing ? (
-                                    <>
-                                      <RefreshCw size={14} className="animate-spin" />
-                                      Validando...
-                                    </>
+                                    <><RefreshCw size={13} className="animate-spin" /> Validando...</>
                                   ) : (
-                                    <>
-                                      <CheckCircle2 size={14} />
-                                      Confirmar
-                                    </>
+                                    <><CheckCircle2 size={13} /> Confirmar</>
                                   )}
                                 </button>
                               </td>
@@ -315,29 +355,31 @@ const ValidacionPagos = () => {
                   </table>
                 </div>
 
-                {/* Pie de tabla */}
-                <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 md:flex-row md:items-center md:justify-between">
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    {pendientesCount === 0 ? 'Sistema sincronizado' : `${pendientesCount} registro${pendientesCount === 1 ? '' : 's'} esperando validación`}
+                {/* ── Pie ── */}
+                <div className="flex flex-col gap-3 border-t border-slate-100 px-6 py-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span className={`h-2 w-2 rounded-full ${pendientesCount === 0 ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                    {pendientesCount === 0
+                      ? 'Todos los pagos están validados'
+                      : `${pendientesCount} registro${pendientesCount === 1 ? '' : 's'} esperando validación`}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                  <div className="flex items-center gap-3">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-500">
                       <input
                         type="checkbox"
                         checked={autoRefreshEnabled}
                         onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-[#7E1D3B]"
+                        className="h-3.5 w-3.5 rounded border-slate-300 accent-[#7E1D3B]"
                       />
-                      Actualización automática (30s)
+                      Auto-actualizar (30s)
                     </label>
                     <button
                       type="button"
                       onClick={loadPendientes}
                       disabled={loading}
-                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 transition"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50 transition"
                     >
-                      <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+                      <RefreshCw size={11} className={loading ? 'animate-spin' : ''} />
                       Recargar
                     </button>
                   </div>

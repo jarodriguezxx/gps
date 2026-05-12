@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { ui } from "../../config/theme";
-import * as tipos from "../../types/requisicion.ts";
+import * as tipos from "../../types/requisicion";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 
 interface OutletCtx {
@@ -16,21 +16,30 @@ const ListaRequisiciones = () => {
   // Validar el rol del usuario
   const { rol } = useParams<{ rol: string }>();
   const requisicionesAMostrar = useMemo(() => {
-    // Este console.log servirá para comprobar que ya no se filtra al hacer clic en filas
-    console.log("Calculando filtro de requisiciones...");
-
+    const ocultas = new Set(["FINALIZADA", "INCOMPLETA", "RECIBIDA"]);
     if (rol === "rec-materiales") {
-      return requisiciones;
+      return requisiciones.filter((r) => !ocultas.has(r.estado));
+    } else if (rol === "administracion") {
+      return requisiciones.filter(
+        (r) =>
+          !r.firmaAdminsitradora &&
+          ((r.tipo === "ORDINARIA" && r.estado === "EN-REVISION") ||
+            (r.tipo === "EXTRAORDINARIA" && r.estado === "PRE-AUTORIZADA")),
+      );
+    } else if (rol === "direccion-general") {
+      return requisiciones.filter(
+        (r) => r.firmaAdminsitradora === true && !r.firmaDirectoraGral,
+      );
     } else {
+      // compras-inventario
       const ordinarias = requisiciones.filter(
-        (r) => r.tipo === "ORDINARIA" && r.estado !== "PENDIENTE",
+        (r) => r.tipo === "ORDINARIA" && r.estado !== "PENDIENTE" && !ocultas.has(r.estado),
       );
       const extraordinarias = requisiciones.filter(
         (r) =>
           r.tipo === "EXTRAORDINARIA" &&
-          (r.estado === "AUTORIZADA" || r.estado === "EN-REVISION" || r.estado === "FINALIZADA"),
+          (r.estado === "AUTORIZADA" || r.estado === "EN-REVISION"),
       );
-
       return [...ordinarias, ...extraordinarias];
     }
   }, [requisiciones, rol]);
@@ -47,6 +56,12 @@ const ListaRequisiciones = () => {
         return "bg-purple-100 text-purple-800 border border-purple-300";
       case "EN-REVISION":
         return "bg-orange-100 text-orange-800 border border-orange-300";
+      case "RECHAZADA":
+        return "bg-red-100 text-red-800 border border-red-300";
+      case "INCOMPLETA":
+        return "bg-amber-100 text-amber-800 border border-amber-300";
+      case "RECIBIDA":
+        return "bg-teal-100 text-teal-800 border border-teal-300";
       default:
         return "bg-slate-100 text-slate-800 border border-slate-300";
     }

@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import java.time.OffsetDateTime;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -39,11 +40,24 @@ public class RequisicionService {
     }
 
     public Requisicion crear(Requisicion requisicion) {
-        return repository.save(requisicion);
+    requisicion.setFecha(OffsetDateTime.now());
+    return repository.save(requisicion);
     }
 
     public Optional<Requisicion> obtenerPorId(UUID id) {
         return repository.findById(id);
+    }
+
+    // ==========================================
+    // NUEVO MÉTODO: Actualizar estado de requisición
+    // ==========================================
+    @Transactional
+    public Requisicion actualizarEstado(UUID id, Estado nuevoEstado) {
+        Requisicion req = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("No se encontró la requisición con ID: " + id));
+        
+        req.setEstado(nuevoEstado);
+        return repository.save(req);
     }
 
     @Transactional
@@ -246,6 +260,47 @@ public class RequisicionService {
         Requisicion req = repository.findById(id)
                 .orElseThrow(NoSuchElementException::new);
         req.setTamanio(tamanio);
+        return repository.save(req);
+    }
+
+    @Transactional
+    public Requisicion firmarAdministradora(UUID id) {
+        Requisicion req = repository.findById(id).orElseThrow(NoSuchElementException::new);
+        boolean puedeFiremar =
+                (req.getEstado() == Estado.EN_REVISION && req.getTipo() == TipoCompra.ORDINARIA) ||
+                (req.getEstado() == Estado.PRE_AUTORIZADA && req.getTipo() == TipoCompra.EXTRAORDINARIA);
+        if (!puedeFiremar)
+            throw new IllegalStateException("estado-invalido");
+        req.setFirmaAdministradora(true);
+        return repository.save(req);
+    }
+
+    @Transactional
+    public Requisicion firmarDirectoraGral(UUID id) {
+        Requisicion req = repository.findById(id).orElseThrow(NoSuchElementException::new);
+        if (!Boolean.TRUE.equals(req.getFirmaAdministradora()))
+            throw new IllegalStateException("firma-administradora-requerida");
+        req.setFirmaDirectoraGral(true);
+        req.setEstado(Estado.AUTORIZADA);
+        return repository.save(req);
+    }
+
+    @Transactional
+    public Requisicion rechazar(UUID id, String rol, String observaciones) {
+        if (observaciones == null || observaciones.isBlank())
+            throw new IllegalArgumentException("motivo-requerido");
+        Requisicion req = repository.findById(id).orElseThrow(NoSuchElementException::new);
+        boolean puedeRechazar =
+                (rol.equals("administracion") && (
+                        (req.getEstado() == Estado.EN_REVISION && req.getTipo() == TipoCompra.ORDINARIA) ||
+                        (req.getEstado() == Estado.PRE_AUTORIZADA && req.getTipo() == TipoCompra.EXTRAORDINARIA)
+                )) ||
+                (rol.equals("direccion-general") && Boolean.TRUE.equals(req.getFirmaAdministradora()));
+        if (!puedeRechazar)
+            throw new IllegalStateException("estado-invalido");
+        req.setObservacionesRechazo(observaciones);
+        req.setRechazadoPor(rol);
+        req.setEstado(Estado.RECHAZADA);
         return repository.save(req);
     }
 

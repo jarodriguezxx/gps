@@ -1,154 +1,179 @@
-import React from 'react';
-import { Inbox } from 'lucide-react';
+import React, { useState } from 'react';
+import { Inbox, Building2, FileText, Calendar, ThermometerSnowflake, ArrowRight, Package, Hash, Scale, AlignLeft } from 'lucide-react';
 
-const Paso1Recepcion = ({ setActiveTab }) => {
-  // Clases CSS reutilizables para mantener el diseño uniforme
-  const labelClass = "block text-xs font-bold text-slate-500 uppercase tracking-[0.15em] mb-1.5 ml-0.5";
-  const inputClass = "w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30 focus:border-[#7E1D3B]/50 transition-all placeholder:text-slate-300";
+const Paso1Recepcion = ({ setActiveTab, setRecepcionActiva }) => {
+  // Datos del Proveedor
+  const [proveedor, setProveedor] = useState('');
+  const [folio, setFolio] = useState('');
+  
+  // NUEVO: Detalles de la Recepción
+  const [cantidadRecibida, setCantidadRecibida] = useState('');
+  const [unidadMedida, setUnidadMedida] = useState('Caja(s)');
+  const [descripcionRapida, setDescripcionRapida] = useState('');
 
-  // Lógica para detectar si es jueves (Día de recepción oficial)
-  const today = new Date();
-  const isThursday = today.getDay() === 4; // 0 = Domingo, 4 = Jueves
-  const dayName = today.toLocaleDateString('es-MX', { weekday: 'long' });
+  // Especificaciones del Lote
+  const [fechaRecepcion, setFechaRecepcion] = useState(new Date().toISOString().split('T')[0]);
+  const [caducidad, setCaducidad] = useState('');
+  const [cuidadosEspeciales, setCuidadosEspeciales] = useState('Ninguno (Temp. Ambiente)');
+
+  const iniciarRecepcion = (e) => {
+    e.preventDefault();
+    
+    // Guardamos TODA la información en la "maleta" del componente padre
+    setRecepcionActiva({
+      proveedor,
+      folio,
+      cantidadRecibida, // <-- Nuevo
+      unidadMedida,     // <-- Nuevo
+      descripcionRapida,// <-- Nuevo
+      fechaRecepcion,
+      caducidad,
+      cuidadosEspeciales
+    });
+    
+    setActiveTab('paso2');
+  };
 
   return (
-    <div className="grid lg:grid-cols-2 gap-5 animate-in fade-in duration-300">
-      
-      {/* ── Panel Izquierdo: Formulario de Recepción ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col h-full">
-        <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4 shrink-0">
-          <Inbox className="text-[#7E1D3B]" size={24} />
-          <div>
-            <h2 className="text-lg font-black text-slate-800">Registro de Recepción</h2>
-            <p className="text-xs text-slate-500">Paso 1 — Entradas y Salidas de Almacén</p>
-          </div>
-        </div>
-
-        {/* Alerta dinámica de día de recepción */}
-        {!isThursday ? (
-          <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 mb-6 text-xs text-rose-800 leading-relaxed shrink-0">
-            ⛔ <strong>Hoy es {dayName}.</strong> El horario de recepción del almacén es únicamente los <strong>jueves de 9:00 a 14:00 hrs</strong> conforme al manual oficial.
-          </div>
-        ) : (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 text-xs text-emerald-800 leading-relaxed shrink-0">
-            ✅ <strong>Hoy es jueves</strong> — Recepción habilitada de 9:00 a 14:00 hrs.
-          </div>
-        )}
-
-        {/* Formulario */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 flex-1 overflow-y-auto pr-2">
-          <div>
-            <label className={labelClass}>Folio de Entrada</label>
-            <input type="text" placeholder="ENT-0090" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Fecha y Hora de Recepción</label>
-            <input type="datetime-local" className={inputClass} />
-          </div>
-          <div className="md:col-span-2">
-            <label className={labelClass}>Proveedor</label>
-            <input type="text" placeholder="Nombre o razón social del proveedor" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>No. de Factura</label>
-            <input type="text" placeholder="Folio de la factura" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Monto Factura ($)</label>
-            <input type="number" placeholder="0.00" className={inputClass} />
-          </div>
-          <div className="md:col-span-2">
-            <label className={labelClass}>Descripción General</label>
-            <input type="text" placeholder="Tipo de bien o consumible recibido" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Cantidad Recibida</label>
-            <input type="number" placeholder="0" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Unidad de Medida</label>
-            <select className={inputClass}>
-              <option>Tabletas</option>
-              <option>Frascos</option>
-              <option>Cajas</option>
-              <option>Piezas</option>
-              <option>Kits</option>
-              <option>Kilogramos</option>
-              <option>Lotes</option>
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Orden de Compra Ref.</label>
-            <input type="text" placeholder="OC-023" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Requisición Ref.</label>
-            <input type="text" placeholder="REQ-017" className={inputClass} />
-          </div>
-        </div>
-
-        {/* Botones de acción */}
-        <div className="flex gap-3 pt-4 border-t border-slate-100 shrink-0">
-          <button onClick={() => setActiveTab('dashboard')} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-50 transition text-center">
-            Cancelar
-          </button>
-          <button onClick={() => setActiveTab('paso2')} className="flex-[2] py-2.5 bg-[#7E1D3B] text-white rounded-xl font-semibold text-sm hover:bg-[#63162e] transition shadow-sm text-center">
-            Continuar → Revisar vs Requisición
-          </button>
+    <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+      {/* Encabezado */}
+      <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50/50">
+        <Inbox className="w-5 h-5 text-[#7E1D3B]" />
+        <div>
+          <h2 className="text-lg font-bold text-slate-800">Paso 1: Recepción de Mercancía</h2>
+          <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Captura de Factura y Lote</p>
         </div>
       </div>
 
-      {/* ── Panel Derecho: Pedidos Recibidos ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-fit">
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Pedidos Recibidos Esta Semana</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                <th className="px-4 py-3">Folio</th>
-                <th className="px-4 py-3">Proveedor</th>
-                <th className="px-4 py-3">Insumo</th>
-                <th className="px-4 py-3">Factura</th>
-                <th className="px-4 py-3">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              <tr className="hover:bg-slate-50 transition">
-                <td className="px-4 py-3 font-mono font-bold text-[#7E1D3B] text-xs">ENT-0089</td>
-                <td className="px-4 py-3 text-slate-600 text-xs">Farm. del Ahorro</td>
-                <td className="px-4 py-3 text-slate-700 font-medium text-xs">Buprenorfina 8mg</td>
-                <td className="px-4 py-3 font-mono text-slate-500 text-xs">FC-2318</td>
-                <td className="px-4 py-3"><span className="px-2 py-1 bg-amber-100 text-amber-700 text-[9px] rounded-full font-bold whitespace-nowrap">En revisión</span></td>
-              </tr>
-              <tr className="hover:bg-slate-50 transition">
-                <td className="px-4 py-3 font-mono font-bold text-[#7E1D3B] text-xs">ENT-0088</td>
-                <td className="px-4 py-3 text-slate-600 text-xs">Prov. Nutrición</td>
-                <td className="px-4 py-3 text-slate-700 font-medium text-xs">Víveres quincena</td>
-                <td className="px-4 py-3 font-mono text-slate-500 text-xs">FC-2312</td>
-                <td className="px-4 py-3"><span className="px-2 py-1 bg-amber-100 text-amber-700 text-[9px] rounded-full font-bold whitespace-nowrap">En revisión</span></td>
-              </tr>
-              <tr className="hover:bg-slate-50 transition">
-                <td className="px-4 py-3 font-mono font-bold text-[#7E1D3B] text-xs">ENT-0087</td>
-                <td className="px-4 py-3 text-slate-600 text-xs">Lab. Pisa S.A.</td>
-                <td className="px-4 py-3 text-slate-700 font-medium text-xs">Mat. curación</td>
-                <td className="px-4 py-3 font-mono text-slate-500 text-xs">NR-0044</td>
-                <td className="px-4 py-3"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[9px] rounded-full font-bold whitespace-nowrap">Aceptado</span></td>
-              </tr>
-              <tr className="hover:bg-slate-50 transition">
-                <td className="px-4 py-3 font-mono font-bold text-[#7E1D3B] text-xs">ENT-0085</td>
-                <td className="px-4 py-3 text-slate-600 text-xs">Lab. Pisa S.A.</td>
-                <td className="px-4 py-3 text-slate-700 font-medium text-xs">Metadona 10mg/mL</td>
-                <td className="px-4 py-3 font-mono text-slate-500 text-xs">NR-0040</td>
-                <td className="px-4 py-3"><span className="px-2 py-1 bg-rose-100 text-rose-700 text-[9px] rounded-full font-bold whitespace-nowrap">Devuelto</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <div className="flex-1 p-8 overflow-y-auto flex items-center justify-center bg-slate-50/30">
+        <form onSubmit={iniciarRecepcion} className="w-full max-w-3xl bg-white p-8 rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/40">
+          
+          {/* SECCIÓN 1: PROVEEDOR */}
+          <h3 className="text-sm font-black text-slate-800 mb-6 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-[#7E1D3B]" /> Datos del Proveedor
+          </h3>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <Building2 className="w-3 h-3" /> Nombre del Proveedor
+              </label>
+              <input 
+                type="text" required placeholder="Ej. Farmacéutica del Nayar"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all"
+                value={proveedor} onChange={(e) => setProveedor(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <FileText className="w-3 h-3" /> Folio de Factura / Remisión
+              </label>
+              <input 
+                type="text" required placeholder="Ej. FAC-8923"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all font-mono uppercase"
+                value={folio} onChange={(e) => setFolio(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* SECCIÓN 2: DETALLES DE LA RECEPCIÓN (NUEVO) */}
+          <h3 className="text-sm font-black text-slate-800 mb-6 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <Package className="w-4 h-4 text-emerald-600" /> Bultos y Cantidades Físicas
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <Hash className="w-3 h-3" /> Cantidad Recibida
+              </label>
+              <input 
+                type="number" min="1" required placeholder="Ej. 15"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all"
+                value={cantidadRecibida} onChange={(e) => setCantidadRecibida(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <Scale className="w-3 h-3" /> Unidad de Medida
+              </label>
+              <select 
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all font-medium"
+                value={unidadMedida} onChange={(e) => setUnidadMedida(e.target.value)}
+              >
+                <option value="Caja(s)">Caja(s)</option>
+                <option value="Paquete(s)">Paquete(s)</option>
+                <option value="Pieza(s)">Pieza(s)</option>
+                <option value="Pallet(s)">Pallet(s)</option>
+                <option value="Galón(es)">Galón(es)</option>
+                <option value="Bolsa(s)">Bolsa(s)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+              <AlignLeft className="w-3 h-3" /> Descripción Rápida / Observaciones
+            </label>
+            <textarea 
+              rows="2" required placeholder="Ej. 5 cajas de jeringas, 2 galones de cloro y 1 paquete de gasas..."
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all resize-none"
+              value={descripcionRapida} onChange={(e) => setDescripcionRapida(e.target.value)}
+            />
+          </div>
+
+          {/* SECCIÓN 3: ESPECIFICACIONES DEL LOTE */}
+          <h3 className="text-sm font-black text-slate-800 mb-6 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <ThermometerSnowflake className="w-4 h-4 text-blue-500" /> Especificaciones de Almacenaje
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <Calendar className="w-3 h-3" /> Fecha Recepción
+              </label>
+              <input 
+                type="date" required
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all"
+                value={fechaRecepcion} onChange={(e) => setFechaRecepcion(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <Calendar className="w-3 h-3 text-rose-500" /> Fecha Caducidad
+              </label>
+              <input 
+                type="date" required
+                className="w-full p-3 bg-rose-50 border border-rose-200 text-rose-700 font-bold rounded-xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none transition-all"
+                value={caducidad} onChange={(e) => setCaducidad(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <ThermometerSnowflake className="w-3 h-3 text-blue-500" /> Cuidados Especiales
+              </label>
+              <select 
+                className="w-full p-3 bg-blue-50 border border-blue-200 text-blue-800 font-bold rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                value={cuidadosEspeciales} onChange={(e) => setCuidadosEspeciales(e.target.value)}
+              >
+                <option value="Ninguno (Temp. Ambiente)">Ninguno (Temp. Ambiente)</option>
+                <option value="Refrigeración (Red de Frío)">Refrigeración (Red de Frío)</option>
+                <option value="Medicamento Controlado">Medicamento Controlado</option>
+                <option value="Material Frágil">Material Frágil</option>
+                <option value="Proteger de la Luz">Proteger de la Luz</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <button 
+              type="submit" 
+              className="px-8 py-3.5 bg-[#7E1D3B] text-white font-bold rounded-xl shadow-lg shadow-[#7E1D3B]/20 hover:bg-[#63162e] transition-all flex items-center gap-2"
+            >
+              Continuar a Verificación <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

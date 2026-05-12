@@ -30,11 +30,12 @@ public class Articulo {
     @JsonProperty("articulosSolicitados")
     private Integer articulosSolicitados;
 
+
     @Column(name = "articulos_entregados")
     @JsonProperty("articulosEntregados")
-    private Integer articulosEntregados;
-
-    @Column(name = "articulos_pendientes")
+    private Integer articulosEntregados = 0; // ← valor por defecto
+    
+    @Column(name = "articulos_pendientes", insertable = false, updatable = false)
     @JsonProperty("articulosPendientes")
     private Integer articulosPendientes;
 
