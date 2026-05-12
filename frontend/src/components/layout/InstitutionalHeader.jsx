@@ -1,13 +1,22 @@
 import React from 'react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
+const getUsuarioSesion = () => {
+  try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
+};
+
+const getInitials = (nombre) => {
+  if (!nombre) return '?';
+  return nombre.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+};
+
 const InstitutionalHeader = ({
   title = 'Sistema Integral Marakame',
   moduleLabel,
   areaLabel,
-  sessionValue,
   badge,
 }) => {
+  const user = getUsuarioSesion();
   return (
     <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
       <div className="flex items-center gap-3">
@@ -21,11 +30,11 @@ const InstitutionalHeader = ({
       </div>
       <div className="flex items-center gap-3 self-end md:self-auto">
         <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center" aria-hidden="true">
-          {badge}
+          {badge ?? <span className="text-sm font-black text-[#7E1D3B]">{getInitials(user.nombreCompleto)}</span>}
         </div>
         <div className="text-right md:text-left">
-          <p className="text-xs text-slate-500">Sesión activa</p>
-          <p className="font-semibold text-slate-700">{sessionValue}</p>
+          <p className="font-semibold text-slate-700">{user.nombreCompleto || 'Usuario'}</p>
+          <p className="text-xs text-slate-500">{user.puesto || 'Sin puesto'}</p>
         </div>
       </div>
     </div>

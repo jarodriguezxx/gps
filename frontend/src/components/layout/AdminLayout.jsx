@@ -8,14 +8,25 @@ import {
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
-export const AdminHeader = ({ submodule = 'Módulo de Admisiones' }) => (
+const getUsuarioSesion = () => {
+  try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
+};
+
+const getInitials = (nombre) => {
+  if (!nombre) return '?';
+  return nombre.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+};
+
+export const AdminHeader = ({ submodule = 'Módulo de Admisiones' }) => {
+  const user = getUsuarioSesion();
+  return (
   <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
     <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
       <div className="flex items-center gap-3">
-        <img 
-          src={marakameLogo} 
+        <img
+          src={marakameLogo}
           alt="Logo Marakame"
-          className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" 
+          className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
         />
         <div>
           <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
@@ -25,16 +36,17 @@ export const AdminHeader = ({ submodule = 'Módulo de Admisiones' }) => (
       </div>
       <div className="flex items-center gap-3 self-end md:self-auto">
         <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center">
-          <span className="text-sm font-black text-[#7E1D3B]">ADM</span>
+          <span className="text-sm font-black text-[#7E1D3B]">{getInitials(user.nombreCompleto)}</span>
         </div>
         <div>
-          <p className="text-xs text-slate-500">Sesión activa</p>
-          <p className="font-semibold text-slate-700">{submodule}</p>
+          <p className="font-semibold text-slate-700">{user.nombreCompleto || 'Usuario'}</p>
+          <p className="text-xs text-slate-500">{user.puesto || submodule}</p>
         </div>
       </div>
     </div>
   </header>
-);
+  );
+};
 
 export const AdminSidebar = ({ navItems, activeKey }) => {
   const navigate = useNavigate();
@@ -76,10 +88,6 @@ const admisionesNavItems = [
 // Ítems del sidebar que cada puesto NO puede ver
 const ADMISIONES_ITEMS_OCULTOS_POR_PUESTO = {
   'RECEPCIÓN': ['requisiciones'],
-};
-
-const getUsuarioSesion = () => {
-  try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
 };
 
 const LIMITE_PACIENTES = 40;

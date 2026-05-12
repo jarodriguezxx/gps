@@ -1,36 +1,48 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Plus, Printer, Trash2, Save, ArrowLeft } from 'lucide-react';
+import { ClipboardList, Plus, Printer, Trash2, Save, ArrowLeft, Clock } from 'lucide-react';
 import { AdminHeader } from '../layout/AdminLayout';
+import { API_BASE } from '../../config/api';
 
-const UNIDADES = ['Pza', 'Caja', 'Paquete', 'Litro', 'Kg', 'Servicio', 'Botella', 'Bulto', 'Otro'];
-
-const TIPOS = [
-  { value: 'Ordinaria',      label: 'Ordinaria',      desc: 'Insumos de uso diario' },
-  { value: 'Extraordinaria', label: 'Extraordinaria',  desc: 'Compra especial (literatura, medallas, reactivos…)' },
+const UNIDADES = [
+  { value: 'PIEZA',     label: 'Pieza' },
+  { value: 'CAJA',      label: 'Caja' },
+  { value: 'PAQUETE',   label: 'Paquete' },
+  { value: 'LITRO',     label: 'Litro' },
+  { value: 'KILOGRAMO', label: 'Kg' },
+  { value: 'SERVICIO',  label: 'Servicio' },
+  { value: 'BOTELLA',   label: 'Botella' },
+  { value: 'BULTO',     label: 'Bulto' },
+  { value: 'OTRO',      label: 'Otro' },
 ];
 
-const BANDEJA_KEY = 'mrkm_solicitudes_almacen_v1';
+const TIPOS = [
+  { value: 'ORDINARIA',      label: 'Ordinaria',      desc: 'Insumos de uso diario' },
+  { value: 'EXTRAORDINARIA', label: 'Extraordinaria',  desc: 'Compra especial (literatura, medallas, reactivos…)' },
+];
 
-const generarFolio = () => {
-  const n = parseInt(localStorage.getItem('mrkm_sol_count') || '0') + 1;
-  localStorage.setItem('mrkm_sol_count', String(n));
-  return `SOL-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`;
-};
-
-const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-const pad   = (v) => String(v).padStart(2, '0');
+const pad = (v) => String(v).padStart(2, '0');
 const toInputDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const moneda = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 
 const createLinea = () => ({
   id: `l-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   cantidad: '1',
-  unidad: 'Pza',
+  unidad: 'PIEZA',
   producto: '',
   descripcion: '',
   precioUnitario: '0.00',
 });
+
+const ventanaAbierta = () => true;
+
+const proximaVentana = () => {
+  const ahora = new Date();
+  const diasHastaMartes = (2 - ahora.getDay() + 7) % 7 || 7;
+  const martes = new Date(ahora);
+  martes.setDate(ahora.getDate() + diasHastaMartes);
+  return martes.toLocaleDateString('es-MX', { weekday: 'long', day: '2-digit', month: 'long' });
+};
 
 // ─────────────────────────────────────────────────────────────────
 // Props:
@@ -41,6 +53,7 @@ const createLinea = () => ({
 const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '' }) => {
   const navigate = useNavigate();
   const fechaSistema = useMemo(() => toInputDate(new Date()), []);
+  const puedeEnviar = ventanaAbierta();
 
   const session = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
@@ -48,9 +61,10 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
 
   const [lineas, setLineas] = useState([createLinea()]);
   const [mensajeGuardado, setMensajeGuardado] = useState('');
+  const [guardando, setGuardando] = useState(false);
   const [formulario, setFormulario] = useState({
     fecha: fechaSistema,
-    tipo: 'Ordinaria',
+    tipo: 'ORDINARIA',
     observaciones: '',
   });
 
@@ -78,55 +92,81 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
       return sig.length > 0 ? sig : [createLinea()];
     });
 
-  const handleGuardar = () => {
-    const articulosValidos = lineas.filter((l) => l.producto.trim() !== '');
+  const handleGuardar = async () => {
     if (!session.nombreCompleto) {
       setMensajeGuardado('error:No se pudo identificar el usuario de sesión. Vuelve a iniciar sesión.');
       return;
     }
+
+    const articulosValidos = lineas.filter((l) => l.producto.trim() !== '');
     if (articulosValidos.length === 0) {
       setMensajeGuardado('error:Agrega al menos un concepto con nombre de producto.');
       return;
     }
 
-    const folio = generarFolio();
-    const nueva = {
-      id: genId(),
-      folio,
+    if (!ventanaAbierta()) {
+      setMensajeGuardado('error:Las requisiciones solo se reciben los martes de 9:00 a 15:00 hrs.');
+      return;
+    }
+
+    setGuardando(true);
+    setMensajeGuardado('');
+
+    const payload = {
       area: departamentoFijo,
       solicitante: session.nombreCompleto,
       tipo: formulario.tipo,
-      observaciones: formulario.observaciones.trim(),
-      fecha: new Date().toISOString(),
       estado: 'PENDIENTE',
+      tamanio: 'INDEFINIDO',
+      justificacion: formulario.observaciones.trim() || null,
       articulos: articulosValidos.map((l) => ({
-        id: genId(),
-        producto: l.producto.trim(),
-        cantidad: Number(l.cantidad) || 1,
+        articuloRequisitado: l.producto.trim(),
+        articulosSolicitados: Number(l.cantidad) || 1,
         unidad: l.unidad,
-        descripcion: l.descripcion?.trim() || '',
+        descripcion: l.descripcion?.trim() || null,
         precioUnitario: Number(l.precioUnitario) || 0,
-        estadoAlmacen: 'pendiente',
-        cantidadSurtida: null,
       })),
-      totales: { subtotal: totales.subtotal, iva: totales.iva, total: totales.total },
-      fechaRevision: null,
-      notasAlmacen: '',
     };
 
     try {
-      const previas = JSON.parse(localStorage.getItem(BANDEJA_KEY) || '[]');
-      localStorage.setItem(BANDEJA_KEY, JSON.stringify([nueva, ...previas]));
-      setMensajeGuardado(`ok:${folio}`);
+      const res = await fetch(`${API_BASE}/requisiciones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `Error ${res.status}`);
+      }
+
+      const data = await res.json();
+      const ref = data.id ? `REQ-${data.id.slice(0, 8).toUpperCase()}` : 'enviada';
+      setMensajeGuardado(`ok:${ref}`);
       setLineas([createLinea()]);
-      setFormulario((prev) => ({ ...prev, observaciones: '', tipo: 'Ordinaria' }));
+      setFormulario((prev) => ({ ...prev, observaciones: '', tipo: 'ORDINARIA' }));
     } catch (err) {
-      setMensajeGuardado(`error:No se pudo guardar: ${err.message}`);
+      setMensajeGuardado(`error:No se pudo enviar la requisición: ${err.message}`);
+    } finally {
+      setGuardando(false);
     }
   };
 
   const inputReadOnly = 'w-full rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2.5 text-sm font-medium text-slate-600 outline-none cursor-default';
   const inputEdit     = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-300 focus:border-[#7E1D3B]/50 focus:ring-2 focus:ring-[#7E1D3B]/15';
+
+  const botonEnviar = (
+    <button
+      type="button"
+      onClick={handleGuardar}
+      disabled={guardando || !puedeEnviar}
+      title={!puedeEnviar ? 'Solo se reciben requisiciones los martes de 9:00 a 15:00 hrs' : undefined}
+      className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#63162e] disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <Save size={16} />
+      {guardando ? 'Enviando…' : 'Enviar Requisición'}
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 print:bg-white print:text-black">
@@ -138,6 +178,19 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
             <aside className="print:hidden">{sidebar}</aside>
 
             <section className="space-y-5">
+
+              {/* Banner ventana de envío */}
+              {!puedeEnviar && (
+                <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 print:hidden">
+                  <Clock size={18} className="shrink-0 text-amber-500" />
+                  <span>
+                    <span className="font-bold">Ventana de envío cerrada.</span> Las requisiciones se reciben únicamente los{' '}
+                    <span className="font-bold">martes de 9:00 a 15:00 hrs.</span>{' '}
+                    Próxima ventana: <span className="font-bold">{proximaVentana()}</span>.
+                    Puedes preparar tu solicitud y enviarla ese día.
+                  </span>
+                </div>
+              )}
 
               {/* Header de impresión */}
               <div className="hidden rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm print:block print:shadow-none">
@@ -164,7 +217,9 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
                     <div>
                       <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#7E1D3B]">Nueva solicitud · {moduleName}</p>
                       <h2 className="text-2xl font-black text-slate-900">Requisición de {moduleName}</h2>
-                      <p className="mt-1 text-sm text-slate-500">Captura insumos y envía directamente a la Bandeja de Almacén.</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Captura los insumos requeridos. La solicitud se enviará a Recursos Materiales para revisión.
+                      </p>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -176,17 +231,15 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
                       className="inline-flex items-center gap-2 rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-2.5 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
                       <Printer size={16} /> Imprimir
                     </button>
-                    <button type="button" onClick={handleGuardar}
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#63162e]">
-                      <Save size={16} /> Enviar a Almacén
-                    </button>
+                    {botonEnviar}
                   </div>
                 </div>
 
                 {/* Alertas */}
                 {mensajeGuardado.startsWith('ok:') && (
                   <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 print:hidden">
-                    Solicitud <span className="font-black">{mensajeGuardado.slice(3)}</span> enviada a la Bandeja de Almacén correctamente.
+                    Requisición <span className="font-black">{mensajeGuardado.slice(3)}</span> enviada a Recursos Materiales correctamente.
+                    El encargado la revisará y te notificará el avance.
                   </div>
                 )}
                 {mensajeGuardado.startsWith('error:') && (
@@ -197,12 +250,12 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
 
                 {/* Banner tipo */}
                 <div className={`mb-5 rounded-2xl border px-4 py-3 text-xs font-medium print:hidden
-                  ${formulario.tipo === 'Ordinaria'
+                  ${formulario.tipo === 'ORDINARIA'
                     ? 'border-slate-200 bg-slate-50 text-slate-600'
                     : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
-                  {formulario.tipo === 'Ordinaria'
-                    ? 'Requisición ordinaria: todos los artículos son insumos de uso diario. No se pueden mezclar con compras extraordinarias.'
-                    : 'Requisición extraordinaria: incluye adquisiciones especiales como literatura, medallas, reactivos (antidoping) u otros artículos fuera del consumo regular.'}
+                  {formulario.tipo === 'ORDINARIA'
+                    ? 'Requisición ordinaria: todos los artículos son insumos de uso diario. No se deben incluir marcas específicas salvo justificación aprobada.'
+                    : 'Requisición extraordinaria: incluye adquisiciones especiales como literatura, medallas, reactivos (antidoping) u otros artículos fuera del consumo regular. Requiere al menos 3 cotizaciones si es compra mayor.'}
                 </div>
 
                 {/* Campos */}
@@ -288,17 +341,19 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
                                 onChange={(e) => actualizarLinea(linea.id, 'cantidad', e.target.value)}
                                 className={inputEdit} />
                             </td>
-                            <td className="w-32 px-4 py-3 align-top">
+                            <td className="w-36 px-4 py-3 align-top">
                               <select value={linea.unidad}
                                 onChange={(e) => actualizarLinea(linea.id, 'unidad', e.target.value)}
                                 className={inputEdit}>
-                                {UNIDADES.map((u) => <option key={u} value={u}>{u}</option>)}
+                                {UNIDADES.map(({ value, label }) => (
+                                  <option key={value} value={value}>{label}</option>
+                                ))}
                               </select>
                             </td>
                             <td className="min-w-[220px] px-4 py-3 align-top">
                               <input type="text" value={linea.producto}
                                 onChange={(e) => actualizarLinea(linea.id, 'producto', e.target.value)}
-                                placeholder="Nombre del producto"
+                                placeholder="Nombre del producto (sin marca)"
                                 className={inputEdit} />
                             </td>
                             <td className="min-w-[260px] px-4 py-3 align-top">
@@ -338,7 +393,7 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
                     <h3 className="text-xl font-black text-slate-900">Observaciones generales</h3>
                   </div>
                   <textarea name="observaciones" value={formulario.observaciones} onChange={actualizarFormulario}
-                    rows={6} placeholder="Notas adicionales, referencias, instrucciones para almacén…"
+                    rows={6} placeholder="Justificación de la compra, referencias, instrucciones especiales…"
                     className={`${inputEdit} rounded-2xl px-4 py-3`} />
                 </section>
 
@@ -360,7 +415,7 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
                     </div>
                   </div>
                   <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
-                    Al guardar, la solicitud es enviada a la Bandeja de Almacén para su revisión y surtido.
+                    Al enviar, la solicitud pasa a Recursos Materiales. El encargado la sellará, firmará y turnará a Compras para cotización.
                   </div>
                 </aside>
               </div>
@@ -377,10 +432,7 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
                     className="inline-flex items-center gap-2 rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-2.5 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
                     <Printer size={16} /> Imprimir
                   </button>
-                  <button type="button" onClick={handleGuardar}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#63162e]">
-                    <Save size={16} /> Enviar a Almacén
-                  </button>
+                  {botonEnviar}
                 </div>
               </div>
 

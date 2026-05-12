@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, FileText, ArrowRight, Loader2, Package, History } from 'lucide-react';
+import { AlertCircle, ArrowRight, Loader2, History } from 'lucide-react';
+import { API_BASE } from '../../config/api';
 
 const PanelGeneral = ({ setActiveTab }) => {
   const [stats, setStats] = useState({
@@ -15,14 +16,14 @@ const PanelGeneral = ({ setActiveTab }) => {
     const cargarDatosDashboard = async () => {
       try {
         // 1. Cargamos las estadísticas resumidas
-        const resStats = await fetch('http://localhost:4000/api/almacen/stats/resumen');
+        const resStats = await fetch(`${API_BASE}/almacen/stats/resumen`);
         if (resStats.ok) {
           const dataStats = await resStats.json();
           setStats(dataStats);
         }
 
         // 2. Cargamos las últimas salidas
-        const resSalidas = await fetch('http://localhost:4000/api/almacen/salidas');
+        const resSalidas = await fetch(`${API_BASE}/almacen/salidas`);
         if (resSalidas.ok) {
           const dataSalidas = await resSalidas.json();
           // Verificamos que sea un array antes de hacer reverse

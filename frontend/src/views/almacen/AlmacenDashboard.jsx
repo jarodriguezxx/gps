@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Package, Undo2, CheckSquare, MonitorSmartphone, MapPin, Bell, Upload, ShoppingCart, ClipboardCheck, Inbox } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
+const getSesion = () => { try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; } };
+const getInitials = (n) => n ? n.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() : '?';
+
 // Importamos los componentes
 import PanelGeneral from './PanelGeneral';
 import Paso1Y2RecepcionVerificacion from './Paso1Y2RecepcionVerificacion';
@@ -33,6 +36,8 @@ const AlmacenDashboard = () => {
   const [recepcionActiva, setRecepcionActiva] = useState(null);
   const [datosIncidencia, setDatosIncidencia] = useState(null);
 
+  const sesion = getSesion();
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
@@ -44,6 +49,15 @@ const AlmacenDashboard = () => {
                 <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
                 <h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema de Gestión</h1>
                 <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Módulo Almacén</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 self-end md:self-auto">
+              <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center">
+                <span className="text-sm font-black text-[#7E1D3B]">{getInitials(sesion.nombreCompleto)}</span>
+              </div>
+              <div>
+                <p className="font-semibold text-slate-700">{sesion.nombreCompleto || 'Usuario'}</p>
+                <p className="text-xs text-slate-500">{sesion.puesto || 'Almacén'}</p>
               </div>
             </div>
           </div>

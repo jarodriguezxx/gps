@@ -6,7 +6,6 @@ import {
   useParams,
   Navigate,
 } from "react-router-dom";
-import { ArrowLeftRight } from "lucide-react";
 import marakameLogo from "../../assets/marakame.jpeg";
 import { ui } from "../../config/theme";
 import { ROLES_PERMITIDOS } from "../../types/roles";
@@ -83,6 +82,13 @@ const RecMaterialesDashboard = () => {
     return <Navigate to="/login" replace />;
   }
 
+  const sesion = (() => {
+    try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
+  })();
+  const initials = sesion.nombreCompleto
+    ? sesion.nombreCompleto.trim().split(/\s+/).slice(0, 2).map((n: string) => n[0]).join('').toUpperCase()
+    : '?';
+
   const goTo = (path: string) => navigate(`/materiales/${rol}${path}`);
 
   const isRequisicionesActive =
@@ -110,19 +116,22 @@ const RecMaterialesDashboard = () => {
                 <p className={ui.text.labelGuinda}>Instituto Marakame</p>
                 <h1 className={ui.text.h1}>Sistema de Gestión Marakame</h1>
                 <p className={ui.text.labelGris}>
-                  Módulo de Recursos Materiales
+                  {rol === "administracion"
+                    ? "Jefatura de Administración"
+                    : rol === "direccion-general"
+                      ? "Dirección General"
+                      : "Módulo de Recursos Materiales"}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 self-end md:self-auto">
-              <div className="h-10 w-10 rounded-full border-2 border-slate-300 bg-slate-100" />
+              <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center">
+                <span className="text-sm font-black text-[#7E1D3B]">{initials}</span>
+              </div>
               <div className="text-right md:text-left">
-                <p className="text-xs text-slate-500">Sesión activa</p>
-                <p className="font-semibold text-sm">
-                  {rol?.replace("-", " ")}{" "}
-                  {/* Convierte 'rec-materiales' en 'rec materiales' */}
-                </p>
+                <p className="font-semibold text-sm">{sesion.nombreCompleto || 'Usuario'}</p>
+                <p className="text-xs text-slate-500">{sesion.puesto || 'Sin puesto'}</p>
               </div>
             </div>
           </header>
@@ -164,25 +173,6 @@ const RecMaterialesDashboard = () => {
                 Historial
               </button>
 
-              {(rol === "rec-materiales" || rol === "compras-inventario") && (
-                <div className="mt-4 pt-4 border-t border-slate-200">
-                  <button
-                    onClick={() =>
-                      navigate(
-                        rol === "rec-materiales"
-                          ? "/materiales/compras-inventario"
-                          : "/materiales/rec-materiales"
-                      )
-                    }
-                    className="w-full rounded-xl px-3 py-3 text-sm font-semibold transition border border-[#7E1D3B]/30 bg-[#7E1D3B]/5 text-[#7E1D3B] hover:bg-[#7E1D3B]/10 flex items-center gap-2"
-                  >
-                    <ArrowLeftRight size={14} />
-                    {rol === "rec-materiales"
-                      ? "Compras e Inventario"
-                      : "Recursos Materiales"}
-                  </button>
-                </div>
-              )}
             </aside>
 
             {/* Este es el contenedor que se estirará */}

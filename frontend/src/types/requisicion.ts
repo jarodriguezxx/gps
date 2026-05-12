@@ -11,7 +11,7 @@ export type Estado =
 export type TamanioCompra = "MAYOR" | "MENOR" | "INDEFINIDO";
 export type TipoCompra = "ORDINARIA" | "EXTRAORDINARIA";
 // TODO: Investigar bien todas las unidades que se manejan
-export type UnidadesArticulos = "PIEZA" | "CAJA" | "PAQUETE";
+export type UnidadesArticulos = "PIEZA" | "CAJA" | "PAQUETE" | "LITRO" | "KILOGRAMO" | "SERVICIO" | "BOTELLA" | "BULTO" | "OTRO";
 
 export type RequisicionesCamposTabla = {
   id: string;

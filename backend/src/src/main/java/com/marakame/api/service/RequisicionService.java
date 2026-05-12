@@ -40,8 +40,13 @@ public class RequisicionService {
     }
 
     public Requisicion crear(Requisicion requisicion) {
-    requisicion.setFecha(OffsetDateTime.now());
-    return repository.save(requisicion);
+        requisicion.setFecha(OffsetDateTime.now());
+        if (requisicion.getArticulos() != null) {
+            for (com.marakame.api.entity.Articulo articulo : requisicion.getArticulos()) {
+                articulo.setRequisicion(requisicion);
+            }
+        }
+        return repository.save(requisicion);
     }
 
     public Optional<Requisicion> obtenerPorId(UUID id) {

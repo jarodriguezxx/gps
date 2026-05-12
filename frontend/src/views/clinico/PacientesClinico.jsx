@@ -48,7 +48,7 @@ const PacientesClinico = () => {
             </div>
             <div className="flex items-center gap-3 self-end md:self-auto">
               <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center text-[#7E1D3B]"><Users size={18} /></div>
-              <div><p className="text-xs text-slate-500 font-semibold">Sesión activa</p><p className="font-bold text-slate-700">Jefe Clínico</p></div>
+              <div><p className="font-semibold text-slate-700">{JSON.parse(localStorage.getItem('marakame_user')||'{}').nombreCompleto||'Usuario'}</p><p className="text-xs text-slate-500">{JSON.parse(localStorage.getItem('marakame_user')||'{}').puesto||'Sin puesto'}</p></div>
             </div>
           </div>
 

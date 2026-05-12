@@ -165,8 +165,8 @@ const RHLayout = ({ navigate, children }) => (
               <span className="text-sm font-black text-[#7E1D3B]">RH</span>
             </div>
             <div className="text-right md:text-left">
-              <p className="text-xs text-slate-500">Sesión activa</p>
-              <p className="font-semibold text-slate-700">Recursos Humanos</p>
+              <p className="font-semibold text-slate-700">{JSON.parse(localStorage.getItem('marakame_user')||'{}').nombreCompleto||'Usuario'}</p>
+              <p className="text-xs text-slate-500">{JSON.parse(localStorage.getItem('marakame_user')||'{}').puesto||'Sin puesto'}</p>
             </div>
           </div>
         </div>

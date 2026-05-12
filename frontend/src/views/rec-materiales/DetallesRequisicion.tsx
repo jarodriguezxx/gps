@@ -221,7 +221,7 @@ const DetallesRequisicion = () => {
     }
 
     if (
-      rol === "compras-inventario" &&
+      rol === "rec-materiales" &&
       datos?.estado === "PRE-AUTORIZADA" &&
       datos?.tipo === "ORDINARIA"
     ) {
@@ -258,7 +258,7 @@ const DetallesRequisicion = () => {
     }
 
     if (
-      rol === "compras-inventario" &&
+      rol === "rec-materiales" &&
       datos?.estado === "AUTORIZADA" &&
       datos?.tipo === "ORDINARIA" &&
       datos?.tamanio === "MAYOR"
@@ -320,7 +320,7 @@ const DetallesRequisicion = () => {
     }
 
     if (
-      rol === "compras-inventario" &&
+      rol === "rec-materiales" &&
       datos?.estado === "EN-REVISION" &&
       datos?.tipo === "EXTRAORDINARIA" &&
       datos?.tamanio === "MAYOR"
@@ -400,7 +400,7 @@ const DetallesRequisicion = () => {
     }
 
     if (
-      rol === "compras-inventario" &&
+      rol === "rec-materiales" &&
       datos?.estado === "EN-REVISION" &&
       datos?.tipo === "EXTRAORDINARIA" &&
       datos?.tamanio === "MENOR"
@@ -471,7 +471,7 @@ const DetallesRequisicion = () => {
     };
     setDatos(parsed);
     if (
-      rol === "compras-inventario" &&
+      rol === "rec-materiales" &&
       parsed.tipo === "ORDINARIA" &&
       (parsed.estado === "PRE-AUTORIZADA" ||
         parsed.estado === "EN-REVISION" ||
@@ -484,7 +484,7 @@ const DetallesRequisicion = () => {
         .catch(() => alert("Error al cargar los documentos guardados. Recarga la página."));
     }
     if (
-      rol === "compras-inventario" &&
+      rol === "rec-materiales" &&
       parsed.tipo === "EXTRAORDINARIA" &&
       parsed.tamanio === "MENOR" &&
       (parsed.estado === "EN-REVISION" || parsed.estado === "FINALIZADA")
@@ -495,7 +495,7 @@ const DetallesRequisicion = () => {
         .catch(() => alert("Error al cargar los documentos guardados. Recarga la página."));
     }
     if (
-      rol === "compras-inventario" &&
+      rol === "rec-materiales" &&
       parsed.tipo === "EXTRAORDINARIA" &&
       parsed.tamanio === "MAYOR" &&
       (parsed.estado === "EN-REVISION" || parsed.estado === "FINALIZADA")
@@ -507,14 +507,11 @@ const DetallesRequisicion = () => {
     }
     if (rol === "rec-materiales") {
       setSubirCotizacion(
-        parsed.estado === "PENDIENTE" && parsed.tipo === "EXTRAORDINARIA",
-      );
-    } else if (rol === "compras-inventario") {
-      setSubirCotizacion(
+        (parsed.estado === "PENDIENTE" && parsed.tipo === "EXTRAORDINARIA") ||
         (parsed.estado === "PRE-AUTORIZADA" && parsed.tipo === "ORDINARIA") ||
-          (parsed.estado === "AUTORIZADA" &&
-            parsed.tipo === "ORDINARIA" &&
-            parsed.tamanio === "MAYOR"),
+        (parsed.estado === "AUTORIZADA" &&
+          parsed.tipo === "ORDINARIA" &&
+          parsed.tamanio === "MAYOR"),
       );
     }
   }, [id, rol, requisiciones]);
@@ -528,7 +525,7 @@ const DetallesRequisicion = () => {
   let i = 0;
 
   const esFlujoCotizacionesAdjuntos =
-    rol === "compras-inventario" &&
+    rol === "rec-materiales" &&
     datos?.tipo === "ORDINARIA" &&
     (datos?.estado === "PRE-AUTORIZADA" ||
       datos?.estado === "EN-REVISION" ||
@@ -542,7 +539,7 @@ const DetallesRequisicion = () => {
         .length;
 
   const requiereFacturas =
-    rol === "compras-inventario" &&
+    rol === "rec-materiales" &&
     datos?.estado === "AUTORIZADA" &&
     datos?.tipo === "ORDINARIA" &&
     datos?.tamanio === "MAYOR";
@@ -568,7 +565,7 @@ const DetallesRequisicion = () => {
     datos?.estado === "PENDIENTE" &&
     datos?.tipo === "ORDINARIA"
       ? 0
-      : rol === "compras-inventario" &&
+      : rol === "rec-materiales" &&
           datos?.estado === "AUTORIZADA" &&
           datos?.tipo === "ORDINARIA" &&
           datos?.tamanio === "MAYOR"
@@ -576,7 +573,7 @@ const DetallesRequisicion = () => {
         : 1;
 
   const esExtraordinariaAutorizada =
-    rol === "compras-inventario" &&
+    rol === "rec-materiales" &&
     datos?.estado === "AUTORIZADA" &&
     datos?.tipo === "EXTRAORDINARIA";
   const esExtraordinariaMenor =
@@ -584,7 +581,7 @@ const DetallesRequisicion = () => {
   const esExtraordinariaMayor =
     esExtraordinariaAutorizada && datos?.tamanio === "MAYOR";
   const mostrarOrdenDeCompra =
-    rol === "compras-inventario" &&
+    rol === "rec-materiales" &&
     (datos?.estado === "AUTORIZADA" || datos?.estado === "EN-REVISION" || datos?.estado === "FINALIZADA") &&
     (datos?.tipo === "EXTRAORDINARIA" ||
       (datos?.tipo === "ORDINARIA" && datos?.tamanio === "MENOR") ||
@@ -594,19 +591,19 @@ const DetallesRequisicion = () => {
     esExtraordinariaMenor || esExtraordinariaMayor;
   const mostrarEnviarFinanzas = esExtraordinariaMayor;
   const yaEnviada =
-    (rol === "compras-inventario" &&
+    (rol === "rec-materiales" &&
       datos?.estado === "EN-REVISION" &&
       datos?.tipo === "ORDINARIA") ||
-    (rol === "compras-inventario" && datos?.estado === "FINALIZADA");
+    (rol === "rec-materiales" && datos?.estado === "FINALIZADA");
 
   const esFlujoCargaFacturasExpediente =
-    rol === "compras-inventario" &&
+    rol === "rec-materiales" &&
     datos?.tipo === "EXTRAORDINARIA" &&
     datos?.tamanio === "MENOR" &&
     (datos?.estado === "EN-REVISION" || datos?.estado === "FINALIZADA");
 
   const esFlujoCargaExpedienteMayor =
-    rol === "compras-inventario" &&
+    rol === "rec-materiales" &&
     datos?.tipo === "EXTRAORDINARIA" &&
     datos?.tamanio === "MAYOR" &&
     (datos?.estado === "EN-REVISION" || datos?.estado === "FINALIZADA");
@@ -1357,7 +1354,7 @@ const DetallesRequisicion = () => {
                         }
                       }}
                     />
-                    {rol === "compras-inventario" && (
+                    {rol === "rec-materiales" && (
                       <>
                         <TarjetaCotizacion
                           archivoInicial={archivosCotizaciones["2"]}

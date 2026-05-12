@@ -91,7 +91,13 @@ const ListaRequisiciones = () => {
     <div className="flex-1 flex flex-col gap-4 min-h-0">
       {/* Contenedor del titulo de la pantalla */}
       <div className="flex shrink-0">
-        <h1 className={ui.text.h1}>Requisiciones recibidas</h1>
+        <h1 className={ui.text.h1}>
+          {rol === "administracion"
+            ? "Requisiciones por firmar"
+            : rol === "direccion-general"
+              ? "Requisiciones por autorizar"
+              : "Requisiciones recibidas"}
+        </h1>
       </div>
 
       {/* Contenedor de la tabla en sí */}

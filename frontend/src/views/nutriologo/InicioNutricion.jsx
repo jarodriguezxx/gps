@@ -75,8 +75,8 @@ const InicioNutricion = () => {
                 <Apple size={18} className="text-[#7E1D3B]" />
               </div>
               <div>
-                <p className="text-xs text-slate-500">Sesión activa</p>
-                <p className="font-semibold text-slate-700">Nutriología</p>
+                <p className="font-semibold text-slate-700">{JSON.parse(localStorage.getItem('marakame_user')||'{}').nombreCompleto||'Usuario'}</p>
+                <p className="text-xs text-slate-500">{JSON.parse(localStorage.getItem('marakame_user')||'{}').puesto||'Sin puesto'}</p>
               </div>
             </div>
           </div>

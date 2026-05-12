@@ -33,11 +33,19 @@ public class Articulo {
 
     @Column(name = "articulos_entregados")
     @JsonProperty("articulosEntregados")
-    private Integer articulosEntregados = 0; // ← valor por defecto
-    
+    private Integer articulosEntregados = 0;
+
     @Column(name = "articulos_pendientes", insertable = false, updatable = false)
     @JsonProperty("articulosPendientes")
     private Integer articulosPendientes;
+
+    @Column(name = "descripcion", columnDefinition = "TEXT")
+    @JsonProperty("descripcion")
+    private String descripcion;
+
+    @Column(name = "precio_unitario")
+    @JsonProperty("precioUnitario")
+    private Double precioUnitario;
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -59,4 +67,10 @@ public class Articulo {
 
     public Integer getArticulosPendientes() { return articulosPendientes; }
     public void setArticulosPendientes(Integer articulosPendientes) { this.articulosPendientes = articulosPendientes; }
+
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+
+    public Double getPrecioUnitario() { return precioUnitario; }
+    public void setPrecioUnitario(Double precioUnitario) { this.precioUnitario = precioUnitario; }
 }
