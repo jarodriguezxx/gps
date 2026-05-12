@@ -40,6 +40,15 @@ import DirectorioJefeClinico from './views/clinico/DirectorioJefeClinico';
 import CalendarioJefeClinico from './views/clinico/CalendarioJefeClinico';
 import InicioPsicologia from './views/clinico/InicioPsicologia';
 import ExpedientePsicologia from './views/clinico/ExpedientePsicologia';
+import InicioTerapeuta from './views/clinico/InicioTerapeuta';
+import AuditoriaExpediente from './views/clinico/AuditoriaExpediente';
+import AgendaPsicologia from './views/clinico/AgendaPsicologia';
+import InicioConsejeria from './views/clinico/InicioConsejeria';
+import ExpedienteConsejeria from './views/clinico/ExpedienteConsejeria';
+import AgendaConsejeria from './views/clinico/AgendaConsejeria';
+import InicioFamilia from './views/clinico/InicioFamilia';
+import ExpedienteFamilia from './views/clinico/ExpedienteFamilia';
+import AgendaFamilia from './views/clinico/AgendaFamilia';
 
 // Recursos Humanos
 import AltaPersonal from './views/rh/AltaPersonal';
@@ -98,6 +107,9 @@ const quickViews = [
   { label: 'Jefe Clínico - Calend',  path: '/clinico/calendario' },
   { label: 'Psicología - Inicio',    path: '/psicologia/inicio' },
   { label: 'Psicología - Exp',       path: '/psicologia/expediente/1' },
+  { label: 'Terapeuta - Inicio',     path: '/clinico/inicio-terapeuta' },
+  { label: 'Consejería - Inicio',    path: '/consejeria/inicio' },
+  { label: 'Familia - Inicio',       path: '/familia/inicio' },
   { label: 'RH - Alta',              path: '/rh/alta-personal' },
   { label: 'RH - Baja',              path: '/rh/baja-personal' },
   { label: 'RH - Catálogo',          path: '/rh/catalogo-roles' },
@@ -215,12 +227,21 @@ function App() {
         <Route path="/nutriologo/reportes"                     element={<PrivateRoute><ReportesNutricion /></PrivateRoute>} />
         <Route path="/nutriologo/vista-expediente/:id"         element={<PrivateRoute><VistaExpedienteNutricion /></PrivateRoute>} />
 
-        {/* Jefe Clínico */}
         <Route path="/clinico/inicio"                          element={<PrivateRoute><InicioJefeClinico /></PrivateRoute>} />
+        <Route path="/clinico/inicio-terapeuta"                element={<PrivateRoute><InicioTerapeuta /></PrivateRoute>} />
         <Route path="/clinico/directorio"                      element={<PrivateRoute><DirectorioJefeClinico /></PrivateRoute>} />
         <Route path="/clinico/calendario"                      element={<PrivateRoute><CalendarioJefeClinico /></PrivateRoute>} />
+        <Route path="/clinico/auditoria/:id"                   element={<PrivateRoute><AuditoriaExpediente /></PrivateRoute>} />
         <Route path="/psicologia/inicio"                       element={<PrivateRoute><InicioPsicologia /></PrivateRoute>} />
         <Route path="/psicologia/expediente/:id"               element={<PrivateRoute><ExpedientePsicologia /></PrivateRoute>} />
+        <Route path="/psicologia/agendar"                      element={<PrivateRoute><AgendaPsicologia /></PrivateRoute>} />
+        <Route path="/consejeria/inicio"                       element={<PrivateRoute><InicioConsejeria /></PrivateRoute>} />
+        <Route path="/consejeria/expediente/:id"               element={<PrivateRoute><ExpedienteConsejeria /></PrivateRoute>} />
+        <Route path="/consejeria/agendar"                      element={<PrivateRoute><AgendaConsejeria /></PrivateRoute>} />
+        <Route path="/familia/inicio"                          element={<PrivateRoute><InicioFamilia /></PrivateRoute>} />
+        <Route path="/familia/expediente/:id"                  element={<PrivateRoute><ExpedienteFamilia /></PrivateRoute>} />
+        <Route path="/familia/agendar"                         element={<PrivateRoute><AgendaFamilia /></PrivateRoute>} />
+
 
 
         {/* Recursos Humanos */}
