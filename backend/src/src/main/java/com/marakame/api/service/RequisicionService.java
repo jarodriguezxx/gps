@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.OffsetDateTime;
 
 import java.io.IOException;
+import java.text.Normalizer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -40,8 +41,14 @@ public class RequisicionService {
     }
 
     public Requisicion crear(Requisicion requisicion) {
-    requisicion.setFecha(OffsetDateTime.now());
-    return repository.save(requisicion);
+        requisicion.setFecha(OffsetDateTime.now());
+        if (requisicion.getEstado() == null)
+            requisicion.setEstado(Estado.PENDIENTE);
+        if (requisicion.getTamanio() == null)
+            requisicion.setTamanio(TamanioCompra.INDEFINIDO);
+        if (requisicion.getArticulos() != null)
+            requisicion.getArticulos().forEach(a -> a.setRequisicion(requisicion));
+        return repository.save(requisicion);
     }
 
     public Optional<Requisicion> obtenerPorId(UUID id) {
@@ -291,18 +298,25 @@ public class RequisicionService {
             throw new IllegalArgumentException("motivo-requerido");
         Requisicion req = repository.findById(id).orElseThrow(NoSuchElementException::new);
         boolean puedeRechazar =
-                (rol.equals("administracion") && (
-                        (req.getEstado() == Estado.EN_REVISION && req.getTipo() == TipoCompra.ORDINARIA) ||
-                        (req.getEstado() == Estado.PRE_AUTORIZADA && req.getTipo() == TipoCompra.EXTRAORDINARIA)
-                )) ||
-                (rol.equals("direccion-general") && Boolean.TRUE.equals(req.getFirmaAdministradora())) ||
-                (rol.equals("jefe-admisiones") && req.getEstado() == Estado.PENDIENTE);
+                ("jefe-admisiones".equals(rol) && areaCoincide(req.getArea(), "Admisiones")) ||
+                ("jefe-medico".equals(rol) && areaCoincide(req.getArea(), "Médico")) ||
+                ("jefe-clinico".equals(rol) && areaCoincide(req.getArea(), "Clínico"));
         if (!puedeRechazar)
             throw new IllegalStateException("estado-invalido");
         req.setObservacionesRechazo(observaciones);
         req.setRechazadoPor(rol);
         req.setEstado(Estado.RECHAZADA);
         return repository.save(req);
+    }
+
+    private boolean areaCoincide(String areaReal, String areaEsperada) {
+        return normalizar(areaReal).equals(normalizar(areaEsperada));
+    }
+
+    private String normalizar(String texto) {
+        if (texto == null) return "";
+        String sinAcentos = Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return sinAcentos.trim().toLowerCase();
     }
 
     public AdjuntoRequisicion obtenerAdjunto(UUID requisicionId, UUID adjuntoId) {

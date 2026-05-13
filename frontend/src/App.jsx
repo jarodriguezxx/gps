@@ -17,7 +17,11 @@ import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 import RequisicionesAdmisiones from './views/admisiones/RequisicionesAdmisiones';
 import ValidarRequisicionesAdmisiones from './views/admisiones/ValidarRequisicionesAdmisiones';
 import RequisicionesMedico     from './views/medico/RequisicionesMedico';
+import ValidarRequisicionesMedico from './views/medico/ValidarRequisicionesMedico';
 import RequisicionesClinico    from './views/clinico/RequisicionesClinico';
+import ValidarRequisicionesClinico from './views/clinico/ValidarRequisicionesClinico';
+import RequisicionesNutriologo from './views/nutriologo/RequisicionesNutriologo';
+import RequisicionesEnfermeria from './views/enfermeria/RequisicionesEnfermeria';
 
 // Médico
 import InicioJefeMedico from './views/medico/InicioJefeMedico';
@@ -44,6 +48,7 @@ import DirectorioJefeClinico from './views/clinico/DirectorioJefeClinico';
 import CalendarioJefeClinico from './views/clinico/CalendarioJefeClinico';
 import InicioPsicologia from './views/clinico/InicioPsicologia';
 import ExpedientePsicologia from './views/clinico/ExpedientePsicologia';
+import RequisicionesPsicologia from './views/psicologia/RequisicionesPsicologia';
 import InicioTerapeuta from './views/clinico/InicioTerapeuta';
 import AuditoriaExpediente from './views/clinico/AuditoriaExpediente';
 import AsignacionesTerapeutas from './views/clinico/AsignacionesTerapeutas';
@@ -142,10 +147,35 @@ const QUICK_VIEWS = [
   { label: 'Almacén',                path: '/almacen' },
 ];
 
-const PuestoRoute = ({ children, puestosExcluidos = [], fallback = '/admisiones' }) => {
+const PuestoRoute = ({ children, puestosPermitidos = null, puestosExcluidos = [], fallback = '/admisiones' }) => {
   const puesto = getUsuarioSesion().puesto || '';
+  if (puestosPermitidos && !puestosPermitidos.includes(puesto)) return <Navigate to={fallback} replace />;
   if (puestosExcluidos.includes(puesto)) return <Navigate to={fallback} replace />;
   return children;
+};
+
+const AreaRoute = ({ children, area, fallback = '/admisiones' }) => {
+  const usuario = getUsuarioSesion();
+  const rol = usuario.rol || '';
+  
+  // Validar área: puede ser un string o un array de áreas permitidas
+  const areasPermitidas = Array.isArray(area) ? area : [area];
+  
+  // Si el rol coincide O el puesto está en una de las áreas permitidas, permitir acceso
+  if (areasPermitidas.includes(rol)) return children;
+  
+  // También permitir si el puesto contiene una de las palabras clave del área
+  const areaKeywords = {
+    'CLINICO': ['psicologia', 'psicologo', 'clinico', 'nutriolog', 'enfermeria', 'consejeria', 'familia'],
+    'MÉDICO': ['medico'],
+    'ADMISIONES': ['admisiones', 'recepcion']
+  };
+  
+  const keywords = areaKeywords[area] || [];
+  const puestoLower = (usuario.puesto || '').toLowerCase();
+  if (keywords.some(kw => puestoLower.includes(kw))) return children;
+  
+  return <Navigate to={fallback} replace />;
 };
 
 const LegacyRecMaterialesRedirect = () => {
@@ -201,7 +231,7 @@ function App() {
         <Route path="/admisiones/seguimiento-telefonico"       element={<PrivateRoute><SeguimientoTelefonico /></PrivateRoute>} />
         <Route path="/admisiones/expediente"                   element={<PrivateRoute><DirectorioAdmisiones /></PrivateRoute>} />
         <Route path="/admisiones/expediente-digital/:id"       element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
-        <Route path="/admisiones/requisiciones"                element={<PrivateRoute><PuestoRoute puestosExcluidos={['RECEPCIÓN']} fallback="/admisiones"><RequisicionesAdmisiones /></PuestoRoute></PrivateRoute>} />
+        <Route path="/admisiones/requisiciones"                element={<PrivateRoute><RequisicionesAdmisiones /></PrivateRoute>} />
         <Route path="/admisiones/validar-requisiciones"        element={<PrivateRoute><ValidarRequisicionesAdmisiones /></PrivateRoute>} />
 <Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
         <Route path="/admisiones/valoracion-diagnostica"       element={<PrivateRoute><ValoracionDiagnostica /></PrivateRoute>} />
@@ -218,7 +248,8 @@ function App() {
         <Route path="/medico/historia-medica"                  element={<PrivateRoute><HistoriaMedica /></PrivateRoute>} />
         <Route path="/medico/nueva-evolucion/:id"              element={<PrivateRoute><NuevaEvolucion /></PrivateRoute>} />
         <Route path="/medico/monitoreo/:id"                    element={<PrivateRoute><ControlMonitoreo /></PrivateRoute>} />
-        <Route path="/medico/requisiciones"                    element={<PrivateRoute><RequisicionesMedico /></PrivateRoute>} />
+        <Route path="/medico/requisiciones"                    element={<PrivateRoute><AreaRoute area={'MÉDICO'} fallback="/medico/inicio-jefe-medico"><RequisicionesMedico /></AreaRoute></PrivateRoute>} />
+        <Route path="/medico/validar-requisiciones"            element={<PrivateRoute><PuestoRoute puestosPermitidos={['JEFA (E) DEP. MÉDICO', 'JEFE DEPARTAMENTO MÉDICO']} fallback="/medico/inicio-jefe-medico"><ValidarRequisicionesMedico /></PuestoRoute></PrivateRoute>} />
         <Route path="/medico/farmacia"                         element={<PrivateRoute><FarmaciaMedico /></PrivateRoute>} />
 
         <Route path="/nutriologo/pacientes"                    element={<PrivateRoute><PacientesNutricion /></PrivateRoute>} />
@@ -227,6 +258,7 @@ function App() {
         <Route path="/nutriologo/expedientes"                  element={<PrivateRoute><ExpedientesNutricion /></PrivateRoute>} />
         <Route path="/nutriologo/reportes"                     element={<PrivateRoute><ReportesNutricion /></PrivateRoute>} />
         <Route path="/nutriologo/vista-expediente/:id"         element={<PrivateRoute><VistaExpedienteNutricion /></PrivateRoute>} />
+        <Route path="/nutriologo/requisiciones"                element={<PrivateRoute><AreaRoute area={'CLINICO'} fallback="/nutriologo/inicio"><RequisicionesNutriologo /></AreaRoute></PrivateRoute>} />
 
         <Route path="/clinico/inicio"                          element={<PrivateRoute><InicioJefeClinico /></PrivateRoute>} />
         <Route path="/clinico/inicio-terapeuta"                element={<PrivateRoute><InicioTerapeuta /></PrivateRoute>} />
@@ -234,8 +266,10 @@ function App() {
         <Route path="/clinico/calendario"                      element={<PrivateRoute><CalendarioJefeClinico /></PrivateRoute>} />
         <Route path="/clinico/asignaciones"                    element={<PrivateRoute><AsignacionesTerapeutas /></PrivateRoute>} />
         <Route path="/clinico/auditoria/:id"                   element={<PrivateRoute><AuditoriaExpediente /></PrivateRoute>} />
-        <Route path="/clinico/requisiciones"                   element={<PrivateRoute><RequisicionesClinico /></PrivateRoute>} />
+        <Route path="/clinico/requisiciones"                   element={<PrivateRoute><AreaRoute area={'CLINICO'} fallback="/clinico/inicio"><RequisicionesClinico /></AreaRoute></PrivateRoute>} />
+        <Route path="/clinico/validar-requisiciones"           element={<PrivateRoute><PuestoRoute puestosPermitidos={['JEFA (E) DEP. CLÍNICO', 'JEFE DEPARTAMENTO CLÍNICO']} fallback="/clinico/inicio"><ValidarRequisicionesClinico /></PuestoRoute></PrivateRoute>} />
         <Route path="/psicologia/inicio"                       element={<PrivateRoute><InicioPsicologia /></PrivateRoute>} />
+        <Route path="/psicologia/requisiciones"                element={<PrivateRoute><AreaRoute area={'CLINICO'} fallback="/psicologia/inicio"><RequisicionesPsicologia /></AreaRoute></PrivateRoute>} />
         <Route path="/psicologia/expediente/:id"               element={<PrivateRoute><ExpedientePsicologia /></PrivateRoute>} />
         <Route path="/psicologia/agendar"                      element={<PrivateRoute><AgendaPsicologia /></PrivateRoute>} />
         <Route path="/consejeria/inicio"                       element={<PrivateRoute><InicioConsejeria /></PrivateRoute>} />
@@ -277,6 +311,7 @@ function App() {
 
         {/* Enfermería */}
         <Route path="/enfermeria" element={<PrivateRoute><EnfermeriaDashboard /></PrivateRoute>} />
+        <Route path="/enfermeria/requisiciones"                element={<PrivateRoute><AreaRoute area={'CLINICO'} fallback="/enfermeria"><RequisicionesEnfermeria /></AreaRoute></PrivateRoute>} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

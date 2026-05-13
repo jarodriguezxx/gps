@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Users, Pill, History } from 'lucide-react';
+import { Users, Pill, History, ShoppingCart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 import PacientesEnfermeria       from './PacientesEnfermeria';
@@ -7,9 +8,10 @@ import MedicamentosEnfermeria    from './MedicamentosEnfermeria';
 import HistorialDispensaciones   from './HistorialDispensaciones';
 
 const navItems = [
-  { label: 'Pacientes Internados', icon: Users,   key: 'pacientes'   },
-  { label: 'Medicamentos',         icon: Pill,    key: 'medicamentos' },
-  { label: 'Historial',            icon: History, key: 'historial'   },
+  { label: 'Pacientes Internados', icon: Users,        key: 'pacientes' },
+  { label: 'Medicamentos',         icon: Pill,         key: 'medicamentos' },
+  { label: 'Historial',            icon: History,      key: 'historial' },
+  { label: 'Requisiciones',        icon: ShoppingCart, path: '/enfermeria/requisiciones' },
 ];
 
 const getSesion = () => {
@@ -21,6 +23,7 @@ const getInitials = (n) =>
 
 const EnfermeriaDashboard = () => {
   const [activeTab, setActiveTab] = useState('pacientes');
+  const navigate = useNavigate();
   const sesion = getSesion();
 
   return (
@@ -54,10 +57,16 @@ const EnfermeriaDashboard = () => {
           {/* Body */}
           <div className="grid flex-1 gap-4 px-4 py-5 md:grid-cols-[200px_1fr] md:px-6 bg-white min-h-0">
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-              {navItems.map(({ label, icon: Icon, key }) => (
+              {navItems.map(({ label, icon: Icon, key, path }) => (
                 <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
+                  key={key || path}
+                  onClick={() => {
+                    if (path) {
+                      navigate(path);
+                    } else {
+                      setActiveTab(key);
+                    }
+                  }}
                   className={`mb-2 w-full flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
                     activeTab === key
                       ? 'bg-[#7E1D3B] text-white shadow-md'

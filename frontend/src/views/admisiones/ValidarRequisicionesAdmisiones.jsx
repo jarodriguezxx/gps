@@ -121,13 +121,15 @@ export default function ValidarRequisicionesAdmisiones() {
   const pendientesCount = requisiciones.filter(r => r.estado === 'PENDIENTE').length;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
       <AdminHeader submodule="Admisiones — Validar Requisiciones" />
 
-      <div className="grid grid-cols-[auto,1fr] gap-5">
+      <main className="space-y-5">
+      <div className="grid gap-4 md:grid-cols-[220px_1fr]">
         <AdmisionesSidebar />
 
-        <main className="min-w-0">
+        <div className="space-y-5 min-w-0">
           {/* Título */}
           <div className="flex items-start justify-between mb-5">
             <div>
@@ -217,7 +219,9 @@ export default function ValidarRequisicionesAdmisiones() {
               ))}
             </div>
           )}
-        </main>
+        </div>
+      </div>
+      </main>
       </div>
 
       {/* Modal de detalle */}
@@ -283,19 +287,42 @@ export default function ValidarRequisicionesAdmisiones() {
                       <thead className="bg-slate-50">
                         <tr>
                           <th className="px-3 py-2 text-left font-bold text-slate-500 uppercase tracking-wider">Artículo</th>
-                          <th className="px-3 py-2 text-center font-bold text-slate-500 uppercase tracking-wider w-24">Unidad</th>
-                          <th className="px-3 py-2 text-center font-bold text-slate-500 uppercase tracking-wider w-20">Cant.</th>
+                          <th className="px-3 py-2 text-center font-bold text-slate-500 uppercase tracking-wider w-20">Unidad</th>
+                          <th className="px-3 py-2 text-center font-bold text-slate-500 uppercase tracking-wider w-16">Cant.</th>
+                          <th className="px-3 py-2 text-right font-bold text-slate-500 uppercase tracking-wider w-28">Precio Unit.</th>
+                          <th className="px-3 py-2 text-right font-bold text-slate-500 uppercase tracking-wider w-28">Importe</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {seleccionada.articulos.map((art, i) => (
-                          <tr key={art.id || i} className="bg-white">
-                            <td className="px-3 py-2.5 text-slate-700 font-medium">{art.articuloRequisitado}</td>
-                            <td className="px-3 py-2.5 text-center text-slate-500">{art.unidad}</td>
-                            <td className="px-3 py-2.5 text-center text-slate-700 font-bold">{art.articulosSolicitados}</td>
-                          </tr>
-                        ))}
+                        {seleccionada.articulos.map((art, i) => {
+                          const precio   = Number(art.precioUnitario) || 0;
+                          const importe  = precio * (Number(art.articulosSolicitados) || 0);
+                          const moneda   = (v) => v.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+                          return (
+                            <tr key={art.id || i} className="bg-white">
+                              <td className="px-3 py-2.5 text-slate-700 font-medium">{art.articuloRequisitado}</td>
+                              <td className="px-3 py-2.5 text-center text-slate-500">{art.unidad}</td>
+                              <td className="px-3 py-2.5 text-center text-slate-700 font-bold">{art.articulosSolicitados}</td>
+                              <td className="px-3 py-2.5 text-right text-slate-600">{moneda(precio)}</td>
+                              <td className="px-3 py-2.5 text-right text-slate-800 font-bold">{moneda(importe)}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
+                      <tfoot className="bg-slate-50 border-t border-slate-200">
+                        <tr>
+                          <td colSpan={3} />
+                          <td className="px-3 py-2 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Total</td>
+                          <td className="px-3 py-2 text-right text-sm font-black text-[#7E1D3B]">
+                            {(() => {
+                              const total = seleccionada.articulos.reduce(
+                                (acc, a) => acc + (Number(a.precioUnitario) || 0) * (Number(a.articulosSolicitados) || 0), 0
+                              );
+                              return total.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+                            })()}
+                          </td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 </div>

@@ -68,8 +68,7 @@ const admisionesNavItems = [
   { label: 'Bandeja Operativa',      icon: Inbox,           key: 'bandeja',             path: '/admisiones/bandeja-operativa' },
   { label: 'Expediente',             icon: Folder,          key: 'expediente',          path: '/admisiones/expediente' },
   { label: 'Requisiciones',          icon: ClipboardList,   key: 'requisiciones',       path: '/admisiones/requisiciones' },
-  { label: 'Validar Requisiciones',  icon: BadgeCheck,      key: 'validar-requisiciones',path: '/admisiones/validar-requisiciones',
-    soloParaPuesto: ['JEFE DE ADMISIONES', 'ENCARGADO DE ADMISIONES'] },
+  { label: 'Validar Requisiciones',  icon: BadgeCheck,      key: 'validar-requisiciones',path: '/admisiones/validar-requisiciones' },
   { label: 'Agenda de Citas',        icon: CalendarDays,    key: 'agenda',              path: '/admisiones/agenda-citas' },
   { label: 'Seguimiento Telefónico', icon: PhoneCall,       key: 'seguimiento',         path: '/admisiones/seguimiento-telefonico' },
   // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
@@ -77,7 +76,8 @@ const admisionesNavItems = [
 
 // Ítems del sidebar que cada puesto NO puede ver
 const ADMISIONES_ITEMS_OCULTOS_POR_PUESTO = {
-  'RECEPCIÓN': ['requisiciones', 'validar-requisiciones'],
+  // RECEPCIÓN crea requisiciones pero no las valida
+  'RECEPCIÓN': ['validar-requisiciones'],
 };
 
 const getUsuarioSesion = () => {
@@ -243,6 +243,7 @@ const medicoNavItems = [
   { label: 'Pacientes Activos',       icon: Users,         path: '/medico/pacientes' },
   { label: 'Expedientes Clínicos',    icon: ClipboardList, path: '/medico/expedientes' },
   { label: 'Requisiciones',           icon: ShoppingCart,  path: '/medico/requisiciones' },
+  { label: 'Validar Requisiciones',   icon: BadgeCheck,    path: '/medico/validar-requisiciones', soloParaPuesto: ['JEFA (E) DEP. MÉDICO', 'JEFE DEPARTAMENTO MÉDICO'] },
   { label: 'Personal Médico',         icon: Stethoscope,   path: '/medico/personal' },
   { label: 'Reportes y Estadísticas', icon: FileBarChart,  path: '/medico/reportes' },
 ];
@@ -250,9 +251,14 @@ const medicoNavItems = [
 export const MedicoSidebar = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
+  const puesto = getUsuarioSesion().puesto || '';
+  const itemsVisibles = medicoNavItems.filter(item => {
+    if (item.soloParaPuesto && !item.soloParaPuesto.includes(puesto)) return false;
+    return true;
+  });
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {medicoNavItems.map(({ label, icon, path }) => {
+      {itemsVisibles.map(({ label, icon, path }) => {
         const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
         const NavIcon  = icon;
         return (
@@ -278,15 +284,83 @@ const clinicoNavItems = [
   { label: 'Auditoría Consej.', icon: MessageSquare,   path: '/clinico/pacientes' },
   { label: 'Auditoría Familia', icon: Users2,          path: '/clinico/pacientes' },
   { label: 'Terapeuta',         icon: Stethoscope,     path: '/clinico/inicio-terapeuta' },
+  { label: 'Requisiciones Psicología', icon: ShoppingCart, path: '/psicologia/requisiciones' },
   { label: 'Requisiciones',     icon: ShoppingCart,    path: '/clinico/requisiciones' },
+  { label: 'Validar Requisiciones', icon: BadgeCheck,   path: '/clinico/validar-requisiciones', soloParaPuesto: ['JEFA (E) DEP. CLÍNICO', 'JEFE DEPARTAMENTO CLÍNICO'] },
 ];
 
 export const ClinicoSidebar = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
+  const puesto = getUsuarioSesion().puesto || '';
+  const itemsVisibles = clinicoNavItems.filter(item => {
+    if (item.soloParaPuesto && !item.soloParaPuesto.includes(puesto)) return false;
+    return true;
+  });
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {clinicoNavItems.map(({ label, icon, path }) => {
+      {itemsVisibles.map(({ label, icon, path }) => {
+        const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon  = icon;
+        return (
+          <button key={`${label}-${path}`} type="button" onClick={() => navigate(path)}
+            className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5
+              ${active
+                ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+                : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+            {React.createElement(NavIcon, { size: 15, className: 'shrink-0' })}
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </aside>
+  );
+};
+
+// ── Sidebar Nutriólogo ────────────────────────────────────────────
+const nutriologoNavItems = [
+  { label: 'Inicio',                 icon: LayoutDashboard, path: '/nutriologo/inicio' },
+  { label: 'Pacientes',              icon: Users,           path: '/nutriologo/pacientes' },
+  { label: 'Evaluación Nutricional', icon: FileBarChart,    path: '/nutriologo/expedientes' },
+  { label: 'Requisiciones',          icon: ShoppingCart,    path: '/nutriologo/requisiciones' },
+  { label: 'Reportes',               icon: Activity,        path: '/nutriologo/reportes' },
+];
+
+export const NutriologoSidebar = () => {
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  return (
+    <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+      {nutriologoNavItems.map(({ label, icon, path }) => {
+        const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon  = icon;
+        return (
+          <button key={`${label}-${path}`} type="button" onClick={() => navigate(path)}
+            className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5
+              ${active
+                ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+                : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+            {React.createElement(NavIcon, { size: 15, className: 'shrink-0' })}
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </aside>
+  );
+};
+
+// ── Sidebar Enfermería ────────────────────────────────────────────
+const enfermeriasNavItems = [
+  { label: 'Inicio',          icon: LayoutDashboard, path: '/enfermeria' },
+  { label: 'Requisiciones',   icon: ShoppingCart,    path: '/enfermeria/requisiciones' },
+];
+
+export const EnfermeriaSidebar = () => {
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  return (
+    <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+      {enfermeriasNavItems.map(({ label, icon, path }) => {
         const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
         const NavIcon  = icon;
         return (

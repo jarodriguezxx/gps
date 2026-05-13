@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.text.Normalizer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -294,20 +295,21 @@ public class RequisicionController {
     public ResponseEntity<?> validarJefeAdmisiones(
             @PathVariable UUID id,
             @RequestHeader(value = "X-Rol", required = false) String rol) {
-        if (!"jefe-admisiones".equals(rol)) {
-            return ResponseEntity.status(403).body("acceso-denegado");
-        }
-        try {
-            Requisicion req = service.obtenerPorId(id).orElseThrow(NoSuchElementException::new);
-            if (req.getEstado() != Estado.PENDIENTE) {
-                return ResponseEntity.badRequest().body("solo-requisiciones-pendientes");
-            }
-            return ResponseEntity.ok(service.actualizarEstado(id, Estado.PRE_AUTORIZADA));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("error-inesperado: " + e.getMessage());
-        }
+        return validarRequisicionDeArea(id, rol, "jefe-admisiones", "Admisiones");
+    }
+
+    @PatchMapping("/{id}/validar-medico")
+    public ResponseEntity<?> validarJefeMedico(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Rol", required = false) String rol) {
+        return validarRequisicionDeArea(id, rol, "jefe-medico", "Médico");
+    }
+
+    @PatchMapping("/{id}/validar-clinico")
+    public ResponseEntity<?> validarJefeClinico(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Rol", required = false) String rol) {
+        return validarRequisicionDeArea(id, rol, "jefe-clinico", "Clínico");
     }
 
     @PatchMapping("/{id}/rechazar")
@@ -315,10 +317,11 @@ public class RequisicionController {
             @PathVariable UUID id,
             @RequestHeader(value = "X-Rol", required = false) String rol,
             @RequestBody Map<String, String> body) {
-        if (!"administracion".equals(rol) && !"direccion-general".equals(rol) && !"jefe-admisiones".equals(rol)) {
-            return ResponseEntity.status(403).body("acceso-denegado");
-        }
         try {
+            Requisicion req = service.obtenerPorId(id).orElseThrow(NoSuchElementException::new);
+            if (!puedeGestionarArea(rol, req)) {
+                return ResponseEntity.status(403).body("acceso-denegado");
+            }
             return ResponseEntity.ok(service.rechazar(id, rol, body.get("observaciones")));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -380,5 +383,45 @@ public class RequisicionController {
             return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error inesperado: " + e.getMessage());
         }
+    }
+
+    private ResponseEntity<?> validarRequisicionDeArea(UUID id, String rol, String rolEsperado, String areaEsperada) {
+        if (!rolEsperado.equals(rol)) {
+            return ResponseEntity.status(403).body("acceso-denegado");
+        }
+        try {
+            Requisicion req = service.obtenerPorId(id).orElseThrow(NoSuchElementException::new);
+            if (!areaCoincide(req.getArea(), areaEsperada)) {
+                return ResponseEntity.status(403).body("area-no-autorizada");
+            }
+            if (req.getEstado() != Estado.PENDIENTE) {
+                return ResponseEntity.badRequest().body("solo-requisiciones-pendientes");
+            }
+            return ResponseEntity.ok(service.actualizarEstado(id, Estado.PRE_AUTORIZADA));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("error-inesperado: " + e.getMessage());
+        }
+    }
+
+    private boolean puedeGestionarArea(String rol, Requisicion requisicion) {
+        if (rol == null || requisicion == null) return false;
+        return switch (rol) {
+            case "jefe-admisiones" -> areaCoincide(requisicion.getArea(), "Admisiones");
+            case "jefe-medico" -> areaCoincide(requisicion.getArea(), "Médico");
+            case "jefe-clinico" -> areaCoincide(requisicion.getArea(), "Clínico");
+            default -> false;
+        };
+    }
+
+    private boolean areaCoincide(String areaReal, String areaEsperada) {
+        return normalizar(areaReal).equals(normalizar(areaEsperada));
+    }
+
+    private String normalizar(String texto) {
+        if (texto == null) return "";
+        String sinAcentos = Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return sinAcentos.trim().toLowerCase();
     }
 }

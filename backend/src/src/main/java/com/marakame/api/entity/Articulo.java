@@ -22,9 +22,9 @@ public class Articulo {
     @JsonProperty("articuloRequisitado")
     private String articuloRequisitado;
 
-    @Enumerated(EnumType.STRING)
+    @Column(name = "unidad")
     @JsonProperty("unidad")
-    private UnidadesArticulos unidad;
+    private String unidad;
 
     @Column(name = "articulos_solicitados")
     @JsonProperty("articulosSolicitados")
@@ -33,7 +33,11 @@ public class Articulo {
 
     @Column(name = "articulos_entregados")
     @JsonProperty("articulosEntregados")
-    private Integer articulosEntregados = 0; // ← valor por defecto
+    private Integer articulosEntregados = 0;
+
+    @Column(name = "precio_unitario")
+    @JsonProperty("precioUnitario")
+    private Double precioUnitario = 0.0;
     
     @Column(name = "articulos_pendientes", insertable = false, updatable = false)
     @JsonProperty("articulosPendientes")
@@ -48,14 +52,17 @@ public class Articulo {
     public String getArticuloRequisitado() { return articuloRequisitado; }
     public void setArticuloRequisitado(String articuloRequisitado) { this.articuloRequisitado = articuloRequisitado; }
 
-    public UnidadesArticulos getUnidad() { return unidad; }
-    public void setUnidad(UnidadesArticulos unidad) { this.unidad = unidad; }
+    public String getUnidad() { return unidad; }
+    public void setUnidad(String unidad) { this.unidad = unidad; }
 
     public Integer getArticulosSolicitados() { return articulosSolicitados; }
     public void setArticulosSolicitados(Integer articulosSolicitados) { this.articulosSolicitados = articulosSolicitados; }
 
     public Integer getArticulosEntregados() { return articulosEntregados; }
     public void setArticulosEntregados(Integer articulosEntregados) { this.articulosEntregados = articulosEntregados; }
+
+    public Double getPrecioUnitario() { return precioUnitario; }
+    public void setPrecioUnitario(Double precioUnitario) { this.precioUnitario = precioUnitario; }
 
     public Integer getArticulosPendientes() { return articulosPendientes; }
     public void setArticulosPendientes(Integer articulosPendientes) { this.articulosPendientes = articulosPendientes; }

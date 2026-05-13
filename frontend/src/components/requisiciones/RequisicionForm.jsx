@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Plus, Printer, Trash2, Save, ArrowLeft } from 'lucide-react';
 import { AdminHeader } from '../layout/AdminLayout';
+import { API_BASE } from '../../config/api';
 
 const UNIDADES = ['Pza', 'Caja', 'Paquete', 'Litro', 'Kg', 'Servicio', 'Botella', 'Bulto', 'Otro'];
 
@@ -78,7 +79,7 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
       return sig.length > 0 ? sig : [createLinea()];
     });
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     const articulosValidos = lineas.filter((l) => l.producto.trim() !== '');
     if (!session.nombreCompleto) {
       setMensajeGuardado('error:No se pudo identificar el usuario de sesión. Vuelve a iniciar sesión.');
@@ -89,39 +90,42 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
       return;
     }
 
-    const folio = generarFolio();
-    const nueva = {
-      id: genId(),
-      folio,
-      area: departamentoFijo,
-      solicitante: session.nombreCompleto,
-      tipo: formulario.tipo,
-      observaciones: formulario.observaciones.trim(),
-      fecha: new Date().toISOString(),
-      estado: 'PENDIENTE',
+    const payload = {
+      area:             departamentoFijo,
+      solicitante:      session.nombreCompleto,
+      responsableArea:  session.nombreCompleto,
+      tipo:             formulario.tipo.toUpperCase(),
+      estado:           'PENDIENTE',
+      tamanio:          'INDEFINIDO',
+      justificacion:    formulario.observaciones.trim(),
       articulos: articulosValidos.map((l) => ({
-        id: genId(),
-        producto: l.producto.trim(),
-        cantidad: Number(l.cantidad) || 1,
-        unidad: l.unidad,
-        descripcion: l.descripcion?.trim() || '',
-        precioUnitario: Number(l.precioUnitario) || 0,
-        estadoAlmacen: 'pendiente',
-        cantidadSurtida: null,
+        articuloRequisitado:  l.producto.trim(),
+        unidad:               l.unidad,
+        articulosSolicitados: Number(l.cantidad) || 1,
+        articulosEntregados:  0,
+        precioUnitario:       Number(l.precioUnitario) || 0,
       })),
-      totales: { subtotal: totales.subtotal, iva: totales.iva, total: totales.total },
-      fechaRevision: null,
-      notasAlmacen: '',
     };
 
     try {
-      const previas = JSON.parse(localStorage.getItem(BANDEJA_KEY) || '[]');
-      localStorage.setItem(BANDEJA_KEY, JSON.stringify([nueva, ...previas]));
+      setMensajeGuardado('');
+      const res = await fetch(`${API_BASE}/requisiciones`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const texto = await res.text();
+        setMensajeGuardado(`error:${texto || 'No se pudo guardar la requisición.'}`);
+        return;
+      }
+      const data = await res.json();
+      const folio = `REQ-${String(data.id).slice(0, 8).toUpperCase()}`;
       setMensajeGuardado(`ok:${folio}`);
       setLineas([createLinea()]);
       setFormulario((prev) => ({ ...prev, observaciones: '', tipo: 'Ordinaria' }));
-    } catch (err) {
-      setMensajeGuardado(`error:No se pudo guardar: ${err.message}`);
+    } catch {
+      setMensajeGuardado('error:No se pudo conectar con el servidor. Verifica tu conexión.');
     }
   };
 

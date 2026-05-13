@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, Activity, Users, ClipboardList, FileBarChart, ChevronRight, ChevronLeft, HeartPulse, Apple, Scale, AlertTriangle, ArrowLeft, History } from 'lucide-react';
+import { Save, Activity, Users, ClipboardList, FileBarChart, ChevronRight, ChevronLeft, HeartPulse, Apple, Scale, AlertTriangle, ArrowLeft, History, ShoppingCart } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
   { label: 'Inicio Nutrición',      icon: Activity,       key: 'inicio',      path: '/nutriologo/inicio' },
   { label: 'Pacientes Activos',     icon: Users,          key: 'pacientes',   path: '/nutriologo/pacientes' },
   { label: 'Expedientes Nutrición', icon: ClipboardList,  key: 'expedientes', path: '/nutriologo/expedientes' },
+  { label: 'Requisiciones',         icon: ShoppingCart,   key: 'requisiciones', path: '/nutriologo/requisiciones' },
   { label: 'Reportes',              icon: FileBarChart,   key: 'reportes',    path: '/nutriologo/reportes' },
 ];
 

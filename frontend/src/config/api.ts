@@ -15,3 +15,23 @@ export async function fetchJson(path, opts = {}) {
 	}
 	return res.json();
 }
+
+export function getXRoleHeader() {
+	try {
+		const user = JSON.parse(localStorage.getItem('marakame_user') || '{}');
+		const rol = (user.rol || '').toString().trim();
+		const puesto = (user.puesto || '').toString().trim();
+		const isJefe = /JEFE|JEFA/i.test(puesto);
+		if (isJefe && /MÉDICO|MEDICO/i.test(rol)) return 'jefe-medico';
+		if (isJefe && /CLINICO|CLÍNICO/i.test(rol)) return 'jefe-clinico';
+		if (isJefe && /ADMISIONES/i.test(rol)) return 'jefe-admisiones';
+		if (/ADMINISTRACION|ADMINISTRACIÓN/i.test(rol) || /ADMINISTRACION/i.test(puesto)) return 'administracion';
+		if (/DIRECCION|DIRECTORA GENERAL|DIRECTOR GENERAL/i.test(puesto) || /DIRECCION-GENERAL|DIRECCION GENERAL/i.test(rol)) return 'direccion-general';
+		if (/MÉDICO|MEDICO/i.test(rol)) return 'medico';
+		if (/CLINICO|CLÍNICO/i.test(rol)) return 'clinico';
+		if (/ADMISIONES/i.test(rol)) return 'admisiones';
+		return '';
+	} catch {
+		return '';
+	}
+}
