@@ -295,7 +295,8 @@ public class RequisicionService {
                         (req.getEstado() == Estado.EN_REVISION && req.getTipo() == TipoCompra.ORDINARIA) ||
                         (req.getEstado() == Estado.PRE_AUTORIZADA && req.getTipo() == TipoCompra.EXTRAORDINARIA)
                 )) ||
-                (rol.equals("direccion-general") && Boolean.TRUE.equals(req.getFirmaAdministradora()));
+                (rol.equals("direccion-general") && Boolean.TRUE.equals(req.getFirmaAdministradora())) ||
+                (rol.equals("jefe-admisiones") && req.getEstado() == Estado.PENDIENTE);
         if (!puedeRechazar)
             throw new IllegalStateException("estado-invalido");
         req.setObservacionesRechazo(observaciones);

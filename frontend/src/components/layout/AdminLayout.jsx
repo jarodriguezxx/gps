@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE } from '../../config/api';
 import {
-  Activity, BrainCircuit, CalendarDays, ClipboardList, FileBarChart, Folder,
+  Activity, BadgeCheck, BrainCircuit, CalendarDays, ClipboardList, FileBarChart, Folder,
   Inbox, LayoutDashboard, MessageSquare, PhoneCall, ShoppingCart,
   Stethoscope, UserPlus, Users, Users2,
 } from 'lucide-react';
@@ -64,18 +64,20 @@ export const AdminSidebar = ({ navItems, activeKey }) => {
 };
 
 const admisionesNavItems = [
-  { label: 'Dashboard de Inicio',   icon: LayoutDashboard, key: 'dashboard',    path: '/admisiones' },
-  { label: 'Bandeja Operativa',     icon: Inbox,           key: 'bandeja',      path: '/admisiones/bandeja-operativa' },
-  { label: 'Expediente',            icon: Folder,          key: 'expediente',   path: '/admisiones/expediente' },
-  { label: 'Requisiciones',         icon: ClipboardList,   key: 'requisiciones',path: '/admisiones/requisiciones' },
-  { label: 'Agenda de Citas',       icon: CalendarDays,    key: 'agenda',       path: '/admisiones/agenda-citas' },
-  { label: 'Seguimiento Telefónico',icon: PhoneCall,       key: 'seguimiento',  path: '/admisiones/seguimiento-telefonico' },
+  { label: 'Dashboard de Inicio',    icon: LayoutDashboard, key: 'dashboard',           path: '/admisiones' },
+  { label: 'Bandeja Operativa',      icon: Inbox,           key: 'bandeja',             path: '/admisiones/bandeja-operativa' },
+  { label: 'Expediente',             icon: Folder,          key: 'expediente',          path: '/admisiones/expediente' },
+  { label: 'Requisiciones',          icon: ClipboardList,   key: 'requisiciones',       path: '/admisiones/requisiciones' },
+  { label: 'Validar Requisiciones',  icon: BadgeCheck,      key: 'validar-requisiciones',path: '/admisiones/validar-requisiciones',
+    soloParaPuesto: ['JEFE DE ADMISIONES', 'ENCARGADO DE ADMISIONES'] },
+  { label: 'Agenda de Citas',        icon: CalendarDays,    key: 'agenda',              path: '/admisiones/agenda-citas' },
+  { label: 'Seguimiento Telefónico', icon: PhoneCall,       key: 'seguimiento',         path: '/admisiones/seguimiento-telefonico' },
   // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
 ];
 
 // Ítems del sidebar que cada puesto NO puede ver
 const ADMISIONES_ITEMS_OCULTOS_POR_PUESTO = {
-  'RECEPCIÓN': ['requisiciones'],
+  'RECEPCIÓN': ['requisiciones', 'validar-requisiciones'],
 };
 
 const getUsuarioSesion = () => {
@@ -103,7 +105,11 @@ export const AdmisionesSidebar = () => {
 
   const puesto = getUsuarioSesion().puesto || '';
   const itemsOcultos = ADMISIONES_ITEMS_OCULTOS_POR_PUESTO[puesto] ?? [];
-  const itemsVisibles = admisionesNavItems.filter(item => !itemsOcultos.includes(item.key));
+  const itemsVisibles = admisionesNavItems.filter(item => {
+    if (itemsOcultos.includes(item.key)) return false;
+    if (item.soloParaPuesto && !item.soloParaPuesto.includes(puesto)) return false;
+    return true;
+  });
 
   const porcentaje = activos !== null ? Math.min((activos / LIMITE_PACIENTES) * 100, 100) : 0;
   const restantes  = activos !== null ? LIMITE_PACIENTES - activos : null;

@@ -15,6 +15,7 @@ import DirectorioAdmisiones from './views/admisiones/DirectorioAdmisiones';
 import EstudioSocioeconomico from './views/admisiones/EstudioSocioeconomico';
 import ValoracionDiagnostica from './views/admisiones/ValoracionDiagnostica';
 import RequisicionesAdmisiones from './views/admisiones/RequisicionesAdmisiones';
+import ValidarRequisicionesAdmisiones from './views/admisiones/ValidarRequisicionesAdmisiones';
 import RequisicionesMedico     from './views/medico/RequisicionesMedico';
 import RequisicionesClinico    from './views/clinico/RequisicionesClinico';
 
@@ -201,6 +202,7 @@ function App() {
         <Route path="/admisiones/expediente"                   element={<PrivateRoute><DirectorioAdmisiones /></PrivateRoute>} />
         <Route path="/admisiones/expediente-digital/:id"       element={<PrivateRoute><ExpedienteAdmisiones /></PrivateRoute>} />
         <Route path="/admisiones/requisiciones"                element={<PrivateRoute><PuestoRoute puestosExcluidos={['RECEPCIÓN']} fallback="/admisiones"><RequisicionesAdmisiones /></PuestoRoute></PrivateRoute>} />
+        <Route path="/admisiones/validar-requisiciones"        element={<PrivateRoute><ValidarRequisicionesAdmisiones /></PrivateRoute>} />
 <Route path="/admisiones/estudio-socioeconomico"       element={<PrivateRoute><EstudioSocioeconomico /></PrivateRoute>} />
         <Route path="/admisiones/valoracion-diagnostica"       element={<PrivateRoute><ValoracionDiagnostica /></PrivateRoute>} />
         <Route path="/admisiones/bandeja"                      element={<Navigate to="/admisiones/bandeja-operativa" replace />} />

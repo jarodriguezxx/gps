@@ -16,7 +16,7 @@ import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/documentos")
+@RequestMapping("/api/documentos/clinico")
 @CrossOrigin(origins = "*")
 public class DocumentoClinicoController {
 

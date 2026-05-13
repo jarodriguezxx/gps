@@ -290,12 +290,32 @@ public class RequisicionController {
         }
     }
 
+    @PatchMapping("/{id}/validar-admisiones")
+    public ResponseEntity<?> validarJefeAdmisiones(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Rol", required = false) String rol) {
+        if (!"jefe-admisiones".equals(rol)) {
+            return ResponseEntity.status(403).body("acceso-denegado");
+        }
+        try {
+            Requisicion req = service.obtenerPorId(id).orElseThrow(NoSuchElementException::new);
+            if (req.getEstado() != Estado.PENDIENTE) {
+                return ResponseEntity.badRequest().body("solo-requisiciones-pendientes");
+            }
+            return ResponseEntity.ok(service.actualizarEstado(id, Estado.PRE_AUTORIZADA));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("error-inesperado: " + e.getMessage());
+        }
+    }
+
     @PatchMapping("/{id}/rechazar")
     public ResponseEntity<?> rechazar(
             @PathVariable UUID id,
             @RequestHeader(value = "X-Rol", required = false) String rol,
             @RequestBody Map<String, String> body) {
-        if (!"administracion".equals(rol) && !"direccion-general".equals(rol)) {
+        if (!"administracion".equals(rol) && !"direccion-general".equals(rol) && !"jefe-admisiones".equals(rol)) {
             return ResponseEntity.status(403).body("acceso-denegado");
         }
         try {
