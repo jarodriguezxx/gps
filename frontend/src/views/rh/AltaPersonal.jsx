@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, UserPlus, UserMinus, Tag, ShieldCheck, Eye, EyeOff, CheckCircle, KeyRound, RefreshCw } from 'lucide-react';
+import { Save, X, UserPlus, UserMinus, Tag, ShieldCheck, Eye, EyeOff, CheckCircle, KeyRound, RefreshCw, Wallet } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { label: 'Baja de Personal',    icon: UserMinus,   key: 'baja',       path: '/rh/baja-personal' },
   { label: 'Catálogo de Roles',   icon: Tag,         key: 'catalogo',   path: '/rh/catalogo-roles' },
   { label: 'Asignación de Roles', icon: ShieldCheck, key: 'asignacion', path: '/rh/asignacion-roles' },
+  { label: 'Nómina',              icon: Wallet,      key: 'nomina',     path: '/rh/nomina' },
 ];
 
 const PUESTOS_POR_DEPARTAMENTO = {
