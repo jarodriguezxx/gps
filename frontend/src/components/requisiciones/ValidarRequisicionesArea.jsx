@@ -52,8 +52,9 @@ export default function ValidarRequisicionesArea({
     try {
       const r = await fetch(`${API_BASE}/requisiciones`);
       const data = await r.json();
+      const areas = Array.isArray(areaFiltro) ? areaFiltro : [areaFiltro];
       const filtradas = Array.isArray(data)
-        ? data.filter(req => normalizar(req.area) === normalizar(areaFiltro))
+        ? data.filter(req => areas.some(a => normalizar(req.area) === normalizar(a)))
         : [];
       setRequisiciones(filtradas);
     } catch {

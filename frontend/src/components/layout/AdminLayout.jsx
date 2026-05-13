@@ -276,7 +276,40 @@ export const MedicoSidebar = () => {
   );
 };
 
-// ── Sidebar Clínico ───────────────────────────────────────────────
+// ── Sidebar Jefe Clínico (vistas de jefatura) ────────────────────
+const jefeClinicoNavItems = [
+  { label: 'Tablero de Control',     icon: LayoutDashboard, path: '/clinico/inicio' },
+  { label: 'Auditoría Clínica',      icon: BrainCircuit,    path: '/clinico/directorio' },
+  { label: 'Asignación Terapéutica', icon: Users2,          path: '/clinico/asignaciones' },
+  { label: 'Validación Terapéutica', icon: ClipboardList,   path: '/clinico/calendario' },
+  { label: 'Requisiciones',          icon: ShoppingCart,    path: '/clinico/requisiciones' },
+  { label: 'Validar Requisiciones',  icon: BadgeCheck,      path: '/clinico/validar-requisiciones' },
+];
+
+export const JefeClinicoSidebar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  return (
+    <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+      {jefeClinicoNavItems.map(({ label, icon, path }) => {
+        const active  = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon = icon;
+        return (
+          <button key={path} type="button" onClick={() => navigate(path)}
+            className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5
+              ${active
+                ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+                : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+            {React.createElement(NavIcon, { size: 15, className: 'shrink-0' })}
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </aside>
+  );
+};
+
+// ── Sidebar Clínico (staff general) ──────────────────────────────
 const clinicoNavItems = [
   { label: 'Inicio Jefatura',   icon: LayoutDashboard, path: '/clinico/inicio-jefe-clinico' },
   { label: 'Pacientes',         icon: Users,           path: '/clinico/pacientes' },
@@ -318,20 +351,28 @@ export const ClinicoSidebar = () => {
 };
 
 // ── Sidebar Nutriólogo ────────────────────────────────────────────
+const JEFES_MEDICO = ['JEFA (E) DEP. MÉDICO', 'JEFE DEPARTAMENTO MÉDICO'];
+const JEFES_CLINICO = ['JEFA (E) DEP. CLÍNICO', 'JEFE DEPARTAMENTO CLÍNICO'];
+
 const nutriologoNavItems = [
   { label: 'Inicio',                 icon: LayoutDashboard, path: '/nutriologo/inicio' },
   { label: 'Pacientes',              icon: Users,           path: '/nutriologo/pacientes' },
   { label: 'Evaluación Nutricional', icon: FileBarChart,    path: '/nutriologo/expedientes' },
   { label: 'Requisiciones',          icon: ShoppingCart,    path: '/nutriologo/requisiciones' },
   { label: 'Reportes',               icon: Activity,        path: '/nutriologo/reportes' },
+  { label: 'Validar Requisiciones',  icon: BadgeCheck,      path: '/medico/validar-requisiciones', soloParaPuesto: JEFES_MEDICO },
 ];
 
 export const NutriologoSidebar = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
+  const puesto = getUsuarioSesion().puesto || '';
+  const itemsVisibles = nutriologoNavItems.filter(item =>
+    !item.soloParaPuesto || item.soloParaPuesto.includes(puesto)
+  );
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {nutriologoNavItems.map(({ label, icon, path }) => {
+      {itemsVisibles.map(({ label, icon, path }) => {
         const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
         const NavIcon  = icon;
         return (
@@ -351,20 +392,129 @@ export const NutriologoSidebar = () => {
 
 // ── Sidebar Enfermería ────────────────────────────────────────────
 const enfermeriasNavItems = [
-  { label: 'Inicio',          icon: LayoutDashboard, path: '/enfermeria' },
-  { label: 'Requisiciones',   icon: ShoppingCart,    path: '/enfermeria/requisiciones' },
+  { label: 'Inicio',                icon: LayoutDashboard, path: '/enfermeria' },
+  { label: 'Requisiciones',         icon: ShoppingCart,    path: '/enfermeria/requisiciones' },
+  { label: 'Validar Requisiciones', icon: BadgeCheck,      path: '/medico/validar-requisiciones', soloParaPuesto: JEFES_MEDICO },
 ];
 
 export const EnfermeriaSidebar = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
+  const puesto = getUsuarioSesion().puesto || '';
+  const itemsVisibles = enfermeriasNavItems.filter(item =>
+    !item.soloParaPuesto || item.soloParaPuesto.includes(puesto)
+  );
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {enfermeriasNavItems.map(({ label, icon, path }) => {
+      {itemsVisibles.map(({ label, icon, path }) => {
         const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
         const NavIcon  = icon;
         return (
           <button key={`${label}-${path}`} type="button" onClick={() => navigate(path)}
+            className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5
+              ${active
+                ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+                : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+            {React.createElement(NavIcon, { size: 15, className: 'shrink-0' })}
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </aside>
+  );
+};
+
+// ── Sidebar Consejería ────────────────────────────────────────────
+const consejeriaSidebarItems = [
+  { label: 'Mis Pacientes',         icon: Users,         path: '/consejeria/inicio' },
+  { label: 'Agendar Cita',          icon: CalendarDays,  path: '/consejeria/agendar' },
+  { label: 'Requisiciones',         icon: ShoppingCart,  path: '/consejeria/requisiciones' },
+  { label: 'Validar Requisiciones', icon: BadgeCheck,    path: '/clinico/validar-requisiciones', soloParaPuesto: JEFES_CLINICO },
+];
+
+export const ConsejeriaSidebar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const puesto = getUsuarioSesion().puesto || '';
+  const itemsVisibles = consejeriaSidebarItems.filter(item =>
+    !item.soloParaPuesto || item.soloParaPuesto.includes(puesto)
+  );
+  return (
+    <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+      {itemsVisibles.map(({ label, icon, path }) => {
+        const active  = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon = icon;
+        return (
+          <button key={path} type="button" onClick={() => navigate(path)}
+            className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5
+              ${active
+                ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+                : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+            {React.createElement(NavIcon, { size: 15, className: 'shrink-0' })}
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </aside>
+  );
+};
+
+// ── Sidebar Familia ───────────────────────────────────────────────
+const familiaSidebarItems = [
+  { label: 'Mis Pacientes',         icon: Users,         path: '/familia/inicio' },
+  { label: 'Agendar Cita',          icon: CalendarDays,  path: '/familia/agendar' },
+  { label: 'Requisiciones',         icon: ShoppingCart,  path: '/familia/requisiciones' },
+  { label: 'Validar Requisiciones', icon: BadgeCheck,    path: '/clinico/validar-requisiciones', soloParaPuesto: JEFES_CLINICO },
+];
+
+export const FamiliaSidebar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const puesto = getUsuarioSesion().puesto || '';
+  const itemsVisibles = familiaSidebarItems.filter(item =>
+    !item.soloParaPuesto || item.soloParaPuesto.includes(puesto)
+  );
+  return (
+    <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+      {itemsVisibles.map(({ label, icon, path }) => {
+        const active  = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon = icon;
+        return (
+          <button key={path} type="button" onClick={() => navigate(path)}
+            className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5
+              ${active
+                ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
+                : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'}`}>
+            {React.createElement(NavIcon, { size: 15, className: 'shrink-0' })}
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </aside>
+  );
+};
+
+// ── Sidebar Terapéutica ───────────────────────────────────────────
+const terapeutaSidebarItems = [
+  { label: 'Proponer Dinámica',     icon: LayoutDashboard, path: '/clinico/inicio-terapeuta' },
+  { label: 'Requisiciones',         icon: ShoppingCart,    path: '/clinico/requisiciones-terapeuta' },
+  { label: 'Validar Requisiciones', icon: BadgeCheck,      path: '/clinico/validar-requisiciones', soloParaPuesto: JEFES_CLINICO },
+];
+
+export const TerapeutaSidebar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const puesto = getUsuarioSesion().puesto || '';
+  const itemsVisibles = terapeutaSidebarItems.filter(item =>
+    !item.soloParaPuesto || item.soloParaPuesto.includes(puesto)
+  );
+  return (
+    <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
+      {itemsVisibles.map(({ label, icon, path }) => {
+        const active  = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon = icon;
+        return (
+          <button key={path} type="button" onClick={() => navigate(path)}
             className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5
               ${active
                 ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'

@@ -49,6 +49,9 @@ import CalendarioJefeClinico from './views/clinico/CalendarioJefeClinico';
 import InicioPsicologia from './views/clinico/InicioPsicologia';
 import ExpedientePsicologia from './views/clinico/ExpedientePsicologia';
 import RequisicionesPsicologia from './views/psicologia/RequisicionesPsicologia';
+import RequisicionesConsejeria from './views/clinico/RequisicionesConsejeria';
+import RequisicionesFamilia from './views/clinico/RequisicionesFamilia';
+import RequisicionesTerapeuta from './views/clinico/RequisicionesTerapeuta';
 import InicioTerapeuta from './views/clinico/InicioTerapeuta';
 import AuditoriaExpediente from './views/clinico/AuditoriaExpediente';
 import AsignacionesTerapeutas from './views/clinico/AsignacionesTerapeutas';
@@ -166,8 +169,8 @@ const AreaRoute = ({ children, area, fallback = '/admisiones' }) => {
   
   // También permitir si el puesto contiene una de las palabras clave del área
   const areaKeywords = {
-    'CLINICO': ['psicologia', 'psicologo', 'clinico', 'nutriolog', 'enfermeria', 'consejeria', 'familia'],
-    'MÉDICO': ['medico'],
+    'CLINICO': ['psicologia', 'psicologo', 'clinico', 'consejeria', 'consejera', 'consejero', 'familia', 'terapeuta', 'coterapeuta'],
+    'MÉDICO': ['medico', 'nutriolog', 'enfermer'],
     'ADMISIONES': ['admisiones', 'recepcion']
   };
   
@@ -258,7 +261,7 @@ function App() {
         <Route path="/nutriologo/expedientes"                  element={<PrivateRoute><ExpedientesNutricion /></PrivateRoute>} />
         <Route path="/nutriologo/reportes"                     element={<PrivateRoute><ReportesNutricion /></PrivateRoute>} />
         <Route path="/nutriologo/vista-expediente/:id"         element={<PrivateRoute><VistaExpedienteNutricion /></PrivateRoute>} />
-        <Route path="/nutriologo/requisiciones"                element={<PrivateRoute><AreaRoute area={'CLINICO'} fallback="/nutriologo/inicio"><RequisicionesNutriologo /></AreaRoute></PrivateRoute>} />
+        <Route path="/nutriologo/requisiciones"                element={<PrivateRoute><AreaRoute area={'MÉDICO'} fallback="/nutriologo/inicio"><RequisicionesNutriologo /></AreaRoute></PrivateRoute>} />
 
         <Route path="/clinico/inicio"                          element={<PrivateRoute><InicioJefeClinico /></PrivateRoute>} />
         <Route path="/clinico/inicio-terapeuta"                element={<PrivateRoute><InicioTerapeuta /></PrivateRoute>} />
@@ -275,9 +278,12 @@ function App() {
         <Route path="/consejeria/inicio"                       element={<PrivateRoute><InicioConsejeria /></PrivateRoute>} />
         <Route path="/consejeria/expediente/:id"               element={<PrivateRoute><ExpedienteConsejeria /></PrivateRoute>} />
         <Route path="/consejeria/agendar"                      element={<PrivateRoute><AgendaConsejeria /></PrivateRoute>} />
+        <Route path="/consejeria/requisiciones"                element={<PrivateRoute><AreaRoute area={'CLINICO'} fallback="/consejeria/inicio"><RequisicionesConsejeria /></AreaRoute></PrivateRoute>} />
         <Route path="/familia/inicio"                          element={<PrivateRoute><InicioFamilia /></PrivateRoute>} />
         <Route path="/familia/expediente/:id"                  element={<PrivateRoute><ExpedienteFamilia /></PrivateRoute>} />
         <Route path="/familia/agendar"                         element={<PrivateRoute><AgendaFamilia /></PrivateRoute>} />
+        <Route path="/familia/requisiciones"                   element={<PrivateRoute><AreaRoute area={'CLINICO'} fallback="/familia/inicio"><RequisicionesFamilia /></AreaRoute></PrivateRoute>} />
+        <Route path="/clinico/requisiciones-terapeuta"         element={<PrivateRoute><AreaRoute area={'CLINICO'} fallback="/clinico/inicio-terapeuta"><RequisicionesTerapeuta /></AreaRoute></PrivateRoute>} />
 
         {/* Recursos Humanos */}
         <Route path="/rh/alta-personal"                        element={<PrivateRoute><AltaPersonal /></PrivateRoute>} />
@@ -311,7 +317,7 @@ function App() {
 
         {/* Enfermería */}
         <Route path="/enfermeria" element={<PrivateRoute><EnfermeriaDashboard /></PrivateRoute>} />
-        <Route path="/enfermeria/requisiciones"                element={<PrivateRoute><AreaRoute area={'CLINICO'} fallback="/enfermeria"><RequisicionesEnfermeria /></AreaRoute></PrivateRoute>} />
+        <Route path="/enfermeria/requisiciones"                element={<PrivateRoute><AreaRoute area={'MÉDICO'} fallback="/enfermeria"><RequisicionesEnfermeria /></AreaRoute></PrivateRoute>} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

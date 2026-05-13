@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Stethoscope, Users, ClipboardList, Activity, FileBarChart, UserPlus,
   AlertCircle, Clock, FileText, CheckCircle2, ChevronRight,
-  ActivitySquare, ShieldAlert, BarChart3, ShoppingCart, Pill
+  ActivitySquare, ShieldAlert, BarChart3, ShoppingCart, Pill, BadgeCheck
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -12,14 +12,19 @@ const navItems = [
   { label: 'Prospectos',              icon: UserPlus,      key: 'prospectos',    path: '/medico/prospectos' },
   { label: 'Pacientes Activos',       icon: Users,         key: 'pacientes',     path: '/medico/pacientes' },
   { label: 'Expedientes Clínicos',    icon: ClipboardList, key: 'expedientes',   path: '/medico/expedientes' },
-  { label: 'Requisiciones',           icon: ShoppingCart,  key: 'requisiciones', path: '/medico/requisiciones' },
-  { label: 'Farmacia / Enfermería',   icon: Pill,          key: 'farmacia',      path: '/medico/farmacia' },
-  { label: 'Personal Médico',         icon: Stethoscope,   key: 'personal',      path: '/medico/personal' },
-  { label: 'Reportes y Estadísticas', icon: FileBarChart,  key: 'reportes',      path: '/medico/reportes' },
+  { label: 'Requisiciones',           icon: ShoppingCart,  key: 'requisiciones',  path: '/medico/requisiciones' },
+  { label: 'Validar Requisiciones',   icon: BadgeCheck,    key: 'validar-req',    path: '/medico/validar-requisiciones', soloParaPuesto: ['JEFA (E) DEP. MÉDICO', 'JEFE DEPARTAMENTO MÉDICO'] },
+  { label: 'Farmacia / Enfermería',   icon: Pill,          key: 'farmacia',       path: '/medico/farmacia' },
+  { label: 'Personal Médico',         icon: Stethoscope,   key: 'personal',       path: '/medico/personal' },
+  { label: 'Reportes y Estadísticas', icon: FileBarChart,  key: 'reportes',       path: '/medico/reportes' },
 ];
+
+const JEFES_MEDICO = ['JEFA (E) DEP. MÉDICO', 'JEFE DEPARTAMENTO MÉDICO'];
 
 const InicioJefeMedico = () => {
   const navigate = useNavigate();
+  const puesto = (() => { try { return JSON.parse(localStorage.getItem('marakame_user') || '{}').puesto || ''; } catch { return ''; } })();
+  const navItemsFiltrados = navItems.filter(item => !item.soloParaPuesto || item.soloParaPuesto.includes(puesto));
   const [activeNav, setActiveNav] = useState('inicio');
   const [loading, setLoading] = useState(true);
   
@@ -161,7 +166,7 @@ const InicioJefeMedico = () => {
           <div className="grid gap-4 px-4 py-5 md:grid-cols-[220px_1fr] md:px-6">
             
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-              {navItems.map(({ label, icon, key, path }) => (
+              {navItemsFiltrados.map(({ label, icon, key, path }) => (
                 <button key={key} onClick={() => handleNavClick({ key, path })}
                   className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition flex items-center gap-2.5 text-left ${
                     activeNav === key ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]' : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'

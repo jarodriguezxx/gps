@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Users, CalendarPlus, Send, History, CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Users, CalendarPlus, Send, History, CheckCircle2, XCircle, Clock, AlertCircle, ShoppingCart, BadgeCheck } from 'lucide-react';
+
+const getUsuarioPuesto = () => { try { return JSON.parse(localStorage.getItem('marakame_user') || '{}').puesto || ''; } catch { return ''; } };
+const JEFES_CLINICO = ['JEFA (E) DEP. CLÍNICO', 'JEFE DEPARTAMENTO CLÍNICO'];
 import marakameLogo from '../../assets/marakame.jpeg';
 
-const navItems = [
-  { label: 'Mis Pacientes', icon: Users,        path: '/consejeria/inicio' },
-  { label: 'Agendar Cita',  icon: CalendarPlus, path: '/consejeria/agendar' },
+const ALL_NAV_ITEMS = [
+  { label: 'Mis Pacientes',         icon: Users,        path: '/consejeria/inicio' },
+  { label: 'Agendar Cita',          icon: CalendarPlus, path: '/consejeria/agendar' },
+  { label: 'Requisiciones',         icon: ShoppingCart, path: '/consejeria/requisiciones' },
+  { label: 'Validar Requisiciones', icon: BadgeCheck,   path: '/clinico/validar-requisiciones', soloParaPuesto: JEFES_CLINICO },
 ];
 
 const AgendaConsejeria = () => {
+  const navItems = ALL_NAV_ITEMS.filter(item => !item.soloParaPuesto || item.soloParaPuesto.includes(getUsuarioPuesto()));
   const navigate = useNavigate();
   const location = useLocation();
   const hoy = new Date().toISOString().split('T')[0];

@@ -299,8 +299,8 @@ public class RequisicionService {
         Requisicion req = repository.findById(id).orElseThrow(NoSuchElementException::new);
         boolean puedeRechazar =
                 ("jefe-admisiones".equals(rol) && areaCoincide(req.getArea(), "Admisiones")) ||
-                ("jefe-medico".equals(rol) && areaCoincide(req.getArea(), "Médico")) ||
-                ("jefe-clinico".equals(rol) && areaCoincide(req.getArea(), "Clínico"));
+                ("jefe-medico".equals(rol) && esAreaMedica(req.getArea())) ||
+                ("jefe-clinico".equals(rol) && esAreaClinica(req.getArea()));
         if (!puedeRechazar)
             throw new IllegalStateException("estado-invalido");
         req.setObservacionesRechazo(observaciones);
@@ -311,6 +311,17 @@ public class RequisicionService {
 
     private boolean areaCoincide(String areaReal, String areaEsperada) {
         return normalizar(areaReal).equals(normalizar(areaEsperada));
+    }
+
+    private boolean esAreaMedica(String area) {
+        String a = normalizar(area);
+        return a.equals("medico") || a.equals("nutriologia") || a.equals("enfermeria");
+    }
+
+    private boolean esAreaClinica(String area) {
+        String a = normalizar(area);
+        return a.equals("clinico") || a.equals("psicologia") || a.equals("consejeria")
+                || a.equals("familia") || a.equals("terapeutica");
     }
 
     private String normalizar(String texto) {

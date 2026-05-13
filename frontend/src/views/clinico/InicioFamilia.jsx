@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Users, ChevronRight, CalendarPlus, Search } from 'lucide-react';
+import { Users, ChevronRight, CalendarPlus, Search, ShoppingCart, BadgeCheck } from 'lucide-react';
+
+const getUsuarioPuesto = () => { try { return JSON.parse(localStorage.getItem('marakame_user') || '{}').puesto || ''; } catch { return ''; } };
+const JEFES_CLINICO = ['JEFA (E) DEP. CLÍNICO', 'JEFE DEPARTAMENTO CLÍNICO'];
 import marakameLogo from '../../assets/marakame.jpeg';
 
-const navItems = [{ label: 'Mis Pacientes', icon: Users, path: '/familia/inicio' }, { label: 'Agendar Cita', icon: CalendarPlus, path: '/familia/agendar' }];
+const ALL_NAV_ITEMS = [
+  { label: 'Mis Pacientes',         icon: Users,        path: '/familia/inicio' },
+  { label: 'Agendar Cita',          icon: CalendarPlus, path: '/familia/agendar' },
+  { label: 'Requisiciones',         icon: ShoppingCart, path: '/familia/requisiciones' },
+  { label: 'Validar Requisiciones', icon: BadgeCheck,   path: '/clinico/validar-requisiciones', soloParaPuesto: JEFES_CLINICO },
+];
 const PASOS_REQUERIDOS = [ "Genograma", "Entrevista inicial familiar", "Diagnóstico familiar", "Plan de intervención", "Sesión familiar", "Notas de evolución", "Cierre y recomendaciones" ];
 
 const InicioFamilia = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const navItems = ALL_NAV_ITEMS.filter(item => !item.soloParaPuesto || item.soloParaPuesto.includes(getUsuarioPuesto()));
   const [pacientes, setPacientes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState('TODOS'); 

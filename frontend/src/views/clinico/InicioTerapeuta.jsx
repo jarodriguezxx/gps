@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Send, LayoutDashboard, CheckCircle, Calendar, Clock, AlignLeft, Sparkles, Info, Timer } from 'lucide-react';
+import { Send, LayoutDashboard, CheckCircle, Calendar, Clock, AlignLeft, Sparkles, Info, Timer, ShoppingCart, BadgeCheck } from 'lucide-react';
+
+const JEFES_CLINICO = ['JEFA (E) DEP. CLÍNICO', 'JEFE DEPARTAMENTO CLÍNICO'];
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const FORM_VACIO = { titulo: '', fecha: '', hora: '', duracion: '', descripcion: '' };
@@ -12,6 +14,7 @@ const inputCls = "w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-sla
 
 const InicioTerapeuta = () => {
   const usuario = (() => { try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; } })();
+  const esJefeClinico = JEFES_CLINICO.includes(usuario.puesto || '');
   const nombreTerapeuta = usuario.nombre || usuario.nombreCompleto || usuario.puesto || 'Terapeuta Operativo';
   const iniciales = nombreTerapeuta.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
@@ -69,10 +72,24 @@ const InicioTerapeuta = () => {
 
             {/* Sidebar */}
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-              <button className="w-full rounded-xl px-3 py-3 text-sm font-semibold bg-[#7E1D3B] text-white shadow-md flex items-center gap-2.5 text-left">
+              <button className="w-full rounded-xl px-3 py-3 text-sm font-semibold bg-[#7E1D3B] text-white shadow-md flex items-center gap-2.5 text-left mb-2">
                 <LayoutDashboard size={16} className="shrink-0" />
                 <span>Proponer Dinámica</span>
               </button>
+              <button
+                onClick={() => window.location.href = '/clinico/requisiciones-terapeuta'}
+                className="w-full rounded-xl px-3 py-3 text-sm font-semibold border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12 flex items-center gap-2.5 text-left transition mb-2">
+                <ShoppingCart size={16} className="shrink-0" />
+                <span>Requisiciones</span>
+              </button>
+              {esJefeClinico && (
+                <button
+                  onClick={() => window.location.href = '/clinico/validar-requisiciones'}
+                  className="w-full rounded-xl px-3 py-3 text-sm font-semibold border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12 flex items-center gap-2.5 text-left transition">
+                  <BadgeCheck size={16} className="shrink-0" />
+                  <span>Validar Requisiciones</span>
+                </button>
+              )}
             </aside>
 
             {/* Main */}

@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Users, HeartHandshake, ChevronRight, CalendarPlus, Search } from 'lucide-react';
+import { Users, HeartHandshake, ChevronRight, CalendarPlus, Search, ShoppingCart, BadgeCheck } from 'lucide-react';
+
+const getUsuarioPuesto = () => { try { return JSON.parse(localStorage.getItem('marakame_user') || '{}').puesto || ''; } catch { return ''; } };
+const JEFES_CLINICO = ['JEFA (E) DEP. CLÍNICO', 'JEFE DEPARTAMENTO CLÍNICO'];
 import marakameLogo from '../../assets/marakame.jpeg';
 
-const navItems = [
-  { label: 'Mis Pacientes', icon: Users,        path: '/consejeria/inicio' },
-  { label: 'Agendar Cita',  icon: CalendarPlus, path: '/consejeria/agendar' },
+const ALL_NAV_ITEMS = [
+  { label: 'Mis Pacientes',         icon: Users,        path: '/consejeria/inicio' },
+  { label: 'Agendar Cita',          icon: CalendarPlus, path: '/consejeria/agendar' },
+  { label: 'Requisiciones',         icon: ShoppingCart, path: '/consejeria/requisiciones' },
+  { label: 'Validar Requisiciones', icon: BadgeCheck,   path: '/clinico/validar-requisiciones', soloParaPuesto: JEFES_CLINICO },
 ];
 
 const PASOS_REQUERIDOS = [ "Historia de vida", "Autodiagnóstico", "Plan de consejería", "Prevención de recaídas", "Plan de vida", "Notas de evolución", "Entrevista final" ];
@@ -14,6 +19,7 @@ const TOTAL_PASOS = PASOS_REQUERIDOS.length;
 const InicioConsejeria = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const navItems = ALL_NAV_ITEMS.filter(item => !item.soloParaPuesto || item.soloParaPuesto.includes(getUsuarioPuesto()));
   const [pacientes, setPacientes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState('TODOS'); 
