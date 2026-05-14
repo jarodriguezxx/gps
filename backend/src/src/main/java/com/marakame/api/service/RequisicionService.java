@@ -1,5 +1,6 @@
 package com.marakame.api.service;
 
+import com.marakame.api.entity.Articulo;
 import com.marakame.api.entity.AdjuntoRequisicion;
 import com.marakame.api.entity.Estado;
 import com.marakame.api.entity.Requisicion;
@@ -39,9 +40,15 @@ public class RequisicionService {
         return repository.findAll();
     }
 
+    @Transactional
     public Requisicion crear(Requisicion requisicion) {
-    requisicion.setFecha(OffsetDateTime.now());
-    return repository.save(requisicion);
+        requisicion.setFecha(OffsetDateTime.now());
+        if (requisicion.getArticulos() != null) {
+            for (Articulo art : requisicion.getArticulos()) {
+                art.setRequisicion(requisicion);
+            }
+        }
+        return repository.save(requisicion);
     }
 
     public Optional<Requisicion> obtenerPorId(UUID id) {
@@ -296,7 +303,7 @@ public class RequisicionService {
                         (req.getEstado() == Estado.PRE_AUTORIZADA && req.getTipo() == TipoCompra.EXTRAORDINARIA)
                 )) ||
                 (rol.equals("direccion-general") && Boolean.TRUE.equals(req.getFirmaAdministradora())) ||
-                (rol.equals("jefe-admisiones") && req.getEstado() == Estado.PENDIENTE);
+                ((rol.equals("jefe-admisiones") || rol.equals("jefe-clinico") || rol.equals("jefe-medico")) && req.getEstado() == Estado.PENDIENTE);
         if (!puedeRechazar)
             throw new IllegalStateException("estado-invalido");
         req.setObservacionesRechazo(observaciones);

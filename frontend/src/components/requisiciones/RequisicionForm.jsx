@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Plus, Printer, Trash2, Save, ArrowLeft } from 'lucide-react';
 import { AdminHeader } from '../layout/AdminLayout';
+import { API_BASE } from '../../config/api';
 
 const UNIDADES = ['Pza', 'Caja', 'Paquete', 'Litro', 'Kg', 'Servicio', 'Botella', 'Bulto', 'Otro'];
 
@@ -10,15 +11,7 @@ const TIPOS = [
   { value: 'Extraordinaria', label: 'Extraordinaria',  desc: 'Compra especial (literatura, medallas, reactivos…)' },
 ];
 
-const BANDEJA_KEY = 'mrkm_solicitudes_almacen_v1';
 
-const generarFolio = () => {
-  const n = parseInt(localStorage.getItem('mrkm_sol_count') || '0') + 1;
-  localStorage.setItem('mrkm_sol_count', String(n));
-  return `SOL-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`;
-};
-
-const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const pad   = (v) => String(v).padStart(2, '0');
 const toInputDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const moneda = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
@@ -48,9 +41,11 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
 
   const [lineas, setLineas] = useState([createLinea()]);
   const [mensajeGuardado, setMensajeGuardado] = useState('');
+  const [guardando, setGuardando] = useState(false);
   const [formulario, setFormulario] = useState({
     fecha: fechaSistema,
     tipo: 'Ordinaria',
+    tamanio: 'INDEFINIDO',
     observaciones: '',
   });
 
@@ -78,7 +73,7 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
       return sig.length > 0 ? sig : [createLinea()];
     });
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     const articulosValidos = lineas.filter((l) => l.producto.trim() !== '');
     if (!session.nombreCompleto) {
       setMensajeGuardado('error:No se pudo identificar el usuario de sesión. Vuelve a iniciar sesión.');
@@ -89,39 +84,41 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
       return;
     }
 
-    const folio = generarFolio();
-    const nueva = {
-      id: genId(),
-      folio,
-      area: departamentoFijo,
-      solicitante: session.nombreCompleto,
-      tipo: formulario.tipo,
-      observaciones: formulario.observaciones.trim(),
-      fecha: new Date().toISOString(),
-      estado: 'PENDIENTE',
-      articulos: articulosValidos.map((l) => ({
-        id: genId(),
-        producto: l.producto.trim(),
-        cantidad: Number(l.cantidad) || 1,
-        unidad: l.unidad,
-        descripcion: l.descripcion?.trim() || '',
-        precioUnitario: Number(l.precioUnitario) || 0,
-        estadoAlmacen: 'pendiente',
-        cantidadSurtida: null,
-      })),
-      totales: { subtotal: totales.subtotal, iva: totales.iva, total: totales.total },
-      fechaRevision: null,
-      notasAlmacen: '',
-    };
-
+    setGuardando(true);
     try {
-      const previas = JSON.parse(localStorage.getItem(BANDEJA_KEY) || '[]');
-      localStorage.setItem(BANDEJA_KEY, JSON.stringify([nueva, ...previas]));
-      setMensajeGuardado(`ok:${folio}`);
+      const payload = {
+        area: departamentoFijo,
+        solicitante: session.nombreCompleto,
+        tipo: formulario.tipo.toUpperCase(),
+        tamanio: formulario.tamanio,
+        estado: 'PENDIENTE',
+        justificacion: formulario.observaciones.trim() || null,
+        articulos: articulosValidos.map((l) => ({
+          articuloRequisitado: l.producto.trim(),
+          unidad: l.unidad,
+          articulosSolicitados: Number(l.cantidad) || 1,
+        })),
+      };
+
+      const res = await fetch(`${API_BASE}/requisiciones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const msg = await res.text().catch(() => 'Error del servidor.');
+        setMensajeGuardado(`error:${msg}`);
+        return;
+      }
+
+      setMensajeGuardado('ok:enviada');
       setLineas([createLinea()]);
-      setFormulario((prev) => ({ ...prev, observaciones: '', tipo: 'Ordinaria' }));
+      setFormulario((prev) => ({ ...prev, observaciones: '', tipo: 'Ordinaria', tamanio: 'INDEFINIDO' }));
     } catch (err) {
       setMensajeGuardado(`error:No se pudo guardar: ${err.message}`);
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -176,9 +173,9 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
                       className="inline-flex items-center gap-2 rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-2.5 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
                       <Printer size={16} /> Imprimir
                     </button>
-                    <button type="button" onClick={handleGuardar}
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#63162e]">
-                      <Save size={16} /> Enviar a Almacén
+                    <button type="button" onClick={handleGuardar} disabled={guardando}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#63162e] disabled:opacity-60">
+                      <Save size={16} /> {guardando ? 'Enviando...' : 'Enviar'}
                     </button>
                   </div>
                 </div>
@@ -186,7 +183,7 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
                 {/* Alertas */}
                 {mensajeGuardado.startsWith('ok:') && (
                   <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 print:hidden">
-                    Solicitud <span className="font-black">{mensajeGuardado.slice(3)}</span> enviada a la Bandeja de Almacén correctamente.
+                    Requisición enviada correctamente.
                   </div>
                 )}
                 {mensajeGuardado.startsWith('error:') && (
@@ -247,6 +244,19 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 ml-0.5 block text-xs font-bold uppercase tracking-[0.15em] text-slate-500">
+                      Tamaño de Compra
+                    </label>
+                    <select name="tamanio" value={formulario.tamanio} onChange={actualizarFormulario}
+                      className={inputEdit}>
+                      <option value="INDEFINIDO">Indefinido</option>
+                      <option value="MENOR">Menor</option>
+                      <option value="MAYOR">Mayor</option>
+                    </select>
+                    <p className="mt-1 ml-0.5 text-[10px] text-slate-400">Clasificación de la compra según monto</p>
                   </div>
                 </div>
               </section>
@@ -377,9 +387,9 @@ const RequisicionForm = ({ sidebar, moduleName = 'Módulo', departamentoFijo = '
                     className="inline-flex items-center gap-2 rounded-xl border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 px-4 py-2.5 text-sm font-semibold text-[#7E1D3B] transition hover:bg-[#7E1D3B]/12">
                     <Printer size={16} /> Imprimir
                   </button>
-                  <button type="button" onClick={handleGuardar}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#63162e]">
-                    <Save size={16} /> Enviar a Almacén
+                  <button type="button" onClick={handleGuardar} disabled={guardando}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#7E1D3B] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#63162e] disabled:opacity-60">
+                    <Save size={16} /> {guardando ? 'Enviando...' : 'Enviar'}
                   </button>
                 </div>
               </div>

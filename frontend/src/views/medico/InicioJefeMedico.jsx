@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Stethoscope, Users, ClipboardList, Activity, FileBarChart, UserPlus,
   AlertCircle, Clock, FileText, CheckCircle2, ChevronRight,
-  ActivitySquare, ShieldAlert, BarChart3, ShoppingCart, Pill
+  ActivitySquare, ShieldAlert, BarChart3, ShoppingCart, Pill, BadgeCheck
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -13,6 +13,7 @@ const navItems = [
   { label: 'Pacientes Activos',       icon: Users,         key: 'pacientes',     path: '/medico/pacientes' },
   { label: 'Expedientes Clínicos',    icon: ClipboardList, key: 'expedientes',   path: '/medico/expedientes' },
   { label: 'Requisiciones',           icon: ShoppingCart,  key: 'requisiciones', path: '/medico/requisiciones' },
+  { label: 'Validar Requisiciones',   icon: BadgeCheck,    key: 'validar-req',   path: '/medico/validar-requisiciones' },
   { label: 'Farmacia / Enfermería',   icon: Pill,          key: 'farmacia',      path: '/medico/farmacia' },
   { label: 'Personal Médico',         icon: Stethoscope,   key: 'personal',      path: '/medico/personal' },
   { label: 'Reportes y Estadísticas', icon: FileBarChart,  key: 'reportes',      path: '/medico/reportes' },

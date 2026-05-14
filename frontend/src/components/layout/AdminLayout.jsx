@@ -2,15 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE } from '../../config/api';
 import {
-  Activity, BadgeCheck, BrainCircuit, CalendarDays, ClipboardList, FileBarChart, Folder,
-  Inbox, LayoutDashboard, MessageSquare, PhoneCall, ShoppingCart,
-  Stethoscope, UserPlus, Users, Users2,
+  Activity, BadgeCheck, BrainCircuit, CalendarDays, CalendarPlus, ClipboardCheck,
+  ClipboardList, FileBarChart, Folder, Inbox, LayoutDashboard, MessageSquare,
+  PhoneCall, ShoppingCart, Stethoscope, UserCog, UserPlus, Users, Users2,
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const getUsuarioHeader = () => {
   try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
 };
+
+const normalizarTexto = (value = '') => String(value || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim();
 
 export const AdminHeader = ({ submodule = 'Módulo de Admisiones' }) => {
   const usuario = getUsuarioHeader();
@@ -80,15 +86,16 @@ const admisionesNavItems = [
   { label: 'Expediente',             icon: Folder,          key: 'expediente',          path: '/admisiones/expediente' },
   { label: 'Requisiciones',          icon: ClipboardList,   key: 'requisiciones',       path: '/admisiones/requisiciones' },
   { label: 'Validar Requisiciones',  icon: BadgeCheck,      key: 'validar-requisiciones',path: '/admisiones/validar-requisiciones',
-    soloParaPuesto: ['JEFE DE ADMISIONES', 'ENCARGADO DE ADMISIONES'] },
+    soloParaPuesto: ['jefe de admisiones', 'jefa de admisiones', 'encargado de admisiones', 'encargada de admisiones', 'dep. admisiones'] },
   { label: 'Agenda de Citas',        icon: CalendarDays,    key: 'agenda',              path: '/admisiones/agenda-citas' },
   { label: 'Llamada Inicial ', icon: PhoneCall,       key: 'seguimiento',         path: '/admisiones/seguimiento-telefonico' },
   // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
 ];
 
-// Ítems del sidebar que cada puesto NO puede ver
+// Ítems del sidebar que cada puesto NO puede ver (claves en minúsculas para comparación case-insensitive)
 const ADMISIONES_ITEMS_OCULTOS_POR_PUESTO = {
-  'RECEPCIÓN': ['requisiciones', 'validar-requisiciones'],
+  'recepción': ['validar-requisiciones'],
+  'recepcion': ['validar-requisiciones'],
 };
 
 const getUsuarioSesion = () => {
@@ -115,10 +122,11 @@ export const AdmisionesSidebar = () => {
   }, []);
 
   const puesto = getUsuarioSesion().puesto || '';
-  const itemsOcultos = ADMISIONES_ITEMS_OCULTOS_POR_PUESTO[puesto] ?? [];
+  const puestoNorm = puesto.toLowerCase().trim();
+  const itemsOcultos = ADMISIONES_ITEMS_OCULTOS_POR_PUESTO[puestoNorm] ?? [];
   const itemsVisibles = admisionesNavItems.filter(item => {
     if (itemsOcultos.includes(item.key)) return false;
-    if (item.soloParaPuesto && !item.soloParaPuesto.includes(puesto)) return false;
+    if (item.soloParaPuesto && !item.soloParaPuesto.some(kw => puestoNorm.includes(kw))) return false;
     return true;
   });
 
@@ -248,26 +256,56 @@ export const AdminSuccessAlert = ({ message }) =>
   ) : null;
 
 // ── Sidebar Médico ────────────────────────────────────────────────
-const medicoNavItems = [
-  { label: 'Inicio Jefatura',         icon: Activity,      path: '/medico/inicio-jefe-medico' },
-  { label: 'Prospectos',              icon: UserPlus,      path: '/medico/prospectos' },
-  { label: 'Pacientes Activos',       icon: Users,         path: '/medico/pacientes' },
-  { label: 'Expedientes Clínicos',    icon: ClipboardList, path: '/medico/expedientes' },
-  { label: 'Requisiciones',           icon: ShoppingCart,  path: '/medico/requisiciones' },
-  { label: 'Personal Médico',         icon: Stethoscope,   path: '/medico/personal' },
-  { label: 'Reportes y Estadísticas', icon: FileBarChart,  path: '/medico/reportes' },
-];
+const getMedicoNavItems = (puestoNorm) => {
+  if (puestoNorm.includes('dep. medico') || puestoNorm.includes('jefe medico') || puestoNorm.includes('jefa medico')) {
+    return [
+      { label: 'Inicio Jefatura',         icon: Activity,      path: '/medico/inicio-jefe-medico' },
+      { label: 'Prospectos',              icon: UserPlus,      path: '/medico/prospectos' },
+      { label: 'Pacientes Activos',       icon: Users,         path: '/medico/pacientes' },
+      { label: 'Expedientes Clínicos',    icon: ClipboardList, path: '/medico/expedientes' },
+      { label: 'Requisiciones',           icon: ShoppingCart,  path: '/medico/requisiciones' },
+      { label: 'Validar Requisiciones',   icon: BadgeCheck,    path: '/medico/validar-requisiciones' },
+      { label: 'Personal Médico',         icon: Stethoscope,   path: '/medico/personal' },
+      { label: 'Reportes y Estadísticas', icon: FileBarChart,  path: '/medico/reportes' },
+    ];
+  }
+  if (puestoNorm.includes('enfermero') || puestoNorm.includes('enfermera')) {
+    return [
+      { label: 'Enfermería',    icon: Users,        path: '/enfermeria' },
+      { label: 'Requisiciones', icon: ShoppingCart, path: '/medico/requisiciones' },
+    ];
+  }
+  if (puestoNorm.includes('nutriolog')) {
+    return [
+      { label: 'Inicio Nutrición', icon: Activity,     path: '/nutriologo/inicio' },
+      { label: 'Mis Pacientes',    icon: Users,        path: '/nutriologo/pacientes' },
+      { label: 'Requisiciones',    icon: ShoppingCart, path: '/medico/requisiciones' },
+    ];
+  }
+  // Médico general y resto
+  return [
+    { label: 'Inicio Jefatura',         icon: Activity,      path: '/medico/inicio-jefe-medico' },
+    { label: 'Prospectos',              icon: UserPlus,      path: '/medico/prospectos' },
+    { label: 'Pacientes Activos',       icon: Users,         path: '/medico/pacientes' },
+    { label: 'Expedientes Clínicos',    icon: ClipboardList, path: '/medico/expedientes' },
+    { label: 'Requisiciones',           icon: ShoppingCart,  path: '/medico/requisiciones' },
+    { label: 'Personal Médico',         icon: Stethoscope,   path: '/medico/personal' },
+    { label: 'Reportes y Estadísticas', icon: FileBarChart,  path: '/medico/reportes' },
+  ];
+};
 
 export const MedicoSidebar = () => {
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const puestoNorm = normalizarTexto(getUsuarioSesion().puesto || getUsuarioSesion().rol || '');
+  const items      = getMedicoNavItems(puestoNorm);
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {medicoNavItems.map(({ label, icon, path }) => {
-        const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
-        const NavIcon  = icon;
+      {items.map(({ label, icon, path }) => {
+        const active  = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon = icon;
         return (
-          <button key={path} type="button" onClick={() => navigate(path)}
+          <button key={`${label}-${path}`} type="button" onClick={() => navigate(path)}
             className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5
               ${active
                 ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
@@ -282,24 +320,56 @@ export const MedicoSidebar = () => {
 };
 
 // ── Sidebar Clínico ───────────────────────────────────────────────
-const clinicoNavItems = [
-  { label: 'Inicio Jefatura',   icon: LayoutDashboard, path: '/clinico/inicio-jefe-clinico' },
-  { label: 'Pacientes',         icon: Users,           path: '/clinico/pacientes' },
-  { label: 'Auditoría Psico.',  icon: BrainCircuit,    path: '/clinico/pacientes' },
-  { label: 'Auditoría Consej.', icon: MessageSquare,   path: '/clinico/pacientes' },
-  { label: 'Auditoría Familia', icon: Users2,          path: '/clinico/pacientes' },
-  { label: 'Terapeuta',         icon: Stethoscope,     path: '/clinico/inicio-terapeuta' },
-  { label: 'Requisiciones',     icon: ShoppingCart,    path: '/clinico/requisiciones' },
-];
+const getClinicoNavItems = (puestoNorm) => {
+  if (puestoNorm.includes('dep. clinico') || puestoNorm.includes('jefe clinico') || puestoNorm.includes('jefa clinico')) {
+    return [
+      { label: 'Tablero de Control',     icon: LayoutDashboard, path: '/clinico/inicio' },
+      { label: 'Auditoría Clínica',      icon: Users,           path: '/clinico/directorio' },
+      { label: 'Asignación Terapéutica', icon: UserCog,         path: '/clinico/asignaciones' },
+      { label: 'Validación Terapéutica', icon: ClipboardCheck,  path: '/clinico/calendario' },
+      { label: 'Requisiciones',          icon: ShoppingCart,    path: '/clinico/requisiciones' },
+      { label: 'Validar Requisiciones',  icon: BadgeCheck,      path: '/clinico/validar-requisiciones' },
+    ];
+  }
+  if (puestoNorm.includes('psicolog')) {
+    return [
+      { label: 'Mis Pacientes',  icon: Users,        path: '/psicologia/inicio' },
+      { label: 'Agendar Cita',   icon: CalendarPlus, path: '/psicologia/agendar' },
+      { label: 'Requisiciones',  icon: ShoppingCart, path: '/clinico/requisiciones' },
+    ];
+  }
+  if (puestoNorm.includes('consej')) {
+    return [
+      { label: 'Mis Pacientes',  icon: Users,        path: '/consejeria/inicio' },
+      { label: 'Agendar Cita',   icon: CalendarPlus, path: '/consejeria/agendar' },
+      { label: 'Requisiciones',  icon: ShoppingCart, path: '/clinico/requisiciones' },
+    ];
+  }
+  if (puestoNorm.includes('familia')) {
+    return [
+      { label: 'Mis Pacientes',  icon: Users,        path: '/familia/inicio' },
+      { label: 'Agendar Cita',   icon: CalendarPlus, path: '/familia/agendar' },
+      { label: 'Requisiciones',  icon: ShoppingCart, path: '/clinico/requisiciones' },
+    ];
+  }
+  // terapeuta, coterapeuta, post tratamiento y resto de clínico
+  return [
+    { label: 'Mis Dinámicas',  icon: LayoutDashboard, path: '/clinico/inicio-terapeuta' },
+    { label: 'Requisiciones',  icon: ShoppingCart,    path: '/clinico/requisiciones' },
+  ];
+};
 
 export const ClinicoSidebar = () => {
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const puestoNorm = normalizarTexto(getUsuarioSesion().puesto || getUsuarioSesion().rol || '');
+  const items      = getClinicoNavItems(puestoNorm);
+
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {clinicoNavItems.map(({ label, icon, path }) => {
-        const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
-        const NavIcon  = icon;
+      {items.map(({ label, icon, path }) => {
+        const active  = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon = icon;
         return (
           <button key={`${label}-${path}`} type="button" onClick={() => navigate(path)}
             className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5

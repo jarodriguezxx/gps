@@ -29,7 +29,7 @@ import com.marakame.api.service.PacienteService;
 
 @RestController
 @RequestMapping("/api/pacientes")
-@CrossOrigin(origins = "http://localhost:5173") 
+@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
 public class PacienteController {
 
     @Autowired

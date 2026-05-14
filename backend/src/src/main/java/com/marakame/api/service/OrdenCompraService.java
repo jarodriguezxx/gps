@@ -52,7 +52,9 @@ public class OrdenCompraService {
                 aoc.setArticuloRequisicionId(art.getId());
                 aoc.setArticulo(art.getArticuloRequisitado());
                 aoc.setDescripcion(art.getArticuloRequisitado());
-                aoc.setUnidad(art.getUnidad());
+                if (art.getUnidad() != null) {
+                    try { aoc.setUnidad(UnidadesArticulos.valueOf(art.getUnidad())); } catch (IllegalArgumentException ignored) {}
+                }
                 aoc.setCantidad(art.getArticulosPendientes() != null ? art.getArticulosPendientes() : 0);
                 aoc.setPrecioUnitario(BigDecimal.ZERO);
                 articulos.add(aoc);

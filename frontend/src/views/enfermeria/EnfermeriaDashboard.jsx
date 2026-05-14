@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Users, Pill, History } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Pill, History, ShoppingCart } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 import PacientesEnfermeria       from './PacientesEnfermeria';
@@ -22,6 +23,7 @@ const getInitials = (n) =>
 const EnfermeriaDashboard = () => {
   const [activeTab, setActiveTab] = useState('pacientes');
   const sesion = getSesion();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -67,6 +69,12 @@ const EnfermeriaDashboard = () => {
                   <Icon size={15} /> {label}
                 </button>
               ))}
+              <button
+                onClick={() => navigate('/medico/requisiciones')}
+                className="mb-2 w-full flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12"
+              >
+                <ShoppingCart size={15} /> Requisiciones
+              </button>
             </aside>
 
             <main className="flex-1 overflow-y-auto overflow-x-hidden">

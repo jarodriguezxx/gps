@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Users, ChevronRight, CalendarPlus, Search } from 'lucide-react';
+import { Users, ChevronRight, CalendarPlus, Search, ShoppingCart } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
-const navItems = [{ label: 'Mis Pacientes', icon: Users, path: '/familia/inicio' }, { label: 'Agendar Cita', icon: CalendarPlus, path: '/familia/agendar' }];
+const navItems = [
+  { label: 'Mis Pacientes',  icon: Users,        path: '/familia/inicio' },
+  { label: 'Agendar Cita',   icon: CalendarPlus, path: '/familia/agendar' },
+  { label: 'Requisiciones',  icon: ShoppingCart, path: '/clinico/requisiciones' },
+];
 const PASOS_REQUERIDOS = [ "Genograma", "Entrevista inicial familiar", "Diagnóstico familiar", "Plan de intervención", "Sesión familiar", "Notas de evolución", "Cierre y recomendaciones" ];
 
 const InicioFamilia = () => {

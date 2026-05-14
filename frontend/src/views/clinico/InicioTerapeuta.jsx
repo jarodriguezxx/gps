@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Send, LayoutDashboard, CheckCircle, Calendar, Clock, AlignLeft, Sparkles, Info, Timer } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Send, LayoutDashboard, CheckCircle, Calendar, Clock, AlignLeft, Sparkles, Info, Timer, ShoppingCart } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const FORM_VACIO = { titulo: '', fecha: '', hora: '', duracion: '', descripcion: '' };
@@ -11,6 +12,7 @@ const Label = ({ children }) => (
 const inputCls = "w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#7E1D3B]/30 focus:border-[#7E1D3B]/40 transition placeholder:text-slate-400";
 
 const InicioTerapeuta = () => {
+  const navigate = useNavigate();
   const usuario = (() => { try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; } })();
   const nombreTerapeuta = usuario.nombre || usuario.nombreCompleto || usuario.puesto || 'Terapeuta Operativo';
   const iniciales = nombreTerapeuta.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
@@ -69,9 +71,16 @@ const InicioTerapeuta = () => {
 
             {/* Sidebar */}
             <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-              <button className="w-full rounded-xl px-3 py-3 text-sm font-semibold bg-[#7E1D3B] text-white shadow-md flex items-center gap-2.5 text-left">
+              <button className="mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold bg-[#7E1D3B] text-white shadow-md flex items-center gap-2.5 text-left">
                 <LayoutDashboard size={16} className="shrink-0" />
                 <span>Proponer Dinámica</span>
+              </button>
+              <button
+                onClick={() => navigate('/clinico/requisiciones')}
+                className="mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12 transition flex items-center gap-2.5 text-left"
+              >
+                <ShoppingCart size={16} className="shrink-0" />
+                <span>Requisiciones</span>
               </button>
             </aside>
 
