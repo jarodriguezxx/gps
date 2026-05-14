@@ -64,6 +64,7 @@ import NominaRH from './views/rh/NominaRH';
 import RegistrarIncidencia from './views/rh/RegistrarIncidencia';
 import TablaIncidencias from './views/rh/TablaIncidencias';
 import IncidenciasDepartamento from './views/rh/IncidenciasDepartamento';
+import CalculoQuincena from './views/rh/CalculoQuincena';
 
 // Financiero
 import ArchivoContable from './views/financiero/ArchivoContable';
@@ -260,6 +261,7 @@ function App() {
         <Route path="/rh/registrar-incidencia"                 element={<PrivateRoute><RegistrarIncidencia /></PrivateRoute>} />
         <Route path="/rh/tabla-incidencias"                    element={<PrivateRoute><TablaIncidencias /></PrivateRoute>} />
         <Route path="/incidencias/departamento"                element={<PrivateRoute><IncidenciasDepartamento /></PrivateRoute>} />
+        <Route path="/rh/calculo-quincena"                     element={<PrivateRoute><CalculoQuincena /></PrivateRoute>} />
 
         {/* Financiero */}
         <Route path="/financiero/archivo-contable"             element={<PrivateRoute><ArchivoContable /></PrivateRoute>} />

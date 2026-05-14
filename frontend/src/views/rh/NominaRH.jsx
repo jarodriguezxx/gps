@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   UserPlus, UserMinus, Tag, ShieldCheck, Wallet,
   Upload, FileText, X, AlertCircle, TrendingUp, TrendingDown, DollarSign,
-  AlertTriangle, ClipboardList,
+  AlertTriangle, ClipboardList, Calculator,
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -15,6 +15,7 @@ const navItems = [
   { label: 'Nómina',               icon: Wallet,        key: 'nomina',            path: '/rh/nomina' },
   { label: 'Registrar Incidencia', icon: AlertTriangle, key: 'incidencias',       path: '/rh/registrar-incidencia' },
   { label: 'Tabla de Incidencias', icon: ClipboardList, key: 'tabla-incidencias', path: '/rh/tabla-incidencias' },
+  { label: 'Cálculo de Quincena',  icon: Calculator,    key: 'quincena',          path: '/rh/calculo-quincena' },
 ];
 
 const fmt = (n) =>
