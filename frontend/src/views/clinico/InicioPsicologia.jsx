@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Users, Brain, ChevronRight, CalendarPlus, Search, CheckCircle2, Clock, Activity } from 'lucide-react';
+import { Users, Brain, ChevronRight, CalendarPlus, Search, CheckCircle2, Clock, Activity, ShoppingCart } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
-  { label: 'Mis Pacientes', icon: Users,        path: '/psicologia/inicio' },
-  { label: 'Agendar Cita',  icon: CalendarPlus, path: '/psicologia/agendar' },
+  { label: 'Mis Pacientes',  icon: Users,        path: '/psicologia/inicio' },
+  { label: 'Agendar Cita',   icon: CalendarPlus, path: '/psicologia/agendar' },
+  { label: 'Requisiciones',  icon: ShoppingCart, path: '/clinico/requisiciones' },
 ];
 
 const PASOS_REQUERIDOS = [ "Entrevista inicial", "Primera terapia grupal", "Evaluación psicosocial", "Plan de tratamiento", "Daños por consumo", "Sesión familiar", "Notas de evolución", "Despedida grupal", "Entrevista de cierre" ];

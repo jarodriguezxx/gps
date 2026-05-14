@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowRight, FileText, FileX, AlertTriangle, Search, Sparkles, X, Download, Upload, CheckCircle2, Paperclip, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileText, FileX, AlertTriangle, Search, Sparkles, X, Download, Upload, CheckCircle2, Paperclip, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
 import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
@@ -276,7 +276,7 @@ const buildDiagnosticoReadOnlyData = (prospecto, detalleExpediente) => {
 	}
 
 	const llamadaInicial = detalleExpediente?.llamadaInicial || {};
-	const tieneSnapshot = Object.keys(llamadaInicial).length > 0;
+	const tieneSnapshot = Boolean(prospecto?.solicitante?.id || Object.keys(llamadaInicial).length > 0);
 	const ultimoSeguimiento = Array.isArray(detalleExpediente?.seguimientos) && detalleExpediente.seguimientos.length > 0
 		? detalleExpediente.seguimientos[0]
 		: null;
@@ -406,167 +406,192 @@ const convertirNumeroALetra = (num) => {
 const generarReciboHTML = (datos) => {
 	const totalMonto = parseFloat(datos.montoPago || 0) + parseFloat(datos.montoPrograma || 0);
 	const nombreCompletoPagador = `${datos.nombrePagador || ''} ${datos.apellidoPaternoPagador || ''} ${datos.apellidoMaternoPagador || ''}`.trim();
-	
-	return `
-		<!DOCTYPE html>
-		<html>
-		<head>
-			<meta charset="UTF-8">
-			<style>
-				body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-				.recibo { border: 2px solid #333; padding: 30px; max-width: 800px; margin: 0 auto; }
-				.header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #7E1D3B; padding-bottom: 15px; }
-				.header h1 { margin: 0; color: #7E1D3B; font-size: 28px; }
-				.header p { margin: 5px 0; font-size: 12px; color: #666; }
-				.numero-recibo { position: absolute; top: 20px; right: 30px; font-size: 14px; font-weight: bold; }
-				.grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 20px 0; }
-				.grid-2 { grid-template-columns: 1fr 1fr; }
-				.campo { margin-bottom: 12px; }
-				.campo label { font-weight: bold; font-size: 10px; color: #333; display: block; margin-bottom: 2px; }
-				.campo-valor { border-bottom: 1px solid #333; padding: 3px 0; font-size: 11px; }
-				.full-width { grid-column: 1 / -1; }
-				.tabla { width: 100%; border-collapse: collapse; margin: 20px 0; }
-				.tabla th { background: #7E1D3B; color: white; padding: 8px; text-align: left; font-size: 11px; }
-				.tabla td { border-bottom: 1px solid #ddd; padding: 8px; font-size: 11px; }
-				.tabla tr:last-child td { border-bottom: 2px solid #333; }
-				.firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; }
-				.firma { text-align: center; border-top: 1px solid #333; padding-top: 10px; font-size: 11px; }
-				.firma-linea { margin-top: 60px; }
-			</style>
-		</head>
-		<body>
-			<div class="recibo">
-				<div class="numero-recibo">Nº ${new Date().getTime().toString().slice(-4)}</div>
-				<div class="header">
-					<h1>RECIBO DE PAGO</h1>
-					<p>Instituto Marakame • Centro de Tratamiento</p>
-					<p>Fecha: ${new Date().toLocaleDateString('es-MX')}</p>
-				</div>
+	const centavos = totalMonto.toFixed(2).split('.')[1] || '00';
+	const direccionCompleta = [
+		datos.direccionCalle,
+		datos.direccionNoExt ? `No. ${datos.direccionNoExt}` : '',
+		datos.direccionNoInt ? `Int. ${datos.direccionNoInt}` : '',
+		datos.direccionColonia,
+		datos.direccionMunicipioDelegacion,
+		datos.codigoPostal ? `C.P. ${datos.codigoPostal}` : '',
+		datos.direccionCiudadEstado,
+	].filter(Boolean).join(', ');
+	const fechaFormateada = (() => {
+		try { return new Date(`${datos.fechaPago}T12:00:00`).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' }); }
+		catch { return datos.fechaPago || ''; }
+	})();
+	const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 90"><circle cx="45" cy="45" r="45" fill="#7E1D3B"/><circle cx="45" cy="45" r="40" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/><polygon points="45,18 30,68 45,56 60,68" fill="none" stroke="white" stroke-width="2.5" stroke-linejoin="round"/><polygon points="22,28 45,68 45,56 30,68" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1" stroke-linejoin="round"/><text x="45" y="59" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="700" fill="white" letter-spacing="-1">M</text><text x="45" y="76" text-anchor="middle" font-family="Arial,sans-serif" font-size="7" font-weight="700" fill="rgba(255,255,255,0.75)" letter-spacing="3">MARAKAME</text></svg>`;
+	const logoBase64 = `data:image/svg+xml;base64,${btoa(logoSvg)}`;
 
-				<div class="grid grid-2">
-					<div class="campo">
-						<label>Nombre(s):</label>
-						<div class="campo-valor">${datos.nombrePagador || ''}</div>
-					</div>
-					<div class="campo">
-						<label>Apellido paterno:</label>
-						<div class="campo-valor">${datos.apellidoPaternoPagador || ''}</div>
-					</div>
-					<div class="campo">
-						<label>Apellido materno:</label>
-						<div class="campo-valor">${datos.apellidoMaternoPagador || ''}</div>
-					</div>
-					<div class="campo">
-						<label>Fecha de pago:</label>
-						<div class="campo-valor">${datos.fechaPago || ''}</div>
-					</div>
-					<div class="campo">
-						<label>RFC:</label>
-						<div class="campo-valor">${datos.rfc || ''}</div>
-					</div>
-					<div class="campo">
-						<label>Teléfono:</label>
-						<div class="campo-valor">${datos.telefonoPagador || ''}</div>
-					</div>
-				</div>
+	return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:10px;color:#1a1a1a;background:#fff}
+  .page{width:760px;margin:0 auto;padding:0}
 
-				<div style="border-top: 2px solid #7E1D3B; padding-top: 15px; margin: 20px 0;">
-					<p style="font-weight: bold; margin-bottom: 8px;">Dirección:</p>
-					<div class="grid grid-2">
-						<div class="campo">
-							<label>Calle:</label>
-							<div class="campo-valor">${datos.direccionCalle || ''}</div>
-						</div>
-						<div class="campo">
-							<label>No. Exterior:</label>
-							<div class="campo-valor">${datos.direccionNoExt || ''}</div>
-						</div>
-						<div class="campo">
-							<label>No. Interior:</label>
-							<div class="campo-valor">${datos.direccionNoInt || ''}</div>
-						</div>
-						<div class="campo">
-							<label>Colonia:</label>
-							<div class="campo-valor">${datos.direccionColonia || ''}</div>
-						</div>
-						<div class="campo">
-							<label>Municipio/Delegación:</label>
-							<div class="campo-valor">${datos.direccionMunicipioDelegacion || ''}</div>
-						</div>
-						<div class="campo">
-							<label>C.P.:</label>
-							<div class="campo-valor">${datos.codigoPostal || ''}</div>
-						</div>
-						<div class="campo full-width">
-							<label>Ciudad/Estado:</label>
-							<div class="campo-valor">${datos.direccionCiudadEstado || ''}</div>
-						</div>
-					</div>
-				</div>
+  /* ── HEADER ── */
+  .hdr{background:#fff;padding:14px 18px 0;display:flex;justify-content:space-between;align-items:flex-start}
+  .hdr-left{}
+  .hdr-doc-label{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.22em;color:#7E1D3B;margin-bottom:4px}
+  .hdr-title{font-size:22px;font-weight:900;color:#1A365D;letter-spacing:.04em;line-height:1}
+  .hdr-folio{display:inline-block;margin-top:6px;font-size:10px;font-weight:700;color:#7E1D3B;background:#fdf2f4;border:1px solid #e8c0ca;padding:3px 10px;border-radius:20px}
+  .hdr-fecha{font-size:8.5px;color:#888;margin-top:4px}
+  .hdr-right{display:flex;gap:14px;align-items:center;justify-content:flex-end}
+  .hdr-logo-img{height:64px;width:auto;flex-shrink:0}
+  .hdr-inst-block{display:flex;flex-direction:column;text-align:right;color:#1A365D}
+  .hdr-inst-name{font-size:15px;font-weight:900;color:#7E1D3B;letter-spacing:.04em;line-height:1.1}
+  .hdr-inst-sub{font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;color:#888;margin-top:3px}
+  .hdr-band{height:4px;background:linear-gradient(90deg,#7E1D3B 0%,#b04060 60%,#7E1D3B 100%);margin-top:12px}
 
-				<div style="border: 2px solid #7E1D3B; padding: 15px; margin: 20px 0;">
-					<div class="grid grid-2">
-						<div class="campo">
-							<label>Nombre(s) del paciente:</label>
-							<div class="campo-valor">${datos.nombrePaciente || ''}</div>
-						</div>
-						<div class="campo">
-							<label>Apellido paterno:</label>
-							<div class="campo-valor">${datos.apellidoPaternoPaciente || ''}</div>
-						</div>
-						<div class="campo">
-							<label>Apellido materno:</label>
-							<div class="campo-valor">${datos.apellidoMaternoPaciente || ''}</div>
-						</div>
-						<div class="campo">
-							<label>Clave del paciente:</label>
-							<div class="campo-valor">${datos.clavePaciente || ''}</div>
-						</div>
-						<div class="campo full-width">
-							<label>Concepto del pago:</label>
-							<div class="campo-valor">${datos.concepto || ''}</div>
-						</div>
-					</div>
-				</div>
+  /* ── SECTIONS ── */
+  .sec{border:1px solid #e2d0d4;border-radius:5px;margin-top:8px;overflow:hidden}
+  .sec-title{background:#f8f3f4;border-bottom:1px solid #e2d0d4;padding:4px 10px;font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:#7E1D3B}
+  .sec-body{padding:8px 10px}
 
-				<table class="tabla">
-					<thead>
-						<tr>
-							<th>Concepto de pago</th>
-							<th style="text-align: right;">Monto</th>
-						</tr>
-					</thead>
-					<tbody>
-						${datos.montoPago > 0 ? `<tr><td>Tratamiento</td><td style="text-align: right;">$${parseFloat(datos.montoPago).toFixed(2)}</td></tr>` : ''}
-						${datos.montoPrograma > 0 ? `<tr><td>Programa Familiar</td><td style="text-align: right;">$${parseFloat(datos.montoPrograma).toFixed(2)}</td></tr>` : ''}
-						<tr style="font-weight: bold;">
-							<td>TOTAL</td>
-							<td style="text-align: right;">$${totalMonto.toFixed(2)}</td>
-						</tr>
-					</tbody>
-				</table>
+  /* ── PATIENT BOX ── */
+  .pac-sec{border:1.5px solid #7E1D3B;border-radius:5px;margin-top:8px;overflow:hidden}
+  .pac-title{background:#7E1D3B;color:#fff;padding:4px 10px;font-size:7.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
+  .pac-body{padding:8px 10px}
 
-				<div class="campo full-width" style="margin-top: 20px;">
-					<label>Cantidad en letra:</label>
-					<div class="campo-valor" style="font-size: 13px; text-transform: capitalize;">${convertirNumeroALetra(Math.floor(totalMonto))} pesos con ${String(totalMonto).split('.')[1] || '00'} centavos</div>
-				</div>
+  /* ── FIELD ROWS ── */
+  .row{display:flex;gap:10px;margin-bottom:7px}
+  .row:last-child{margin-bottom:0}
+  .f{flex:1;min-width:0}
+  .f2{flex:2}
+  .f3{flex:3}
+  .lbl{display:block;font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#999;margin-bottom:1px}
+  .val{display:block;border-bottom:1px solid #ccc;padding:2px 2px 3px;font-size:10.5px;color:#1a1a1a;min-height:17px}
 
-				<div class="firmas">
-					<div class="firma">
-						<div class="firma-linea"></div>
-						<div>Persona que recibe el pago</div>
-						<div>${datos.nombreRecibe || ''}</div>
-					</div>
-					<div class="firma">
-						<div class="firma-linea"></div>
-						<div>Persona que realiza el pago</div>
-						<div>${nombreCompletoPagador}</div>
-					</div>
-				</div>
-			</div>
-		</body>
-		</html>
-	`;
+  /* ── PAYMENT TABLE ── */
+  .tbl{width:100%;border-collapse:collapse;margin-top:8px;font-size:10px}
+  .tbl thead th{background:#7E1D3B;color:#fff;padding:5px 10px;text-align:left;font-size:8px;text-transform:uppercase;letter-spacing:.1em}
+  .tbl thead th:last-child{text-align:right}
+  .tbl tbody td{padding:6px 10px;border-bottom:1px solid #f0e8ea}
+  .tbl tbody td:last-child{text-align:right;font-weight:700}
+  .tbl tbody tr.total-row td{background:#f8f3f4;font-weight:900;font-size:12px;border-top:2px solid #7E1D3B;border-bottom:none;padding:7px 10px}
+  .tbl tbody tr.total-row td:first-child{color:#7E1D3B;text-transform:uppercase;letter-spacing:.05em}
+
+  /* ── LETRA BOX ── */
+  .letra{background:#fdf8f9;border:1px dashed #c8a0aa;border-radius:4px;padding:6px 10px;margin-top:8px}
+  .letra .lbl{margin-bottom:3px}
+  .letra-val{font-size:10px;font-style:italic;text-transform:capitalize;color:#2a1a1e;line-height:1.4}
+
+  /* ── FIRMAS ── */
+  .firmas{display:flex;gap:24px;margin-top:16px}
+  .firma{flex:1;text-align:center}
+  .firma-space{height:38px}
+  .firma-line{border-top:1px solid #555;margin-bottom:4px}
+  .firma-role{font-size:8px;color:#666;text-transform:uppercase;letter-spacing:.1em}
+  .firma-name{font-size:9px;font-weight:700;color:#1a1a1a;margin-top:2px}
+
+  /* ── FOOTER ── */
+  .footer{text-align:center;margin-top:10px;padding-top:7px;border-top:1px solid #eee}
+  .footer p{font-size:7.5px;color:#aaa;letter-spacing:.05em}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══ ENCABEZADO ══ -->
+  <div class="hdr">
+
+    <!-- IZQUIERDA: identificación del documento -->
+    <div class="hdr-left">
+      <div class="hdr-doc-label">Comprobante de pago</div>
+      <div class="hdr-title">RECIBO DE PAGO</div>
+      <div class="hdr-folio">Folio: ${datos.folioRecibo || new Date().getTime().toString().slice(-6)}</div>
+      <div class="hdr-fecha">${fechaFormateada}</div>
+    </div>
+
+    <!-- DERECHA: logo + identidad institucional -->
+    <div class="hdr-right">
+      <img src="${logoBase64}" class="hdr-logo-img" alt="Logo Instituto Marakame" />
+      <div class="hdr-inst-block">
+        <div class="hdr-inst-name">INSTITUTO MARAKAME</div>
+        <div class="hdr-inst-sub">Centro de Tratamiento Integral</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="hdr-band"></div>
+
+  <!-- DATOS DEL PAGADOR -->
+  <div class="sec">
+    <div class="sec-title">Datos de la persona que realiza el pago</div>
+    <div class="sec-body">
+      <div class="row">
+        <div class="f f2"><span class="lbl">Nombre(s)</span><span class="val">${datos.nombrePagador || ''}</span></div>
+        <div class="f f2"><span class="lbl">Apellido paterno</span><span class="val">${datos.apellidoPaternoPagador || ''}</span></div>
+        <div class="f f2"><span class="lbl">Apellido materno</span><span class="val">${datos.apellidoMaternoPagador || ''}</span></div>
+        <div class="f"><span class="lbl">Fecha de pago</span><span class="val">${fechaFormateada}</span></div>
+      </div>
+      <div class="row">
+        <div class="f f3"><span class="lbl">Domicilio</span><span class="val">${direccionCompleta}</span></div>
+        <div class="f"><span class="lbl">RFC</span><span class="val">${datos.rfc || ''}</span></div>
+        <div class="f"><span class="lbl">Teléfono</span><span class="val">${datos.telefonoPagador || ''}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATOS DEL PACIENTE -->
+  <div class="pac-sec">
+    <div class="pac-title">Datos del paciente</div>
+    <div class="pac-body">
+      <div class="row">
+        <div class="f f2"><span class="lbl">Nombre(s)</span><span class="val">${datos.nombrePaciente || ''}</span></div>
+        <div class="f f2"><span class="lbl">Apellido paterno</span><span class="val">${datos.apellidoPaternoPaciente || ''}</span></div>
+        <div class="f f2"><span class="lbl">Apellido materno</span><span class="val">${datos.apellidoMaternoPaciente || ''}</span></div>
+        <div class="f f2"><span class="lbl">Clave del paciente</span><span class="val">${datos.clavePaciente || ''}</span></div>
+      </div>
+      <div class="row">
+        <div class="f"><span class="lbl">Concepto del pago</span><span class="val">${datos.concepto || ''}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DE PAGOS -->
+  <table class="tbl">
+    <thead><tr><th>Concepto</th><th>Monto</th></tr></thead>
+    <tbody>
+      ${datos.montoPago > 0 ? `<tr><td>Tratamiento</td><td>$${parseFloat(datos.montoPago).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>` : ''}
+      ${datos.montoPrograma > 0 ? `<tr><td>Programa Familiar</td><td>$${parseFloat(datos.montoPrograma).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>` : ''}
+      <tr class="total-row"><td>Total</td><td>$${totalMonto.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>
+    </tbody>
+  </table>
+
+  <!-- CANTIDAD EN LETRA -->
+  <div class="letra">
+    <span class="lbl">Cantidad con letra</span>
+    <div class="letra-val">${convertirNumeroALetra(Math.floor(totalMonto))} pesos ${centavos}/100 M.N.</div>
+  </div>
+
+  <!-- FIRMAS -->
+  <div class="firmas">
+    <div class="firma">
+      <div class="firma-space"></div>
+      <div class="firma-line"></div>
+      <div class="firma-role">Recibió el pago</div>
+      <div class="firma-name">${datos.nombreRecibe || '___________________________'}</div>
+    </div>
+    <div class="firma">
+      <div class="firma-space"></div>
+      <div class="firma-line"></div>
+      <div class="firma-role">Realizó el pago</div>
+      <div class="firma-name">${nombreCompletoPagador || '___________________________'}</div>
+    </div>
+  </div>
+
+  <!-- PIE DE PÁGINA -->
+  <div class="footer">
+    <p>Instituto Marakame &bull; Centro de Tratamiento Integral &bull; Documento oficial de comprobante de pago</p>
+  </div>
+
+</div>
+</body>
+</html>`;
 };
 
 const ExpedienteAdmisiones = () => {
@@ -591,8 +616,8 @@ const ExpedienteAdmisiones = () => {
 	const [generandoRecibo, setGenerandoRecibo] = useState(false);
 	const [folioReciboActual, setFolioReciboActual] = useState('');
 	
-	// --- MODIFICACIÓN 2: Estado para controlar si el médico ya guardó la valoración ---
 	const [tieneValoracionMedica, setTieneValoracionMedica] = useState(false);
+	const [valoracionMedica, setValoracionMedica] = useState(null);
 	const [estudioPdfExists, setEstudioPdfExists] = useState(null);
 	const [estudioDescargaUrl, setEstudioDescargaUrl] = useState(null);
 	
@@ -752,6 +777,35 @@ const ExpedienteAdmisiones = () => {
 		return () => { mounted = false; };
 	}, [prospectoSeleccionado?.id]);
 
+	// Autocompletar datos del recibo cada vez que cambia el paciente seleccionado (cubre todas las rutas de selección)
+	useEffect(() => {
+		if (!prospectoSeleccionado) return;
+		const sol = prospectoSeleccionado.solicitante || {};
+		setDatosRecibo(prev => ({
+			...prev,
+			// Paciente
+			nombrePaciente: prospectoSeleccionado.nombres || '',
+			apellidoPaternoPaciente: prospectoSeleccionado.apellidoPaterno || '',
+			apellidoMaternoPaciente: prospectoSeleccionado.apellidoMaterno || '',
+			clavePaciente: prospectoSeleccionado.clavePaciente || '--',
+			// Dirección del paciente
+			direccionCalle: prospectoSeleccionado.direccionCalle || '',
+			direccionNoExt: prospectoSeleccionado.direccionNoExt || '',
+			direccionNoInt: prospectoSeleccionado.direccionNoInt || '',
+			direccionColonia: prospectoSeleccionado.direccionColonia || '',
+			direccionMunicipioDelegacion: prospectoSeleccionado.direccionMunicipioDelegacion || '',
+			codigoPostal: prospectoSeleccionado.direccionCp || '',
+			direccionCiudadEstado: prospectoSeleccionado.direccionCiudadEstado || '',
+			// Pagador (solicitante vinculado)
+			nombrePagador: sol.nombres || sol.nombre || '',
+			apellidoPaternoPagador: sol.apellidoPaterno || '',
+			apellidoMaternoPagador: sol.apellidoMaterno || '',
+			telefonoPagador: sol.telefono || sol.celular || prospectoSeleccionado.telefonoContacto || '',
+			// Monto desde el estudio socioeconómico
+			montoPago: prospectoSeleccionado.costoTratamiento ? parseFloat(prospectoSeleccionado.costoTratamiento) : prev.montoPago,
+		}));
+	}, [prospectoSeleccionado?.id]);
+
 	const seleccionarProspecto = async (prospecto, opciones = {}) => {
 		const { abrirConsulta = false, tabConsulta = 'solicitante' } = opciones;
 		setProspectoSeleccionado(prospecto);
@@ -787,21 +841,6 @@ const ExpedienteAdmisiones = () => {
 			setExpedienteModo('prospecto');
 		}
 
-		// Autocompletar datos del recibo con formato correcto
-		setDatosRecibo(prev => ({
-			...prev,
-			nombrePaciente: prospecto.nombres || '',
-			apellidoPaternoPaciente: prospecto.apellidoPaterno || '',
-			apellidoMaternoPaciente: prospecto.apellidoMaterno || '',
-			clavePaciente: prospecto.clavePaciente || '--',
-			direccionCalle: prospecto.direccionCalle || '',
-			direccionNoExt: prospecto.direccionNoExt || '',
-			direccionNoInt: prospecto.direccionNoInt || '',
-			direccionColonia: prospecto.direccionColonia || '',
-			direccionMunicipioDelegacion: prospecto.direccionMunicipioDelegacion || '',
-			codigoPostal: prospecto.direccionCp || '',
-			direccionCiudadEstado: prospecto.direccionCiudadEstado || '',
-		}));
 	};
 
 	const descargarRecibo = () => {
@@ -856,10 +895,10 @@ const ExpedienteAdmisiones = () => {
 				const element = document.createElement('div');
 				element.innerHTML = html;
 				const opt = {
-					margin: 5,
+					margin: [6, 8, 6, 8],
 					filename: `recibo-${folioGenerado}.pdf`,
 					image: { type: 'jpeg', quality: 0.98 },
-					html2canvas: { scale: 2 },
+					html2canvas: { scale: 2, useCORS: true },
 					jsPDF: { orientation: 'portrait', unit: 'mm', format: 'letter' }
 				};
 				await html2pdf().set(opt).from(element).save();
@@ -1286,12 +1325,15 @@ const ExpedienteAdmisiones = () => {
 					});
 					
 					if (valoracionRes.ok) {
-						setTieneValoracionMedica(true); // Sí existe la valoración
+						const valData = await valoracionRes.json();
+						setTieneValoracionMedica(true);
+						setValoracionMedica(valData);
 					} else if (valoracionRes.status === 404) {
-						// Endpoint no existe o no hay valoración
 						setTieneValoracionMedica(false);
+						setValoracionMedica(null);
 					} else {
 						setTieneValoracionMedica(false);
+						setValoracionMedica(null);
 					}
 				} catch (valoracionError) {
 					// Si hay error de red, asumimos que no hay valoración
@@ -1331,10 +1373,11 @@ const ExpedienteAdmisiones = () => {
 			];
 		}
 
+		const esPropspecto = !prospectoSeleccionado.clavePaciente;
 		return [
-			{ label: 'Paciente', value: getNombreProspecto(prospectoSeleccionado) || 'Sin nombre' },
-			{ label: 'Clave', value: prospectoSeleccionado.clavePaciente || '--' },
-			{ label: 'Ingreso', value: formatDateValue(prospectoSeleccionado.fechaIngreso || prospectoSeleccionado.createdAt || prospectoSeleccionado.fechaAtencion || prospectoSeleccionado.fechaRegistro) },
+			{ label: 'Paciente', value: getNombreProspecto(prospectoSeleccionado) || 'Sin nombre', valueClass: 'capitalize' },
+			{ label: 'Clave', value: prospectoSeleccionado.clavePaciente || 'Sin asignar', muted: esPropspecto },
+			{ label: 'Ingreso', value: formatDateValue(prospectoSeleccionado.fechaIngreso || prospectoSeleccionado.createdAt || prospectoSeleccionado.fechaAtencion || prospectoSeleccionado.fechaRegistro) || 'Pendiente de ingreso', muted: !prospectoSeleccionado.fechaIngreso },
 			{ label: 'Estado', value: formatEstadoPacienteDisplay(prospectoSeleccionado.estadoPaciente) },
 		];
 	}, [prospectoSeleccionado]);
@@ -1380,11 +1423,14 @@ const ExpedienteAdmisiones = () => {
 				<div className="grid gap-4 md:grid-cols-[220px_1fr]">
 					<AdmisionesSidebar />
 					<div className="space-y-5">
-						<PrimarySidebarActionButton
-							label="Volver a admisiones"
+						<button
+							type="button"
 							onClick={() => navigate('/admisiones')}
-							icon={<ArrowRight size={18} />}
-						/>
+							className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+						>
+							<ArrowLeft size={15} />
+							Volver a admisiones
+						</button>
 							
 						
 						<section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
@@ -1400,18 +1446,79 @@ const ExpedienteAdmisiones = () => {
 						</section>
 
 						{tab === 'general' && (
-							
-								
+							<>
 
 								<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 									{tarjetasGeneral.map((item) => (
 										<article key={item.label} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
 											<p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{item.label}</p>
-											<p className="mt-3 text-2xl font-black text-slate-900">{item.value}</p>
+											<p className={`mt-3 text-2xl font-black ${item.muted ? 'text-slate-300' : 'text-slate-900'} ${item.valueClass || ''}`}>{item.value}</p>
 										</article>
 									))}
+									{prospectoSeleccionado?.costoTratamiento && (
+										<article className="rounded-[24px] border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+											<p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">Costo tratamiento</p>
+											<p className="mt-3 text-2xl font-black text-emerald-800">
+												${Number(prospectoSeleccionado.costoTratamiento).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+											</p>
+										</article>
+									)}
 								</section>
-							
+
+								{/* Tarjeta de rechazo médico */}
+								{estadoPacienteActual === 'DENEGADO' && valoracionMedica && valoracionMedica.esAptoParaIngreso !== true && (() => {
+									const vm = valoracionMedica;
+									// Fallback: extraer motivo del texto en observaciones si los campos nuevos son null
+									const motivoFallback = (() => {
+										if (vm.motivoRechazo) return null; // usa el campo nuevo
+										const obs = vm.observaciones || '';
+										const match = obs.match(/Motivo cl[ií]nico:\s*(.+?)(?:\.\s*Se deriva|$)/i);
+										return match ? match[1].trim() : null;
+									})();
+									const institucionFallback = (() => {
+										if (vm.institucionDerivacion) return null;
+										const obs = vm.observaciones || '';
+										const match = obs.match(/Se deriva a:\s*(.+?)(?:,|\.|$)/i);
+										return match ? match[1].trim() : null;
+									})();
+									return (
+										<div className="rounded-[24px] border border-rose-200 bg-rose-50 p-5 shadow-sm">
+											<div className="flex items-start gap-4">
+												<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
+													<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+												</div>
+												<div className="flex-1 min-w-0">
+													<div className="flex flex-wrap items-center gap-2 mb-1">
+														<span className="text-sm font-black text-rose-900 uppercase tracking-wide">Rechazo Médico</span>
+														{vm.tipoRechazo && (
+															<span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${vm.tipoRechazo === 'tratamiento_previo' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+																{vm.tipoRechazo === 'tratamiento_previo' ? 'Requiere tratamiento previo' : 'No aplica para esta institución'}
+															</span>
+														)}
+													</div>
+													<p className="text-xs text-rose-500 font-semibold mb-3">
+														Médico responsable: <span className="text-rose-800 font-bold">{vm.medicoAsignado || 'No especificado'}</span>
+													</p>
+													{(vm.motivoRechazo || motivoFallback) && (
+														<div className="mb-3">
+															<p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Motivo clínico</p>
+															<p className="text-sm text-rose-800 font-medium leading-relaxed">{vm.motivoRechazo || motivoFallback}</p>
+														</div>
+													)}
+													{(vm.institucionDerivacion || institucionFallback) && (
+														<div className="rounded-xl bg-white/70 border border-rose-100 px-3 py-2.5 space-y-1">
+															<p className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Derivación</p>
+															<p className="text-sm font-bold text-rose-900">{vm.institucionDerivacion || institucionFallback}</p>
+															{vm.direccionDerivacion && <p className="text-xs text-rose-600">{vm.direccionDerivacion}</p>}
+															{vm.telefonoDerivacion && <p className="text-xs text-rose-500">Tel: {vm.telefonoDerivacion}</p>}
+														</div>
+													)}
+												</div>
+											</div>
+										</div>
+									);
+								})()}
+							</>
 						)}
 {tab === 'docs' && (
     <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6 animate-fadeIn">
@@ -1729,40 +1836,39 @@ const ExpedienteAdmisiones = () => {
 							<div className="mb-4 flex items-center justify-between gap-3">
 								<div>
 									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Línea de tiempo</p>
-									<h3 className="text-2xl font-black text-slate-900">Seguimientos y notas del expediente</h3>
+									<h3 className="text-xl font-black text-slate-900">Seguimientos y notas</h3>
 								</div>
-								<Sparkles className="text-[#7E1D3B]" size={22} />
+								<Sparkles className="text-[#7E1D3B]" size={20} />
 							</div>
 							{!prospectoSeleccionado ? (
-								<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
-									Selecciona un prospecto para ver su línea de tiempo.
-								</div>
+								<p className="text-sm text-slate-400">Selecciona un prospecto para ver su línea de tiempo.</p>
 							) : timelineProspecto.length === 0 ? (
-								<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
-									Este expediente todavía no tiene seguimientos registrados.
-								</div>
+								<p className="text-sm text-slate-400">Sin seguimientos registrados aún.</p>
 							) : (
-								<div className="relative space-y-4 pl-4 before:absolute before:left-[10px] before:top-1 before:h-full before:w-px before:bg-slate-200">
+								<div className="relative space-y-3 pl-4 before:absolute before:left-[10px] before:top-1 before:h-[calc(100%-8px)] before:w-px before:bg-slate-200">
 									{timelineProspecto.map((item) => (
-										<article key={item.id} className="relative rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-											<span className={`absolute -left-[18px] top-5 h-4 w-4 rounded-full border-4 border-white ${item.tone === 'emerald' ? 'bg-emerald-500' : item.tone === 'rose' ? 'bg-rose-500' : item.tone === 'amber' ? 'bg-amber-500' : 'bg-slate-400'}`}></span>
-											<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+										<article key={item.id} className="relative rounded-xl border border-slate-100 bg-slate-50/80 p-3 shadow-sm">
+											<span className={`absolute -left-[18px] top-4 h-3.5 w-3.5 rounded-full border-4 border-white ${item.tone === 'emerald' ? 'bg-emerald-500' : item.tone === 'rose' ? 'bg-rose-500' : item.tone === 'amber' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+											<div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
 												<div>
-													<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{formatDateValue(item.fecha)} • {formatTimeValue(item.fecha)}</p>
-													<h4 className="mt-1 text-lg font-black text-slate-900">{item.titulo}</h4>
+													<p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{formatDateValue(item.fecha)} · {formatTimeValue(item.fecha)}</p>
+													<p className="mt-0.5 text-sm font-bold text-slate-900">{item.titulo}</p>
 												</div>
-												<span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.tone === 'emerald' ? 'bg-emerald-100 text-emerald-800' : item.tone === 'rose' ? 'bg-rose-100 text-rose-800' : item.tone === 'amber' ? 'bg-amber-100 text-amber-900' : 'bg-slate-200 text-slate-700'}`}>
+												<span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${item.tone === 'emerald' ? 'bg-emerald-100 text-emerald-800' : item.tone === 'rose' ? 'bg-rose-100 text-rose-800' : item.tone === 'amber' ? 'bg-amber-100 text-amber-900' : 'bg-slate-200 text-slate-700'}`}>
 													{item.estado}
 												</span>
 											</div>
-											<p className="mt-2 text-sm leading-6 text-slate-600">{item.detalle}</p>
+											{item.detalle && <p className="mt-1 text-xs leading-5 text-slate-500">{item.detalle}</p>}
 											{item.diagnosticoVisual ? (
-												<p className="mt-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+												<p className="mt-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-900">
 													Diagnóstico visual: {item.diagnosticoVisual}
 												</p>
 											) : null}
 										</article>
 									))}
+									{timelineProspecto.length < 3 && (
+										<p className="pl-1 pt-1 text-xs text-slate-400">El historial se irá completando conforme avance el expediente.</p>
+									)}
 								</div>
 							)}
 						</section>
@@ -1770,8 +1876,8 @@ const ExpedienteAdmisiones = () => {
 						<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
 							<div className="mb-4 flex items-center justify-between gap-3">
 								<div>
-									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Acción rápida</p>
-									<h3 className="text-2xl font-black text-slate-900">Abrir módulos del expediente</h3>
+									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Acciones</p>
+									<h3 className="text-xl font-black text-slate-900">Módulos del expediente</h3>
 								</div>
 								<Sparkles className="text-[#7E1D3B]" size={22} />
 							</div>

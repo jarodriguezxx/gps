@@ -2,54 +2,71 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE } from '../../config/api';
 import {
-  Activity, BadgeCheck, BrainCircuit, CalendarDays, ClipboardList, FileBarChart, Folder,
-  Inbox, LayoutDashboard, MessageSquare, PhoneCall, ShoppingCart,
-  Stethoscope, UserPlus, Users, Users2, AlertTriangle,
+  Activity, AlertTriangle, BadgeCheck, BrainCircuit, CalendarDays, CalendarPlus, ClipboardCheck,
+  ClipboardList, FileBarChart, Folder, Inbox, LayoutDashboard, MessageSquare,
+  PhoneCall, ShoppingCart, Stethoscope, UserCog, UserPlus, Users, Users2,
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
-export const AdminHeader = ({ submodule = 'Módulo de Admisiones' }) => (
-  <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
-    <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
-      <div className="flex items-center gap-3">
-        <img 
-          src={marakameLogo} 
-          alt="Logo Marakame"
-          className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" 
-        />
-        <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
-          <h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema Integral Marakame</h1>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">{submodule}</p>
+const getUsuarioHeader = () => {
+  try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
+};
+
+const normalizarTexto = (value = '') => String(value || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim();
+
+export const AdminHeader = ({ submodule = 'Módulo de Admisiones' }) => {
+  const usuario = getUsuarioHeader();
+  const nombre = usuario.nombre || usuario.nombreCompleto || 'Usuario';
+  const puesto = usuario.puesto || usuario.rol || '';
+  const iniciales = nombre.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+  return (
+    <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
+      <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="flex items-center gap-3">
+          <img
+            src={marakameLogo}
+            alt="Logo Marakame"
+            className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
+          />
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
+            <h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema Integral Marakame</h1>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">{submodule}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 self-end md:self-auto">
+          <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center">
+            <span className="text-sm font-black text-[#7E1D3B]">{iniciales}</span>
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800 leading-tight">{nombre}</p>
+            {puesto && <p className="text-xs text-slate-500 uppercase tracking-wide">{puesto}</p>}
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-3 self-end md:self-auto">
-        <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center">
-          <span className="text-sm font-black text-[#7E1D3B]">ADM</span>
-        </div>
-        <div>
-          <p className="text-xs text-slate-500">Sesión activa</p>
-          <p className="font-semibold text-slate-700">{submodule}</p>
-        </div>
-      </div>
-    </div>
-  </header>
-);
+    </header>
+  );
+};
 
 export const AdminSidebar = ({ navItems, activeKey }) => {
   const navigate = useNavigate();
   
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {navItems.map(({ label, icon, key, path }) => {
+      {navItems.map(({ label, icon, key: navKey, path }) => {
         const NavIcon = icon;
 
         return (
         <button 
-          key={key} 
+          key={`${label}-${path}`} 
           onClick={() => navigate(path)}
           className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition flex items-center gap-2.5 ${
-            key === activeKey
+            navKey === activeKey
               ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
               : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
           }`}
@@ -64,22 +81,23 @@ export const AdminSidebar = ({ navItems, activeKey }) => {
 };
 
 const admisionesNavItems = [
-  { label: 'Dashboard de Inicio',    icon: LayoutDashboard, key: 'dashboard',            path: '/admisiones' },
-  { label: 'Bandeja Operativa',      icon: Inbox,           key: 'bandeja',              path: '/admisiones/bandeja-operativa' },
-  { label: 'Expediente',             icon: Folder,          key: 'expediente',           path: '/admisiones/expediente' },
-  { label: 'Requisiciones',          icon: ClipboardList,   key: 'requisiciones',        path: '/admisiones/requisiciones' },
-  { label: 'Validar Requisiciones',  icon: BadgeCheck,      key: 'validar-requisiciones', path: '/admisiones/validar-requisiciones',
-    soloParaPuesto: ['JEFE DE ADMISIONES', 'ENCARGADO DE ADMISIONES'] },
-  { label: 'Agenda de Citas',        icon: CalendarDays,    key: 'agenda',               path: '/admisiones/agenda-citas' },
-  { label: 'Seguimiento Telefónico', icon: PhoneCall,       key: 'seguimiento',          path: '/admisiones/seguimiento-telefonico' },
-  { label: 'Incidencias de mi Área', icon: AlertTriangle,   key: 'incidencias-area',     path: '/incidencias/departamento',
-    soloParaPuesto: ['JEFA (E) DEP. ADMISIONES'] },
+  { label: 'Dashboard de Inicio',    icon: LayoutDashboard, key: 'dashboard',              path: '/admisiones' },
+  { label: 'Bandeja Operativa',      icon: Inbox,           key: 'bandeja',                path: '/admisiones/bandeja-operativa' },
+  { label: 'Expediente',             icon: Folder,          key: 'expediente',             path: '/admisiones/expediente' },
+  { label: 'Requisiciones',          icon: ClipboardList,   key: 'requisiciones',          path: '/admisiones/requisiciones' },
+  { label: 'Validar Requisiciones',  icon: BadgeCheck,      key: 'validar-requisiciones',  path: '/admisiones/validar-requisiciones',
+    soloParaPuesto: ['jefe de admisiones', 'jefa de admisiones', 'encargado de admisiones', 'encargada de admisiones', 'dep. admisiones'] },
+  { label: 'Agenda de Citas',        icon: CalendarDays,    key: 'agenda',                 path: '/admisiones/agenda-citas' },
+  { label: 'Seguimiento Telefónico', icon: PhoneCall,       key: 'seguimiento',            path: '/admisiones/seguimiento-telefonico' },
+  { label: 'Incidencias de mi Área', icon: AlertTriangle,   key: 'incidencias-area',       path: '/incidencias/departamento',
+    soloParaPuesto: ['dep. admisiones', 'jefe de admisiones', 'jefa de admisiones', 'jefa (e) dep. admisiones'] },
   // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
 ];
 
-// Ítems del sidebar que cada puesto NO puede ver
+// Ítems del sidebar que cada puesto NO puede ver (claves en minúsculas para comparación case-insensitive)
 const ADMISIONES_ITEMS_OCULTOS_POR_PUESTO = {
-  'RECEPCIÓN': ['requisiciones', 'validar-requisiciones'],
+  'recepción': ['validar-requisiciones'],
+  'recepcion': ['validar-requisiciones'],
 };
 
 const getUsuarioSesion = () => {
@@ -106,10 +124,11 @@ export const AdmisionesSidebar = () => {
   }, []);
 
   const puesto = getUsuarioSesion().puesto || '';
-  const itemsOcultos = ADMISIONES_ITEMS_OCULTOS_POR_PUESTO[puesto] ?? [];
+  const puestoNorm = puesto.toLowerCase().trim();
+  const itemsOcultos = ADMISIONES_ITEMS_OCULTOS_POR_PUESTO[puestoNorm] ?? [];
   const itemsVisibles = admisionesNavItems.filter(item => {
     if (itemsOcultos.includes(item.key)) return false;
-    if (item.soloParaPuesto && !item.soloParaPuesto.includes(puesto)) return false;
+    if (item.soloParaPuesto && !item.soloParaPuesto.some(kw => puestoNorm.includes(kw))) return false;
     return true;
   });
 
@@ -120,13 +139,13 @@ export const AdmisionesSidebar = () => {
 
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {itemsVisibles.map(({ label, icon, key, path }) => {
+      {itemsVisibles.map(({ label, icon, path }) => {
         const active = location.pathname === path || location.pathname.startsWith(`${path}/`);
         const NavIcon = icon;
 
         return (
           <button
-            key={key}
+            key={`${label}-${path}`}
             type="button"
             onClick={() => navigate(path)}
             className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5 ${
@@ -239,26 +258,56 @@ export const AdminSuccessAlert = ({ message }) =>
   ) : null;
 
 // ── Sidebar Médico ────────────────────────────────────────────────
-const medicoNavItems = [
-  { label: 'Inicio Jefatura',         icon: Activity,      path: '/medico/inicio-jefe-medico' },
-  { label: 'Prospectos',              icon: UserPlus,      path: '/medico/prospectos' },
-  { label: 'Pacientes Activos',       icon: Users,         path: '/medico/pacientes' },
-  { label: 'Expedientes Clínicos',    icon: ClipboardList, path: '/medico/expedientes' },
-  { label: 'Requisiciones',           icon: ShoppingCart,  path: '/medico/requisiciones' },
-  { label: 'Personal Médico',         icon: Stethoscope,   path: '/medico/personal' },
-  { label: 'Reportes y Estadísticas', icon: FileBarChart,  path: '/medico/reportes' },
-];
+const getMedicoNavItems = (puestoNorm) => {
+  if (puestoNorm.includes('dep. medico') || puestoNorm.includes('jefe medico') || puestoNorm.includes('jefa medico')) {
+    return [
+      { label: 'Inicio Jefatura',         icon: Activity,      path: '/medico/inicio-jefe-medico' },
+      { label: 'Prospectos',              icon: UserPlus,      path: '/medico/prospectos' },
+      { label: 'Pacientes Activos',       icon: Users,         path: '/medico/pacientes' },
+      { label: 'Expedientes Clínicos',    icon: ClipboardList, path: '/medico/expedientes' },
+      { label: 'Requisiciones',           icon: ShoppingCart,  path: '/medico/requisiciones' },
+      { label: 'Validar Requisiciones',   icon: BadgeCheck,    path: '/medico/validar-requisiciones' },
+      { label: 'Personal Médico',         icon: Stethoscope,   path: '/medico/personal' },
+      { label: 'Reportes y Estadísticas', icon: FileBarChart,  path: '/medico/reportes' },
+    ];
+  }
+  if (puestoNorm.includes('enfermero') || puestoNorm.includes('enfermera')) {
+    return [
+      { label: 'Enfermería',    icon: Users,        path: '/enfermeria' },
+      { label: 'Requisiciones', icon: ShoppingCart, path: '/medico/requisiciones' },
+    ];
+  }
+  if (puestoNorm.includes('nutriolog')) {
+    return [
+      { label: 'Inicio Nutrición', icon: Activity,     path: '/nutriologo/inicio' },
+      { label: 'Mis Pacientes',    icon: Users,        path: '/nutriologo/pacientes' },
+      { label: 'Requisiciones',    icon: ShoppingCart, path: '/medico/requisiciones' },
+    ];
+  }
+  // Médico general y resto
+  return [
+    { label: 'Inicio Jefatura',         icon: Activity,      path: '/medico/inicio-jefe-medico' },
+    { label: 'Prospectos',              icon: UserPlus,      path: '/medico/prospectos' },
+    { label: 'Pacientes Activos',       icon: Users,         path: '/medico/pacientes' },
+    { label: 'Expedientes Clínicos',    icon: ClipboardList, path: '/medico/expedientes' },
+    { label: 'Requisiciones',           icon: ShoppingCart,  path: '/medico/requisiciones' },
+    { label: 'Personal Médico',         icon: Stethoscope,   path: '/medico/personal' },
+    { label: 'Reportes y Estadísticas', icon: FileBarChart,  path: '/medico/reportes' },
+  ];
+};
 
 export const MedicoSidebar = () => {
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const puestoNorm = normalizarTexto(getUsuarioSesion().puesto || getUsuarioSesion().rol || '');
+  const items      = getMedicoNavItems(puestoNorm);
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {medicoNavItems.map(({ label, icon, path }) => {
-        const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
-        const NavIcon  = icon;
+      {items.map(({ label, icon, path }) => {
+        const active  = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon = icon;
         return (
-          <button key={path} type="button" onClick={() => navigate(path)}
+          <button key={`${label}-${path}`} type="button" onClick={() => navigate(path)}
             className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5
               ${active
                 ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
@@ -273,24 +322,56 @@ export const MedicoSidebar = () => {
 };
 
 // ── Sidebar Clínico ───────────────────────────────────────────────
-const clinicoNavItems = [
-  { label: 'Inicio Jefatura',   icon: LayoutDashboard, path: '/clinico/inicio-jefe-clinico' },
-  { label: 'Pacientes',         icon: Users,           path: '/clinico/pacientes' },
-  { label: 'Auditoría Psico.',  icon: BrainCircuit,    path: '/clinico/pacientes' },
-  { label: 'Auditoría Consej.', icon: MessageSquare,   path: '/clinico/pacientes' },
-  { label: 'Auditoría Familia', icon: Users2,          path: '/clinico/pacientes' },
-  { label: 'Terapeuta',         icon: Stethoscope,     path: '/clinico/inicio-terapeuta' },
-  { label: 'Requisiciones',     icon: ShoppingCart,    path: '/clinico/requisiciones' },
-];
+const getClinicoNavItems = (puestoNorm) => {
+  if (puestoNorm.includes('dep. clinico') || puestoNorm.includes('jefe clinico') || puestoNorm.includes('jefa clinico')) {
+    return [
+      { label: 'Tablero de Control',     icon: LayoutDashboard, path: '/clinico/inicio' },
+      { label: 'Auditoría Clínica',      icon: Users,           path: '/clinico/directorio' },
+      { label: 'Asignación Terapéutica', icon: UserCog,         path: '/clinico/asignaciones' },
+      { label: 'Validación Terapéutica', icon: ClipboardCheck,  path: '/clinico/calendario' },
+      { label: 'Requisiciones',          icon: ShoppingCart,    path: '/clinico/requisiciones' },
+      { label: 'Validar Requisiciones',  icon: BadgeCheck,      path: '/clinico/validar-requisiciones' },
+    ];
+  }
+  if (puestoNorm.includes('psicolog')) {
+    return [
+      { label: 'Mis Pacientes',  icon: Users,        path: '/psicologia/inicio' },
+      { label: 'Agendar Cita',   icon: CalendarPlus, path: '/psicologia/agendar' },
+      { label: 'Requisiciones',  icon: ShoppingCart, path: '/clinico/requisiciones' },
+    ];
+  }
+  if (puestoNorm.includes('consej')) {
+    return [
+      { label: 'Mis Pacientes',  icon: Users,        path: '/consejeria/inicio' },
+      { label: 'Agendar Cita',   icon: CalendarPlus, path: '/consejeria/agendar' },
+      { label: 'Requisiciones',  icon: ShoppingCart, path: '/clinico/requisiciones' },
+    ];
+  }
+  if (puestoNorm.includes('familia')) {
+    return [
+      { label: 'Mis Pacientes',  icon: Users,        path: '/familia/inicio' },
+      { label: 'Agendar Cita',   icon: CalendarPlus, path: '/familia/agendar' },
+      { label: 'Requisiciones',  icon: ShoppingCart, path: '/clinico/requisiciones' },
+    ];
+  }
+  // terapeuta, coterapeuta, post tratamiento y resto de clínico
+  return [
+    { label: 'Mis Dinámicas',  icon: LayoutDashboard, path: '/clinico/inicio-terapeuta' },
+    { label: 'Requisiciones',  icon: ShoppingCart,    path: '/clinico/requisiciones' },
+  ];
+};
 
 export const ClinicoSidebar = () => {
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const puestoNorm = normalizarTexto(getUsuarioSesion().puesto || getUsuarioSesion().rol || '');
+  const items      = getClinicoNavItems(puestoNorm);
+
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {clinicoNavItems.map(({ label, icon, path }) => {
-        const active   = location.pathname === path || location.pathname.startsWith(`${path}/`);
-        const NavIcon  = icon;
+      {items.map(({ label, icon, path }) => {
+        const active  = location.pathname === path || location.pathname.startsWith(`${path}/`);
+        const NavIcon = icon;
         return (
           <button key={`${label}-${path}`} type="button" onClick={() => navigate(path)}
             className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5

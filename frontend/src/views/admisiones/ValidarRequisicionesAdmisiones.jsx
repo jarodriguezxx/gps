@@ -121,10 +121,11 @@ export default function ValidarRequisicionesAdmisiones() {
   const pendientesCount = requisiciones.filter(r => r.estado === 'PENDIENTE').length;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
       <AdminHeader submodule="Admisiones — Validar Requisiciones" />
 
-      <div className="grid grid-cols-[auto,1fr] gap-5">
+      <div className="grid gap-4 md:grid-cols-[220px_1fr]">
         <AdmisionesSidebar />
 
         <main className="min-w-0">
@@ -380,6 +381,7 @@ export default function ValidarRequisicionesAdmisiones() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -44,7 +44,7 @@ public class SeguimientoController {
             .toList();
 
         List<SeguimientoTablaDTO> citas = seguimiento.stream()
-            .filter(item -> !esLlamada(item.tipoAccion()))
+            .filter(item -> !esLlamada(item.tipoAccion()) && !esAperturaExpediente(item.tipoAccion()))
             .toList();
 
         List<SeguimientoTablaDTO> llamadas = seguimiento.stream()
@@ -208,6 +208,10 @@ public class SeguimientoController {
 
     private boolean esLlamada(String tipoAccion) {
         return tipoAccion != null && tipoAccion.toLowerCase(Locale.ROOT).contains("llamada");
+    }
+
+    private boolean esAperturaExpediente(String tipoAccion) {
+        return tipoAccion != null && tipoAccion.toLowerCase(Locale.ROOT).contains("apertura");
     }
 
     public record SeguimientoTablasResponse(

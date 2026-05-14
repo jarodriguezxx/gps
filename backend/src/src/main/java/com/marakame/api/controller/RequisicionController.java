@@ -19,7 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -38,13 +37,24 @@ public class RequisicionController {
     private ArticuloRequisicionRepository articuloRepository;
 
     @GetMapping
-    public List<Requisicion> getAll() {
-        return service.obtenerTodas();
+    public ResponseEntity<?> getAll() {
+        try {
+            return ResponseEntity.ok(service.obtenerTodas());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("error-cargando-requisiciones: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
     }
 
     @PostMapping
-    public Requisicion create(@RequestBody Requisicion requisicion) {
-        return service.crear(requisicion);
+    public ResponseEntity<?> create(@RequestBody Requisicion requisicion) {
+        try {
+            return ResponseEntity.ok(service.crear(requisicion));
+        } catch (Exception e) {
+            System.err.println("[RequisicionController] Error al crear: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            if (e.getCause() != null) System.err.println("  Causa: " + e.getCause().getMessage());
+            return ResponseEntity.status(500).body("error-crear: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
@@ -290,6 +300,46 @@ public class RequisicionController {
         }
     }
 
+    @PatchMapping("/{id}/validar-medico")
+    public ResponseEntity<?> validarJefeMedico(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Rol", required = false) String rol) {
+        if (!"jefe-medico".equals(rol)) {
+            return ResponseEntity.status(403).body("acceso-denegado");
+        }
+        try {
+            Requisicion req = service.obtenerPorId(id).orElseThrow(NoSuchElementException::new);
+            if (req.getEstado() != Estado.PENDIENTE) {
+                return ResponseEntity.badRequest().body("solo-requisiciones-pendientes");
+            }
+            return ResponseEntity.ok(service.actualizarEstado(id, Estado.PRE_AUTORIZADA));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("error-inesperado: " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{id}/validar-clinico")
+    public ResponseEntity<?> validarJefeClinico(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Rol", required = false) String rol) {
+        if (!"jefe-clinico".equals(rol)) {
+            return ResponseEntity.status(403).body("acceso-denegado");
+        }
+        try {
+            Requisicion req = service.obtenerPorId(id).orElseThrow(NoSuchElementException::new);
+            if (req.getEstado() != Estado.PENDIENTE) {
+                return ResponseEntity.badRequest().body("solo-requisiciones-pendientes");
+            }
+            return ResponseEntity.ok(service.actualizarEstado(id, Estado.PRE_AUTORIZADA));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("error-inesperado: " + e.getMessage());
+        }
+    }
+
     @PatchMapping("/{id}/validar-admisiones")
     public ResponseEntity<?> validarJefeAdmisiones(
             @PathVariable UUID id,
@@ -315,7 +365,7 @@ public class RequisicionController {
             @PathVariable UUID id,
             @RequestHeader(value = "X-Rol", required = false) String rol,
             @RequestBody Map<String, String> body) {
-        if (!"administracion".equals(rol) && !"direccion-general".equals(rol) && !"jefe-admisiones".equals(rol)) {
+        if (!"administracion".equals(rol) && !"direccion-general".equals(rol) && !"jefe-admisiones".equals(rol) && !"jefe-clinico".equals(rol) && !"jefe-medico".equals(rol)) {
             return ResponseEntity.status(403).body("acceso-denegado");
         }
         try {

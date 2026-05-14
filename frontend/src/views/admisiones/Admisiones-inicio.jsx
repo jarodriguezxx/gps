@@ -344,7 +344,6 @@ const AdmisionesInicio = () => {
 			{ label: 'Casos en Bandeja', value: String(bandejaTrabajo.length), helper: 'Casos activos por prioridad', tone: 'emerald', icon: FileText },
 			{ label: 'Citas Activas', value: String(citasHoy.length), helper: 'Programadas para atender hoy', tone: 'sky', icon: CalendarDays },
 			{ label: 'Seguimientos', value: String(seguimiento.length), helper: 'Llamadas y contactos registrados', tone: 'amber', icon: Phone },
-			{ label: 'Pendientes Hoy', value: String(resumen.pendientes), helper: 'Casos que requieren acción', tone: 'rose', icon: Bell },
 			{
 				label: 'Capacidad Clínica',
 				value: `${pacientesIngresados} / ${LIMITE_PACIENTES}`,

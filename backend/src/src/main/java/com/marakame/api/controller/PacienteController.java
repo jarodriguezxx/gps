@@ -29,7 +29,7 @@ import com.marakame.api.service.PacienteService;
 
 @RestController
 @RequestMapping("/api/pacientes")
-@CrossOrigin(origins = "http://localhost:5173") 
+@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
 public class PacienteController {
 
     @Autowired
@@ -173,8 +173,8 @@ public class PacienteController {
     @PostMapping
     public ResponseEntity<?> guardarNuevoExpediente(@RequestBody PacienteDTO dto) {
         try {
-            pacienteService.guardarNuevoExpediente(dto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("mensaje", "Expediente y paciente creados correctamente"));
+            Long pacienteId = pacienteService.guardarNuevoExpediente(dto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("mensaje", "Expediente y paciente creados correctamente", "id", pacienteId));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
@@ -316,7 +316,9 @@ public ResponseEntity<?> buscarPacientePorIdEspecifico(@PathVariable Long id) {
             if (nuevoEstado == null || nuevoEstado.isBlank()) {
                 return new ResponseEntity<>(Map.of("error", "Estado no puede estar vacío"), HttpStatus.BAD_REQUEST);
             }
-            var paciente = pacienteService.cambiarEstadoPaciente(id, nuevoEstado);
+            String motivoDenegacion = payload.get("motivoDenegacion");
+            String medicoRechazo = payload.get("medicoRechazo");
+            var paciente = pacienteService.cambiarEstadoPaciente(id, nuevoEstado, motivoDenegacion, medicoRechazo);
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "estadoPaciente", paciente.getEstadoPaciente(),

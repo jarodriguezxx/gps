@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, ClipboardCheck, UserCog, Activity,
-  TrendingUp, Clock, UserX, ChevronRight, CalendarClock, AlertTriangle
+  TrendingUp, Clock, UserX, ChevronRight, CalendarClock, ShoppingCart, BadgeCheck, AlertTriangle
 } from 'lucide-react';
+import { API_BASE } from '../../config/api';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
@@ -11,6 +12,8 @@ const navItems = [
   { label: 'Auditoría Clínica',      icon: Users,           path: '/clinico/directorio' },
   { label: 'Asignación Terapéutica', icon: UserCog,         path: '/clinico/asignaciones' },
   { label: 'Validación Terapéutica', icon: ClipboardCheck,  path: '/clinico/calendario' },
+  { label: 'Requisiciones',          icon: ShoppingCart,    path: '/clinico/requisiciones' },
+  { label: 'Validar Requisiciones',  icon: BadgeCheck,      path: '/clinico/validar-requisiciones' },
   { label: 'Incidencias de mi Área', icon: AlertTriangle,   path: '/incidencias/departamento' },
 ];
 
@@ -23,9 +26,9 @@ const InicioJefeClinico = () => {
 
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:4000/api/pacientes').then(r => r.ok ? r.json() : []),
-      fetch('http://localhost:4000/api/actividades').then(r => r.ok ? r.json() : []),
-      fetch('http://localhost:4000/api/asignaciones-clinico').then(r => r.ok ? r.json() : []),
+      fetch(`${API_BASE}/pacientes`).then(r => r.ok ? r.json() : []).catch(() => []),
+      fetch(`${API_BASE}/actividades`).then(r => r.ok ? r.json() : []).catch(() => []),
+      fetch(`${API_BASE}/asignaciones-clinico`).then(r => r.ok ? r.json() : []).catch(() => []),
     ]).then(([pacs, acts, asigs]) => {
       setPacientes((Array.isArray(pacs) ? pacs : []).filter(p => (p.estadoPaciente || '').toUpperCase() === 'INGRESADO'));
       setActividades(Array.isArray(acts) ? acts : []);

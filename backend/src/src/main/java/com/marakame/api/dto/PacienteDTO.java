@@ -35,5 +35,17 @@ public record PacienteDTO(
     @JsonAlias("fecha_cita")
     LocalDateTime fechaCita,   // Fecha y hora programada
     @JsonAlias("motivo_accion")
-    String motivoAccion       // Notas breves sobre la llamada o visita
+    String motivoAccion,      // Notas breves sobre la llamada o visita
+
+    // --- CAMPOS CLÍNICOS DEL DIAGNÓSTICO INICIAL ---
+    String sustanciaEspecifica,
+    String internamiento,
+    String criterioInternamiento,
+    String conclusionIntervencion,
+    String tratamientoAnterior,
+    String posibilidadesEconomicas,
+
+    // --- FUENTE DE REFERENCIA (solicitante) ---
+    String fuenteReferencia,
+    String fuenteReferenciaOtro
 ) {}

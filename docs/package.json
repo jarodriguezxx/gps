@@ -1,0 +1,12 @@
+{
+  "name": "estudio-mockup-pdf",
+  "version": "1.0.0",
+  "description": "Generador de PDF para el mockup Estudio Socioeconómico",
+  "main": "generate-pdf.js",
+  "scripts": {
+    "generate-pdf": "node generate-pdf.js"
+  },
+  "dependencies": {
+    "puppeteer": "^20.0.0"
+  }
+}

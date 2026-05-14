@@ -246,7 +246,7 @@ const requiredTextFields = {
     { name: 'internamiento', label: '¿Está dispuesto a internarse?' },
     { name: 'tratamientoAnterior', label: '¿Ha estado en tratamiento anteriormente?' },
     { name: 'posibilidadesEconomicas', label: 'Posibilidades económicas' },
-    { name: 'llamarPaciente', label: 'Tipo de llamada inicial' },
+    // 'llamarPaciente' se valida condicionalmente más abajo según el modo de contacto
     { name: 'acuerdo', label: 'Acuerdo' },
   ],
 };
@@ -474,6 +474,28 @@ const ValoracionDiagnostica = () => {
     }));
   };
 
+  const modoContacto = formData.llamarPaciente || formData.estadoSeguimiento || '';
+  const dateFieldConfig = {
+    nosotros:        { name: 'fechaLlamada',        label: 'Fecha programada de nuestra llamada inicial' },
+    prospecto:       { name: 'fechaLlamada',        label: 'Fecha de llamada del prospecto' },
+    espera_visita:   { name: 'fechaEsperaVisita',   label: 'Fecha de visita del prospecto' },
+    Posible_Ingreso: { name: 'fechaPosibleIngreso',  label: 'Fecha de posible ingreso' },
+  }[modoContacto] || null;
+
+  const handleModoContactoChange = (e) => {
+    const value = e.target.value;
+    const esLlamada = value === 'nosotros' || value === 'prospecto';
+    setFormData((prev) => ({
+      ...prev,
+      llamarPaciente:   esLlamada ? value : '',
+      estadoSeguimiento: !esLlamada ? value : '',
+      fechaLlamada:        '',
+      fechaEsperaVisita:   '',
+      fechaEsperaLlamada:  '',
+      fechaPosibleIngreso: '',
+    }));
+  };
+
   const cerrarModalMenor = () => {
     setModalMenorOpen(false);
     setFormData((prev) => ({
@@ -529,6 +551,14 @@ const ValoracionDiagnostica = () => {
       telefono: formData.pacienteTelefonoCelular,
       ocupacion: formData.dedicacionPaciente,
       sustancia: formData.sustanciaConsumo,
+      sustanciaEspecifica: formData.sustanciaEspecifica,
+      internamiento: formData.internamiento,
+      criterioInternamiento: formData.criterioInternamiento,
+      conclusionIntervencion: formData.conclusionIntervencion,
+      tratamientoAnterior: formData.tratamientoAnterior,
+      posibilidadesEconomicas: formData.posibilidadesEconomicas,
+      fuenteReferencia: formData.fuenteReferencia,
+      fuenteReferenciaOtro: formData.fuenteReferenciaOtro,
       solicitanteId: incomingState.solicitanteId || null,
       llamarPaciente: formData.llamarPaciente,
       estadoSeguimiento: formData.estadoSeguimiento,
@@ -587,6 +617,8 @@ const ValoracionDiagnostica = () => {
       parentescoPaciente: formData.parentesco,
       telefono: formData.telefonoSolicitante,
       celular: formData.celularSolicitante,
+      fuenteReferencia: formData.fuenteReferencia,
+      fuenteReferenciaOtro: formData.fuenteReferenciaOtro,
     };
 
     const pacientePayload = {
@@ -618,6 +650,12 @@ const ValoracionDiagnostica = () => {
       telefono: formData.pacienteTelefonoCelular,
       ocupacion: formData.dedicacionPaciente,
       sustancia: formData.sustanciaConsumo,
+      sustanciaEspecifica: formData.sustanciaEspecifica,
+      internamiento: formData.internamiento,
+      criterioInternamiento: formData.criterioInternamiento,
+      conclusionIntervencion: formData.conclusionIntervencion,
+      tratamientoAnterior: formData.tratamientoAnterior,
+      posibilidadesEconomicas: formData.posibilidadesEconomicas,
       llamarPaciente: formData.llamarPaciente,
       estadoSeguimiento: formData.estadoSeguimiento,
       fechaCita: fechaCitaProgramada,
@@ -641,6 +679,31 @@ const ValoracionDiagnostica = () => {
         }
 
         setNotification({ type: 'success', message: 'Valoración diagnóstica actualizada correctamente.' });
+
+        // Si se guardó una fecha para visita o posible ingreso, crear una cita en seguimientos
+        try {
+          const fecha = fechaCitaProgramada;
+          const estado = String(formData.estadoSeguimiento || '').trim();
+          const esVisita = estado === 'espera_visita';
+          const esPosibleIngreso = estado === 'Posible_Ingreso';
+          const pacienteIdToUse = incomingState.pacienteId;
+
+          if (fecha && (esVisita || esPosibleIngreso) && pacienteIdToUse) {
+            const fechaConSegundos = fecha.length === 16 ? `${fecha}:00` : fecha;
+            await fetch(`${API_BASE}/seguimientos/citas`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pacienteId: pacienteIdToUse,
+                fechaHoraProgramada: fechaConSegundos,
+                tipoCita: esVisita ? 'Visita' : 'Posible ingreso',
+                motivo: 'Programada desde Valoración Diagnóstica',
+              }),
+            }).catch((err) => console.error('No se pudo crear cita tras actualizar paciente:', err));
+          }
+        } catch (err) {
+          console.error('Error creando cita tras actualización:', err);
+        }
       } else {
         const solicitanteResponse = await fetch(`${API_BASE}/solicitantes`, {
           method: 'POST',
@@ -670,7 +733,34 @@ const ValoracionDiagnostica = () => {
           throw new Error(errorText || 'No se pudo guardar el paciente.');
         }
 
+        const pacienteGuardado = await pacienteResponse.json().catch(() => ({}));
+
         setNotification({ type: 'success', message: 'Valoración diagnóstica guardada correctamente.' });
+
+        // Crear cita si corresponde (espera visita / posible ingreso)
+        try {
+          const fecha = fechaCitaProgramada;
+          const estado = String(formData.estadoSeguimiento || '').trim();
+          const esVisita = estado === 'espera_visita';
+          const esPosibleIngreso = estado === 'Posible_Ingreso';
+          const pacienteIdToUse = pacienteGuardado.id || null;
+
+          if (fecha && (esVisita || esPosibleIngreso) && pacienteIdToUse) {
+            const fechaConSegundos = fecha.length === 16 ? `${fecha}:00` : fecha;
+            await fetch(`${API_BASE}/seguimientos/citas`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pacienteId: pacienteIdToUse,
+                fechaHoraProgramada: fechaConSegundos,
+                tipoCita: esVisita ? 'Visita' : 'Posible ingreso',
+                motivo: 'Programada desde Valoración Diagnóstica',
+              }),
+            }).catch((err) => console.error('No se pudo crear cita tras crear paciente:', err));
+          }
+        } catch (err) {
+          console.error('Error creando cita tras guardado:', err);
+        }
       }
 
       setTimeout(() => {
@@ -1145,95 +1235,43 @@ const ValoracionDiagnostica = () => {
               {/* Criterios de Internamiento */}
               <label className="text-[#7E1D3B] font-bold text-lg border-b border-slate-100 pb-3">Seguimiento y Programación</label>
               <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8 shadow-sm">
-                <div>
-                  <p className="mb-4 font-bold text-sm text-slate-700 uppercase">Tipo de llamada inicial</p>
-                  <select
-                    name="llamarPaciente"
-                    value={formData.llamarPaciente}
-                    onChange={handleInputChange}
-                    className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
-                  >
-                    <option value="">Sin seleccionar</option>
-                    <option value="nosotros">Nosotros le llamamos</option>
-                    <option value="prospecto">El prospecto nos llama</option>
-                  </select>
-                </div>
-                 <div className="space-y-4">
-                 
-                  <div className="space-y-3">
-                    <InputGroup
-                label="Acuerdo"
-                name="acuerdo"
-                value={formData.acuerdo}
-                onChange={handleInputChange}
-                placeholder="En qué se acordó con el prospecto para su internamiento"
-              />
-                  </div>
-                </div>
-
                 <div className="space-y-4">
-                  {!formData.llamarPaciente && (
+                  <div>
+                    <p className="mb-4 font-bold text-sm text-slate-700 uppercase">Forma de contacto</p>
+                    <select
+                      value={modoContacto}
+                      onChange={handleModoContactoChange}
+                      className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
+                    >
+                      <option value="">Sin seleccionar</option>
+                      <option value="nosotros">Nosotros le llamamos</option>
+                      <option value="prospecto">El prospecto nos llama</option>
+                      <option value="espera_visita">En espera de visita del paciente</option>
+                      <option value="Posible_Ingreso">En espera de posible ingreso</option>
+                    </select>
+                  </div>
+                  {dateFieldConfig && (
                     <div>
-                      <p className="mb-4 font-bold text-sm text-slate-700 uppercase flex items-center gap-2">
-                        <Clipboard size={16} /> Estado de seguimiento
-                      </p>
-                      <select
-                        name="estadoSeguimiento"
-                        value={formData.estadoSeguimiento}
-                        onChange={handleInputChange}
-                        className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
-                      >
-                        <option value="">Sin seleccionar</option>
-                        <option value="espera_visita">En espera de visita del paciente</option>
-                        <option value="Posible_Ingreso">En espera de Posible Ingreso</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Mostrar fecha solo si hay tipo de llamada */}
-                  {formData.llamarPaciente && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">
-                        {formData.llamarPaciente === 'nosotros' ? 'Fecha programada de nuestra llamada inicial' : 'Fecha de llamada del prospecto'}
-                      </label>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">{dateFieldConfig.label}</label>
                       <input
                         type="datetime-local"
-                        name="fechaLlamada"
-                        value={formData.fechaLlamada}
+                        name={dateFieldConfig.name}
+                        value={formData[dateFieldConfig.name]}
                         onChange={handleInputChange}
                         min={minFechaHoraProgramacion}
                         className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
                       />
                     </div>
                   )}
-                  {/*llamda del pacinete hora */}
-                  {!formData.llamarPaciente && formData.estadoSeguimiento === 'espera_visita' && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de visita del prospecto</label>
-                      <input
-                        type="datetime-local"
-                        name="fechaEsperaVisita"
-                        value={formData.fechaEsperaVisita}
-                        onChange={handleInputChange}
-                        min={minFechaHoraProgramacion}
-                        className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
-                      />
-                    </div>
-                  )}
-                   {/*Posible ingreso */}
-                  {!formData.llamarPaciente && formData.estadoSeguimiento === 'Posible_Ingreso' && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 uppercase mb-2 ml-1">Fecha de posible ingreso</label>
-                      <input
-                        type="datetime-local"
-                        name="fechaPosibleIngreso"
-                        value={formData.fechaPosibleIngreso}
-                        onChange={handleInputChange}
-                        min={minFechaHoraProgramacion}
-                        className="w-full bg-white border border-slate-200 p-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#7E1D3B]/20 outline-none transition-all min-h-[48px]"
-                      />
-                    </div>
-                  )}
+                </div>
+                <div className="space-y-3">
+                  <InputGroup
+                    label="Acuerdo"
+                    name="acuerdo"
+                    value={formData.acuerdo}
+                    onChange={handleInputChange}
+                    placeholder="En qué se acordó con el prospecto para su internamiento"
+                  />
                 </div>
               </div>
 

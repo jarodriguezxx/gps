@@ -6,20 +6,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/actividades")
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
 public class ActividadController {
 
     @Autowired
     private ActividadRepository repository;
 
     @GetMapping
-    public List<Actividad> obtenerTodas() {
-        return repository.findAllByOrderByFechaCreacionDesc();
+    public ResponseEntity<List<Actividad>> obtenerTodas() {
+        try {
+            return ResponseEntity.ok(repository.findAllByOrderByFechaCreacionDesc());
+        } catch (Exception e) {
+            System.err.println("[ActividadController] Error en obtenerTodas: " + e.getMessage());
+            return ResponseEntity.ok(Collections.emptyList());
+        }
     }
 
     @PostMapping

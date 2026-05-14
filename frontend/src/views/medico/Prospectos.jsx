@@ -168,7 +168,7 @@ const DirectorioProspectos = () => {
                         </tr>
                       ) : (
                         prospectosFiltrados.map((p, i) => (
-                          <tr key={p.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
+                          <tr key={`${p.id}-${i}`} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
                             
                             {/* Datos Básicos */}
                             <td className="px-5 py-4">

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Users, HeartHandshake, ChevronRight, CalendarPlus, Search } from 'lucide-react';
+import { Users, HeartHandshake, ChevronRight, CalendarPlus, Search, ShoppingCart } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
-  { label: 'Mis Pacientes', icon: Users,        path: '/consejeria/inicio' },
-  { label: 'Agendar Cita',  icon: CalendarPlus, path: '/consejeria/agendar' },
+  { label: 'Mis Pacientes',  icon: Users,        path: '/consejeria/inicio' },
+  { label: 'Agendar Cita',   icon: CalendarPlus, path: '/consejeria/agendar' },
+  { label: 'Requisiciones',  icon: ShoppingCart, path: '/clinico/requisiciones' },
 ];
 
 const PASOS_REQUERIDOS = [ "Historia de vida", "Autodiagnóstico", "Plan de consejería", "Prevención de recaídas", "Plan de vida", "Notas de evolución", "Entrevista final" ];

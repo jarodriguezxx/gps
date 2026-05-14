@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Estudio Socioeconómico — Ejemplo Relleno</title>
+  <link rel="stylesheet" href="estudio-socioeconomico.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div class="logo-wrap">
+        <img src="../frontend/src/assets/marakame.jpeg" alt="Logo Marakame" class="logo" onerror="this.style.display='none'" />
+      </div>
+      <div class="title-wrap">
+        <h1>ESTUDIO SOCIOECONÓMICO</h1>
+      </div>
+      <div class="meta-wrap">
+        <p class="small">Folio: 2026-0001</p>
+      </div>
+    </header>
+
+    <main>
+      <div class="top-row">
+        <div class="photo">
+          <div class="photo-label">FOTO (1)</div>
+          <div class="photo-box"><img src="../frontend/src/assets/sample-person.jpg" alt="foto" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'"/></div>
+          <p class="photo-help">Fotografía del solicitante</p>
+        </div>
+
+        <div class="person-data">
+          <div class="card">
+            <label>Nombre:</label>
+            <div class="field">María López García</div>
+            <label>Fecha de nacimiento:</label>
+            <div class="field">1990-04-12</div>
+            <label>Edad:</label>
+            <div class="field">36 años</div>
+            <label>Domicilio:</label>
+            <div class="field">Calle Falsa 123, Col. Centro, Ciudad</div>
+            <label>Teléfono:</label>
+            <div class="field">+52 55 1234 5678</div>
+          </div>
+
+          <div class="card small-cards">
+            <div><strong>CURP</strong><div class="inline-field">LOGM900412HDFRPR07</div></div>
+            <div><strong>Estado</strong><div class="inline-field">En trámite</div></div>
+          </div>
+        </div>
+      </div>
+
+      <section class="card section">
+        <h2>1. Composición del hogar</h2>
+        <div class="two-col">
+          <div>
+            <label>Miembros del hogar</label>
+            <div class="field">4 (2 adultos, 2 menores)</div>
+
+            <label>Parentesco y edades</label>
+            <div class="field">Cónyuge (38), Hijo (10), Hija (6)</div>
+          </div>
+          <div>
+            <label>Tipo de vivienda</label>
+            <div class="field">Propia, material de paredes: bloque, techo: lámina</div>
+
+            <label>Tenencia</label>
+            <div class="field">Propietario</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card section">
+        <h2>2. Educación y ocupación</h2>
+        <div class="table-like">
+          <div class="row"><div>Escolaridad del jefe de familia</div><div>Secundaria completa</div></div>
+          <div class="row"><div>Ocupación principal</div><div>Trabajadora informal (venta ambulante)</div></div>
+          <div class="row"><div>Horas trabajadas</div><div>30 hrs/sem</div></div>
+        </div>
+      </section>
+
+      <section class="card section">
+        <h2>3. Ingresos y gastos</h2>
+        <p class="muted">Valores mensuales aproximados.</p>
+        <div class="table-like">
+          <div class="row"><div>Ingreso total hogar</div><div>$8,500 MXN</div></div>
+          <div class="row"><div>Gasto en alimentos</div><div>$3,200 MXN</div></div>
+          <div class="row"><div>Gasto en servicios</div><div>$1,100 MXN</div></div>
+          <div class="row"><div>Ahorro</div><div>$200 MXN</div></div>
+        </div>
+      </section>
+
+      <section class="card section">
+        <h2>4. Salud y acceso a servicios</h2>
+        <div class="two-col">
+          <div>
+            <label>Acceso a servicios de salud</label>
+            <div class="field">IMSS</div>
+            <label>Enfermedades crónicas</label>
+            <div class="field">Hipertensión (padre)</div>
+          </div>
+          <div>
+            <label>Acceso a educación</label>
+            <div class="field">Escuela pública cercana</div>
+            <label>Transporte</label>
+            <div class="field">Transporte público</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card section">
+        <h2>5. Observaciones</h2>
+        <textarea class="observations" rows="5">Familia con ingresos inestables; prioridad en apoyo alimentario y acompañamiento para acceso a programas sociales. La vivienda requiere mejoras en techado.</textarea>
+      </section>
+
+      <section class="card section">
+        <h2>6. Recomendaciones</h2>
+        <ul>
+          <li>Inscripción a programas de apoyo alimentario.</li>
+          <li>Gestoría para acceso a servicios de salud adicionales.</li>
+          <li>Evaluación de proyecto de mejora de techo.</li>
+        </ul>
+      </section>
+
+      <footer class="footer">
+        <div class="sign">
+          <div class="sign-box"></div>
+          <p>Nombre y firma del entrevistador: Ana Torres</p>
+        </div>
+        <div class="date">
+          <p class="small">Fecha de firma: 2026-05-13</p>
+        </div>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

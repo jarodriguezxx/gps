@@ -23,6 +23,7 @@ const NuevaEvolucion = () => {
   const [paciente, setPaciente] = useState(null);
   const [guardandoNota, setGuardandoNota] = useState(false);
   const [activeNav, setActiveNav] = useState('pacientes');
+  const [vitalErrors, setVitalErrors] = useState({});
 
   const [formData, setFormData] = useState({
     noSesion: '', ta: '', temp: '', fc: '', fr: '', peso: '', talla: '',
@@ -45,10 +46,118 @@ const NuevaEvolucion = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Validar en tiempo real los signos vitales
+    const errors = { ...vitalErrors };
+    
+    if (name === 'temp' && value) {
+      const num = parseFloat(value);
+      if (isNaN(num) || num < 35.0 || num > 42.0) {
+        errors.temp = `Temp. debe estar entre 35°C - 42°C`;
+      } else {
+        delete errors.temp;
+      }
+    }
+    
+    if (name === 'fc' && value) {
+      const num = parseInt(value, 10);
+      if (isNaN(num) || num < 40 || num > 180) {
+        errors.fc = `F.C debe estar entre 40-180 bpm`;
+      } else {
+        delete errors.fc;
+      }
+    }
+    
+    if (name === 'fr' && value) {
+      const num = parseInt(value, 10);
+      if (isNaN(num) || num < 8 || num > 40) {
+        errors.fr = `F.R debe estar entre 8-40 rpm`;
+      } else {
+        delete errors.fr;
+      }
+    }
+    
+    if (name === 'peso' && value) {
+      const num = parseFloat(value);
+      if (isNaN(num) || num < 1 || num > 300) {
+        errors.peso = `Peso debe estar entre 1-300 kg`;
+      } else {
+        delete errors.peso;
+      }
+    }
+    
+    if (name === 'talla' && value) {
+      const num = parseFloat(value);
+      if (isNaN(num) || num < 50 || num > 250) {
+        errors.talla = `Talla debe estar entre 50-250 cm`;
+      } else {
+        delete errors.talla;
+      }
+    }
+    
+    if (name === 'ta' && value) {
+      const taRegex = /^\d{2,3}\/\d{2}$/;
+      if (!taRegex.test(value)) {
+        errors.ta = `Formato: XXX/XX (ej: 120/80)`;
+      } else {
+        const [sistolica, diastolica] = value.split('/').map(Number);
+        if (sistolica < 50 || sistolica > 250 || diastolica < 20 || diastolica > 150 || sistolica < diastolica) {
+          errors.ta = `Valores inválidos`;
+        } else {
+          delete errors.ta;
+        }
+      }
+    }
+    
+    setVitalErrors(errors);
   };
+
+const validateVitals = () => {
+  const errors = [];
+
+  if (formData.temp && (isNaN(formData.temp) || parseFloat(formData.temp) < 35.0 || parseFloat(formData.temp) > 42.0)) {
+    errors.push(`Temperatura debe estar entre 35.0°C y 42.0°C`);
+  }
+
+  if (formData.fc && (isNaN(formData.fc) || parseInt(formData.fc) < 40 || parseInt(formData.fc) > 180)) {
+    errors.push(`F.C debe estar entre 40 y 180 bpm`);
+  }
+
+  if (formData.fr && (isNaN(formData.fr) || parseInt(formData.fr) < 8 || parseInt(formData.fr) > 40)) {
+    errors.push(`F.R debe estar entre 8 y 40 rpm`);
+  }
+
+  if (formData.ta) {
+    const taRegex = /^\d{2,3}\/\d{2}$/;
+    if (!taRegex.test(formData.ta)) {
+      errors.push(`T.A debe tener formato XXX/XX (ej: 120/80)`);
+    } else {
+      const [sistolica, diastolica] = formData.ta.split('/').map(Number);
+      if (sistolica < 50 || sistolica > 250) errors.push(`Sistólica debe estar entre 50 y 250`);
+      if (diastolica < 20 || diastolica > 150) errors.push(`Diastólica debe estar entre 20 y 150`);
+      if (sistolica < diastolica) errors.push(`Sistólica debe ser mayor o igual a diastólica`);
+    }
+  }
+
+  if (formData.peso && (isNaN(formData.peso) || parseFloat(formData.peso) < 1 || parseFloat(formData.peso) > 300)) {
+    errors.push(`Peso debe estar entre 1 y 300 kg`);
+  }
+
+  if (formData.talla && (isNaN(formData.talla) || parseFloat(formData.talla) < 50 || parseFloat(formData.talla) > 250)) {
+    errors.push(`Talla debe estar entre 50 y 250 cm`);
+  }
+
+  return errors;
+};
 
 const guardarNota = async () => {
   if (!formData.evolucion.trim()) return alert("El campo de Evolución es obligatorio.");
+
+  const validationErrors = validateVitals();
+  if (validationErrors.length > 0) {
+    return alert("Errores en signos vitales:\n" + validationErrors.join("\n"));
+  }
+
   setGuardandoNota(true);
 
   // Mandamos los datos separados exactamente como los espera tu nueva entidad de Java
@@ -154,8 +263,17 @@ const guardarNota = async () => {
                       </div>
                       {['ta', 'temp', 'fc', 'fr', 'peso', 'talla'].map(vital => (
                         <div key={vital}>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase">{vital.replace('ta', 'T.A').replace('temp', 'Temp').replace('fc', 'F.C').replace('fr', 'F.R')}</label>
-                          <input type="text" name={vital} value={formData[vital]} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[#7E1D3B]/30" placeholder="..." />
+                          <label className="text-[10px] font-bold text-slate-500 uppercase">{vital.replace('ta', 'T.A').replace('temp', 'Temp').replace('fc', 'F.C').replace('fr', 'F.R').replace('peso', 'Peso').replace('talla', 'Talla')}</label>
+                          <input 
+                            type={['temp', 'fc', 'fr', 'peso', 'talla'].includes(vital) ? 'number' : 'text'}
+                            name={vital} 
+                            value={formData[vital]} 
+                            onChange={handleInputChange} 
+                            className={`w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[#7E1D3B]/30 transition-colors ${vitalErrors[vital] ? 'border-red-500 bg-red-50' : 'border-slate-300'}`}
+                            placeholder="..." 
+                            step={vital === 'temp' ? '0.1' : '1'}
+                          />
+                          {vitalErrors[vital] && <p className="text-[9px] text-red-600 mt-0.5">{vitalErrors[vital]}</p>}
                         </div>
                       ))}
                     </div>
@@ -206,7 +324,7 @@ const guardarNota = async () => {
                   </div>
 
                   <div className="flex justify-end pt-4">
-                    <button onClick={guardarNota} disabled={guardandoNota} className="px-8 py-3 rounded-xl text-sm font-bold text-white bg-[#7E1D3B] hover:bg-[#63162e] shadow-md flex items-center gap-2">
+                    <button onClick={guardarNota} disabled={guardandoNota || Object.keys(vitalErrors).length > 0} className={`px-8 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors ${Object.keys(vitalErrors).length > 0 ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-[#7E1D3B] text-white hover:bg-[#63162e]'}`}>
                       <Save size={18} /> {guardandoNota ? 'Guardando...' : 'Firmar y Guardar Nota'}
                     </button>
                   </div>

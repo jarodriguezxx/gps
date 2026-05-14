@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿﻿import React, { useEffect, useMemo, useState } from 'react';
 
 import { CalendarDays, CheckCircle2, Clock3, Eye, LoaderCircle, Plus, Search, X } from 'lucide-react';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
@@ -44,6 +44,22 @@ const TOLERANCIA_REAGENDACION_MINUTOS = 15;
 const MINIMO_ANTICIPACION_CITA_MINUTOS = 60;
 
 const getCitaNombre = (cita) => cita?.pacienteNombre || cita?.nombreCompleto || cita?.nombre || 'Sin nombre';
+
+const getCitaTimestamp = (cita) => {
+	const raw = cita?.fechaHoraProgramada || cita?.fechaProgramada || cita?.fecha || null;
+	if (!raw) {
+		return Number.NaN;
+	}
+
+	const parsed = new Date(raw).getTime();
+	return Number.isNaN(parsed) ? Number.NaN : parsed;
+};
+
+const getEstadoCita = (cita) => String(cita?.estadoAsistencia || cita?.estadoSeguimiento || '').toLowerCase();
+
+const esEstadoCitaAbierta = (estado = '') => {
+	return !estado.includes('lleg') && !estado.includes('no se present') && !estado.includes('cancel');
+};
 
 const obtenerPacienteIdDesdeAgenda = (form, citas, llamadas) => {
 	if (form.pacienteId) {
@@ -283,16 +299,12 @@ const AgendaCitas = () => {
 	};
 
 	const esCitaVencida = (cita) => {
-		if (!cita?.fechaHoraProgramada) {
-			return false;
-		}
-
-		const fechaProgramada = new Date(cita.fechaHoraProgramada).getTime();
+		const fechaProgramada = getCitaTimestamp(cita);
 		if (Number.isNaN(fechaProgramada)) {
 			return false;
 		}
 
-		const estado = String(cita.estadoAsistencia || cita.estadoSeguimiento || '').toLowerCase();
+		const estado = getEstadoCita(cita);
 		if (!estado.includes('pend')) {
 			return false;
 		}
@@ -305,16 +317,57 @@ const AgendaCitas = () => {
 		cargarDatos();
 	}, []);
 
-	const resumen = useMemo(() => ({
-		total: citas.length,
-		confirmadas: citas.filter((cita) => String(cita.estadoAsistencia || cita.estadoSeguimiento || '').toLowerCase().includes('lleg')).length,
-		pendientes: citas.filter((cita) => String(cita.estadoAsistencia || cita.estadoSeguimiento || '').toLowerCase().includes('pend') || String(cita.estadoAsistencia || cita.estadoSeguimiento || '').toLowerCase().includes('espera')).length,
-		proxima: [...citas].sort((a, b) => new Date(a.fechaHoraProgramada || 0) - new Date(b.fechaHoraProgramada || 0))[0] || null,
-	}), [citas]);
+	const resumen = useMemo(() => {
+		const ahora = Date.now();
+		const inicioHoy = new Date();
+		inicioHoy.setHours(0, 0, 0, 0);
+		const finHoy = new Date();
+		finHoy.setHours(23, 59, 59, 999);
+
+		const citasFuturasAbiertas = citas
+			.filter((cita) => {
+				const timestamp = getCitaTimestamp(cita);
+				if (Number.isNaN(timestamp) || timestamp <= ahora) {
+					return false;
+				}
+
+				return esEstadoCitaAbierta(getEstadoCita(cita));
+			})
+			.sort((a, b) => getCitaTimestamp(a) - getCitaTimestamp(b));
+
+		const citasFuturasPendientes = citasFuturasAbiertas.filter((cita) => {
+			const estado = getEstadoCita(cita);
+			return estado.includes('pend') || estado.includes('espera');
+		});
+
+		const ultimaCitaDelDia = [...citas]
+			.filter((cita) => {
+				const timestamp = getCitaTimestamp(cita);
+				if (Number.isNaN(timestamp)) {
+					return false;
+				}
+
+				return timestamp >= inicioHoy.getTime() && timestamp <= finHoy.getTime();
+			})
+			.sort((a, b) => getCitaTimestamp(b) - getCitaTimestamp(a))[0] || null;
+
+		const proxima = citasFuturasPendientes[0] || citasFuturasAbiertas[0] || null;
+
+		return {
+			total: citas.length,
+			confirmadas: citas.filter((cita) => getEstadoCita(cita).includes('lleg')).length,
+			pendientes: citas.filter((cita) => {
+				const estado = getEstadoCita(cita);
+				return estado.includes('pend') || estado.includes('espera');
+			}).length,
+			proxima,
+			ultimaCitaDelDia,
+		};
+	}, [citas]);
 
 	const citasFiltradas = useMemo(() => {
 		const query = searchQuery.trim().toLowerCase();
-		const ordenadas = [...citas].sort((a, b) => new Date(a.fechaHoraProgramada || 0) - new Date(b.fechaHoraProgramada || 0));
+		const ordenadas = [...citas].sort((a, b) => getCitaTimestamp(a) - getCitaTimestamp(b));
 		return ordenadas.filter((cita) => {
 			const coincideNombre = !query || getCitaNombre(cita).toLowerCase().includes(query);
 			const fechaCita = toLocalDateInputValue(cita.fechaHoraProgramada);
@@ -330,7 +383,7 @@ const AgendaCitas = () => {
 
 	const llamadasFiltradas = useMemo(() => {
 		const query = searchQuery.trim().toLowerCase();
-		const ordenadas = [...llamadas].sort((a, b) => new Date(a.fechaHoraProgramada || 0) - new Date(b.fechaHoraProgramada || 0));
+		const ordenadas = [...llamadas].sort((a, b) => getCitaTimestamp(a) - getCitaTimestamp(b));
 		return ordenadas.filter((item) => {
 			const coincideNombre = !query || getCitaNombre(item).toLowerCase().includes(query);
 			const fechaLlamada = toLocalDateInputValue(item.fechaHoraProgramada);
@@ -548,6 +601,54 @@ const AgendaCitas = () => {
 		}
 	};
 
+	const getOrigenLabel = (origenLlamada) => {
+		if (!origenLlamada) return '--';
+		return origenLlamada.toUpperCase() === 'NOSOTROS' ? 'Nosotros llamamos' : 'Prospecto llama';
+	};
+
+	const marcarLlamadaHecha = async (llamadaId) => {
+		try {
+			setAccionesEnProceso((prev) => ({ ...prev, [`${llamadaId}-hecha`]: true }));
+			const response = await fetch(`${API_BASE}/seguimientos/${llamadaId}/estado`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ estadoSeguimiento: 'Llamada hecha' }),
+			});
+			if (!response.ok) throw new Error('No se pudo registrar la llamada.');
+			await cargarDatos();
+		} catch (error) {
+			console.error('Error al registrar llamada hecha:', error);
+		} finally {
+			setAccionesEnProceso((prev) => {
+				const siguiente = { ...prev };
+				delete siguiente[`${llamadaId}-hecha`];
+				return siguiente;
+			});
+		}
+	};
+
+	const marcarNoContesto = async (llamadaId) => {
+		const llamadaObjetivo = llamadas.find((l) => l.id === llamadaId) || null;
+		try {
+			setAccionesEnProceso((prev) => ({ ...prev, [`${llamadaId}-no-contesto`]: true }));
+			const response = await fetch(`${API_BASE}/seguimientos/${llamadaId}/estado`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ estadoSeguimiento: 'No contestó' }),
+			});
+			if (!response.ok) throw new Error('No se pudo registrar.');
+			await cargarDatos();
+		} catch (error) {
+			console.error('Error al registrar no contestó:', error);
+		} finally {
+			setAccionesEnProceso((prev) => {
+				const siguiente = { ...prev };
+				delete siguiente[`${llamadaId}-no-contesto`];
+				return siguiente;
+			});
+		}
+	};
+
 	const marcarNoPresento = async (citaId) => {
 		const citaObjetivo = citas.find((cita) => cita.id === citaId) || null;
 		if (!citaObjetivo) {
@@ -577,8 +678,6 @@ const AgendaCitas = () => {
 			}
 
 			await cargarDatos();
-			setAvisoReagendacion(`Se generó un aviso de re-agendación para ${getCitaNombre(citaObjetivo)}. El caso quedó como prioridad alta.`);
-			abrirReagendacion(citaObjetivo);
 		} catch (error) {
 			console.error('Error al registrar no se presentó:', error);
 			setRegistroMensaje('No se pudo actualizar la asistencia de la cita.');
@@ -615,7 +714,24 @@ const AgendaCitas = () => {
 										{ label: 'Citas en agenda', value: String(resumen.total), tone: 'sky', icon: CalendarDays },
 										{ label: 'Confirmadas', value: String(resumen.confirmadas), tone: 'emerald', icon: CheckCircle2 },
 										{ label: 'Pendientes', value: String(resumen.pendientes), tone: 'amber', icon: Clock3 },
-										{ label: 'Próxima cita', value: resumen.proxima ? formatHora(resumen.proxima.fechaHoraProgramada) : '--:--', tone: 'rose', icon: CalendarDays },
+										{ label: 'Próxima cita', value: (() => {
+										const timestampProxima = getCitaTimestamp(resumen.proxima);
+										if (Number.isNaN(timestampProxima)) {
+											const timestampUltimaDelDia = getCitaTimestamp(resumen.ultimaCitaDelDia);
+											if (!Number.isNaN(timestampUltimaDelDia)) {
+												return `Sin próximas ${formatHora(timestampUltimaDelDia)}`;
+											}
+											return '--';
+										}
+										const fecha = new Date(timestampProxima);
+										const hoy = new Date();
+										const esHoy = fecha.toDateString() === hoy.toDateString();
+										const esMañana = fecha.toDateString() === new Date(hoy.getTime() + 86400000).toDateString();
+										const hora = formatHora(timestampProxima);
+										if (esHoy) return `Hoy ${hora}`;
+										if (esMañana) return `Mañana ${hora}`;
+										return `${fecha.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} ${hora}`;
+									})(), tone: 'rose', icon: CalendarDays },
 									].map((item) => {
 										const Icon = item.icon;
 										const toneClass = item.tone === 'sky' ? 'text-sky-700' : item.tone === 'emerald' ? 'text-emerald-700' : item.tone === 'amber' ? 'text-amber-700' : 'text-[#7E1D3B]';
@@ -889,43 +1005,101 @@ const AgendaCitas = () => {
 											<div className="overflow-x-auto">
 												<table className="min-w-full border-collapse text-left text-sm">
 													<thead>
-														<tr className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-															<th className="px-3 py-2 font-semibold">Paciente</th>
-															<th className="px-3 py-2 font-semibold">Teléfono</th>
-															<th className="px-3 py-2 font-semibold">Día</th>
-															<th className="px-3 py-2 font-semibold">Fecha</th>
-															<th className="px-3 py-2 font-semibold">Hora</th>
-															<th className="px-3 py-2 font-semibold">Motivo</th>
-															<th className="px-3 py-2 font-semibold">Estado</th>
+													<tr className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+														<th className="px-3 py-2 font-semibold">Paciente</th>
+														<th className="px-3 py-2 font-semibold">Teléfono</th>
+														<th className="px-3 py-2 font-semibold">Origen</th>
+														<th className="px-3 py-2 font-semibold">Día</th>
+														<th className="px-3 py-2 font-semibold">Fecha</th>
+														<th className="px-3 py-2 font-semibold">Hora</th>
+														<th className="px-3 py-2 font-semibold">Motivo</th>
+														<th className="px-3 py-2 font-semibold">Estado</th>
+														<th className="px-3 py-2 font-semibold">Acciones</th>
+													</tr>
+												</thead>
+												<tbody>
+													{llamadas.length === 0 ? (
+														<tr>
+															<td className="px-3 py-3 text-slate-500" colSpan={9}>No hay llamadas de seguimiento registradas.</td>
 														</tr>
-													</thead>
-													<tbody>
-														{llamadas.length === 0 ? (
-															<tr>
-																<td className="px-3 py-3 text-slate-500" colSpan={7}>No hay llamadas de seguimiento registradas.</td>
-															</tr>
-														) : llamadasFiltradas.map((item) => {
-															const estado = String(item.estadoSeguimiento || 'Pendiente');
-															const estadoLower = estado.toLowerCase();
-															const estadoClass = estadoLower.includes('hecha') || estadoLower.includes('llamó') ? 'bg-emerald-100 text-emerald-800' : estadoLower.includes('no') ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
+													) : llamadasFiltradas.map((item) => {
+														const estado = String(item.estadoSeguimiento || 'Pendiente');
+														const estadoLower = estado.toLowerCase();
+														const estadoClass = estadoLower.includes('hecha') ? 'bg-emerald-100 text-emerald-800' : estadoLower.includes('no contest') ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800';
+														const llamadaHecha = estadoLower.includes('hecha');
+														const noContesto = estadoLower.includes('no contest');
+														const esVencida = esCitaVencida(item);
 
-															return (
-																<tr key={item.id} className="border-b border-slate-100 align-middle">
-																	<td className="px-3 py-3 font-semibold text-slate-900">{item.pacienteNombre || '--'}</td>
-																	<td className="px-3 py-3 text-slate-700">{item.pacienteTelefono || '--'}</td>
-																	<td className="px-3 py-3 text-slate-700 capitalize">{formatDia(item.fechaHoraProgramada)}</td>
-																	<td className="px-3 py-3 text-slate-700">{formatFecha(item.fechaHoraProgramada)}</td>
-																	<td className="px-3 py-3 text-slate-700">{formatHora(item.fechaHoraProgramada)}</td>
-																	<td className="px-3 py-3 text-slate-700">{item.motivo || '--'}</td>
-																	<td className="px-3 py-3">
-																		<span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${estadoClass}`}>
-																			{estado}
+														return (
+															<tr key={item.id} className="border-b border-slate-100 align-middle">
+																<td className="px-3 py-3 font-semibold text-slate-900">{item.pacienteNombre || '--'}</td>
+																<td className="px-3 py-3 text-slate-700">{item.pacienteTelefono || '--'}</td>
+																<td className="px-3 py-3">
+																	{item.origenLlamada ? (
+																		<span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${item.origenLlamada.toUpperCase() === 'NOSOTROS' ? 'bg-blue-100 text-blue-800' : 'bg-violet-100 text-violet-800'}`}>
+																			{getOrigenLabel(item.origenLlamada)}
 																		</span>
-																	</td>
-																</tr>
-															);
-														})}
-													</tbody>
+																	) : <span className="text-slate-400">--</span>}
+																</td>
+																<td className="px-3 py-3 text-slate-700 capitalize">{formatDia(item.fechaHoraProgramada)}</td>
+																<td className="px-3 py-3 text-slate-700">{formatFecha(item.fechaHoraProgramada)}</td>
+																<td className="px-3 py-3 text-slate-700">
+																	<div className="flex flex-wrap items-center gap-2">
+																		<span>{formatHora(item.fechaHoraProgramada)}</span>
+																		{!llamadaHecha && esVencida ? (
+																			<span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-700">Vencida</span>
+																		) : null}
+																	</div>
+																</td>
+																<td className="px-3 py-3 text-slate-700">{item.motivo || '--'}</td>
+																<td className="px-3 py-3">
+																	<span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${estadoClass}`}>
+																		{estado}
+																	</span>
+																</td>
+																<td className="px-3 py-3">
+																	{llamadaHecha ? (
+																		<span className="inline-block rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-500">
+																			Llamada cerrada
+																		</span>
+																	) : noContesto ? (
+																		<span className="inline-block rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">No contestó</span>
+																	) : (
+																		<div className="flex flex-wrap gap-2">
+																			<button
+																				type="button"
+																				onClick={() => marcarLlamadaHecha(item.id)}
+																				disabled={Boolean(accionesEnProceso[`${item.id}-hecha`])}
+																				className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+																			>
+																				{accionesEnProceso[`${item.id}-hecha`] ? <LoaderCircle size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+																				{accionesEnProceso[`${item.id}-hecha`] ? 'Guardando...' : 'Llamada hecha'}
+																			</button>
+																			<button
+																				type="button"
+																				onClick={() => marcarNoContesto(item.id)}
+																				disabled={Boolean(accionesEnProceso[`${item.id}-no-contesto`])}
+																				className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+																			>
+																				{accionesEnProceso[`${item.id}-no-contesto`] ? 'Procesando...' : 'No contestó'}
+																			</button>
+																			{esVencida ? (
+																				<button
+																					type="button"
+																					onClick={() => abrirReagendacion(item)}
+																					className="inline-flex items-center gap-1 rounded-md border border-[#F59E0B] bg-[#F59E0B]/10 px-3 py-2 text-xs font-semibold text-[#B45309] transition hover:bg-[#F59E0B]/20"
+																				>
+																					<Plus size={14} />
+																					Re-programar
+																				</button>
+																			) : null}
+																		</div>
+																	)}
+																</td>
+															</tr>
+														);
+													})}
+												</tbody>
 												</table>
 											</div>
 										)}

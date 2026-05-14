@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Estudio Socioeconómico — Mockup</title>
+  <link rel="stylesheet" href="estudio-socioeconomico.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div class="logo-wrap">
+        <img src="../frontend/src/assets/marakame.jpeg" alt="Logo Marakame" class="logo" onerror="this.style.display='none'" />
+      </div>
+      <div class="title-wrap">
+        <h1>ESTUDIO SOCIOECONÓMICO</h1>
+      </div>
+      <div class="meta-wrap">
+        <p class="small">Folio: ____________</p>
+      </div>
+    </header>
+
+    <main>
+      <div class="top-row">
+        <div class="photo">
+          <div class="photo-label">FOTO (1)</div>
+          <div class="photo-box">&nbsp;</div>
+          <p class="photo-help">Coloca la fotografía aquí (6x6 cm aprox.)</p>
+        </div>
+
+        <div class="person-data">
+          <div class="card">
+            <label>Nombre:</label>
+            <div class="field">________________________________________</div>
+            <label>Fecha de nacimiento:</label>
+            <div class="field">____/____/____</div>
+            <label>Fecha del estudio:</label>
+            <div class="field">____/____/____</div>
+          </div>
+
+          <div class="card small-cards">
+            <div><strong>CURP</strong><div class="inline-field">__________________</div></div>
+            <div><strong>Teléfono</strong><div class="inline-field">__________________</div></div>
+          </div>
+        </div>
+      </div>
+
+      <section class="card section">
+        <h2>1. Datos de la vivienda</h2>
+        <div class="two-col">
+          <div>
+            <label>Tipo de vivienda</label>
+            <div class="field">________________________________________</div>
+
+            <label>Servicios disponibles</label>
+            <div class="field">________________________________________</div>
+          </div>
+          <div>
+            <label>Material de paredes</label>
+            <div class="field">________________________________________</div>
+
+            <label>Material de techo</label>
+            <div class="field">________________________________________</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card section">
+        <h2>2. Ingresos y gastos</h2>
+        <p class="muted">Indica el ingreso mensual y principales gastos del hogar.</p>
+        <div class="table-like">
+          <div class="row"><div>Ingreso mensual (MXN)</div><div>_______________</div></div>
+          <div class="row"><div>Gasto en alimentos</div><div>_______________</div></div>
+          <div class="row"><div>Gasto en educación</div><div>_______________</div></div>
+        </div>
+      </section>
+
+      <section class="card section">
+        <h2>3. Observaciones</h2>
+        <textarea class="observations" rows="5">Escribe observaciones relevantes...</textarea>
+      </section>
+
+      <footer class="footer">
+        <div class="sign">
+          <div class="sign-box"></div>
+          <p>Nombre y firma del entrevistador</p>
+        </div>
+        <div class="date">
+          <p class="small">Fecha de firma: ____/____/______</p>
+        </div>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

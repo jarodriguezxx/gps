@@ -2,6 +2,7 @@ package com.marakame.api.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.text.Normalizer;
@@ -26,6 +27,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -149,9 +151,36 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         "estado", expediente.getEstado()
     ));
     // CAMBIO: Enviamos la lista 'notas' que consultamos explícitamente
-    respuesta.put("notasEvolucion", notas); 
+    respuesta.put("notasEvolucion", notas);
     respuesta.put("notasAdministrativas", notasAdministrativasMap);
     respuesta.put("documentos", documentos);
+
+    // Seguimientos del paciente para la línea de tiempo
+    List<Seguimiento> seguimientos = seguimientoRepository.findByPaciente_IdOrderByFechaHoraProgramadaDesc(pacienteId);
+    List<Map<String, Object>> seguimientosMap = seguimientos.stream()
+        .map(s -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", s.getId());
+            item.put("tipoAccion", s.getTipoAccion());
+            item.put("estadoSeguimiento", s.getEstadoSeguimiento());
+            item.put("estadoAsistencia", s.getEstadoAsistencia());
+            item.put("origenLlamada", s.getOrigenLlamada());
+            item.put("fechaHoraProgramada", s.getFechaHoraProgramada());
+            item.put("motivo", s.getMotivo());
+            item.put("diagnosticoVisual", s.getDiagnosticoVisual());
+            return item;
+        })
+        .collect(Collectors.toList());
+    respuesta.put("seguimientos", seguimientosMap);
+
+    // llamadaInicial: snapshot del diagnóstico inicial (primer seguimiento con JSON)
+    List<Seguimiento> seguimientosConSnapshot = seguimientoRepository
+        .findByPaciente_IdAndFormatoLlamadaInicialJsonIsNotNullOrderByFechaHoraProgramadaAsc(pacienteId);
+    if (!seguimientosConSnapshot.isEmpty()) {
+        respuesta.put("llamadaInicial", leerFormatoLlamadaInicial(seguimientosConSnapshot.get(0).getFormatoLlamadaInicialJson()));
+    } else {
+        respuesta.put("llamadaInicial", Map.of());
+    }
 
     return respuesta;
 }
@@ -255,6 +284,8 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         String estadoAnterior = paciente.getEstadoPaciente() != null ? paciente.getEstadoPaciente().name() : EstadoPaciente.PROSPECTO.name();
 
         paciente.setEstadoPaciente(EstadoPaciente.DENEGADO);
+        paciente.setMotivoDenegacion(observaciones.trim());
+        paciente.setMedicoRechazo("Trabajo Social");
         pacienteRepository.save(paciente);
 
         expediente.setEstado(EstadoPaciente.DENEGADO.name());
@@ -442,6 +473,8 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         solicitante.setTelefono(dto.telefono());
         solicitante.setCelular(dto.telefono());
         solicitante.setOcupacion(dto.ocupacion());
+        solicitante.setFuenteReferencia(dto.fuenteReferencia());
+        solicitante.setFuenteReferenciaOtro(dto.fuenteReferenciaOtro());
         solicitanteRepository.save(solicitante);
 
         paciente.setNombres(dto.nombres());
@@ -473,6 +506,12 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         paciente.setTelefonoContacto(dto.telefono());
         paciente.setOcupacion(dto.ocupacion());
         paciente.setSustanciaConsumo(dto.sustancia());
+        paciente.setSustanciaConsumoEspecifica(dto.sustanciaEspecifica());
+        paciente.setInternamiento(dto.internamiento());
+        paciente.setCriterioInternamiento(dto.criterioInternamiento());
+        paciente.setConclusionIntervencion(dto.conclusionIntervencion());
+        paciente.setTratamientoAnterior(dto.tratamientoAnterior());
+        paciente.setPosibilidadesEconomicas(dto.posibilidadesEconomicas());
         pacienteRepository.save(paciente);
 
         List<Seguimiento> seguimientosIniciales = seguimientoRepository
@@ -499,6 +538,20 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 
         byte[] contenidoPdf = construirPdfEstudio(paciente, payload);
 
+        // Extraer y guardar costo de tratamiento en el paciente
+        try {
+            Object estudio = payload.get("estudio");
+            Map<?, ?> estudioMap = estudio instanceof Map<?, ?> m ? m : payload;
+            Object diagObj = estudioMap.get("diagnosticoEconomico");
+            if (diagObj instanceof Map<?, ?> diag) {
+                Object costo = diag.get("costoTotal");
+                if (costo != null && !String.valueOf(costo).isBlank()) {
+                    paciente.setCostoTratamiento(String.valueOf(costo));
+                    pacienteRepository.save(paciente);
+                }
+            }
+        } catch (Exception ignored) {}
+
         EstudioSocioeconomicoPdf pdf = new EstudioSocioeconomicoPdf();
         pdf.setPaciente(paciente);
         pdf.setNombreArchivo(construirNombreArchivo(paciente));
@@ -512,8 +565,8 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
     @Autowired
     private ExpedienteClinicoRepository expedienteRepository;
 
-    @Transactional 
-    public void guardarNuevoExpediente(PacienteDTO dto) {
+    @Transactional
+    public Long guardarNuevoExpediente(PacienteDTO dto) {
         // 1. Crear y mapear el Paciente desde el DTO
         Paciente paciente = new Paciente();
         paciente.setNombres(dto.nombres());
@@ -522,9 +575,26 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         paciente.setNombreCompleto(dto.nombre());
         paciente.setEdad(dto.edad());
         paciente.setEstadoCivil(dto.estadocivil());
+        paciente.setCantidadHijos(dto.hijos());
+        paciente.setEscolaridad(dto.escolaridad());
+        paciente.setOrigen(dto.origen());
+        paciente.setDireccionCalle(dto.direccionCalle());
+        paciente.setDireccionNoExt(dto.direccionNoExt());
+        paciente.setDireccionNoInt(dto.direccionNoInt());
+        paciente.setDireccionColonia(dto.direccionColonia());
+        paciente.setDireccionMunicipioDelegacion(dto.direccionMunicipioDelegacion());
+        paciente.setDireccionCp(dto.direccionCp());
+        paciente.setDireccionCiudadEstado(dto.direccionCiudadEstado());
+        paciente.setDomicilioParticular(dto.domicilio());
         paciente.setTelefonoContacto(dto.telefono());
+        paciente.setOcupacion(dto.ocupacion());
         paciente.setSustanciaConsumo(dto.sustancia());
-        // ... agrega los setters restantes que ya tenías
+        paciente.setSustanciaConsumoEspecifica(dto.sustanciaEspecifica());
+        paciente.setInternamiento(dto.internamiento());
+        paciente.setCriterioInternamiento(dto.criterioInternamiento());
+        paciente.setConclusionIntervencion(dto.conclusionIntervencion());
+        paciente.setTratamientoAnterior(dto.tratamientoAnterior());
+        paciente.setPosibilidadesEconomicas(dto.posibilidadesEconomicas());
 
         // 1.5 Vincular el solicitante si viene en el DTO
         if (dto.solicitanteId() != null && dto.solicitanteId() > 0) {
@@ -548,12 +618,21 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         // 4. Crear el primer Seguimiento Administrativo
         Seguimiento seguimiento = new Seguimiento();
         seguimiento.setPaciente(pacienteGuardado);
-        seguimiento.setTipoAccion("Apertura de Expediente");
+
+        String llamarPaciente = dto.llamarPaciente();
+        if (llamarPaciente != null && !llamarPaciente.isBlank()) {
+            seguimiento.setTipoAccion("Llamada");
+            seguimiento.setOrigenLlamada("nosotros".equalsIgnoreCase(llamarPaciente) ? "NOSOTROS" : "PROSPECTO");
+        } else {
+            seguimiento.setTipoAccion("Apertura de Expediente");
+        }
+
         seguimiento.setEstadoSeguimiento(dto.estadoSeguimiento());
         seguimiento.setFechaHoraProgramada(dto.fechaCita());
         seguimiento.setMotivo(dto.motivoAccion());
-        
+
         seguimientoRepository.save(seguimiento);
+        return pacienteGuardado.getId();
     }
 
 
@@ -626,6 +705,12 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         data.put("telefono", dto.telefono());
         data.put("ocupacion", dto.ocupacion());
         data.put("sustancia", dto.sustancia());
+        data.put("sustanciaEspecifica", dto.sustanciaEspecifica());
+        data.put("internamiento", dto.internamiento());
+        data.put("criterioInternamiento", dto.criterioInternamiento());
+        data.put("conclusionIntervencion", dto.conclusionIntervencion());
+        data.put("tratamientoAnterior", dto.tratamientoAnterior());
+        data.put("posibilidadesEconomicas", dto.posibilidadesEconomicas());
         return data;
     }
 
@@ -785,6 +870,23 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         return "estudio_socioeconomico_" + nombre + "_" + System.currentTimeMillis() + ".pdf";
     }
 
+    private PDImageXObject cargarLogoMarakame(PDDocument document) {
+        try (InputStream input = getClass().getResourceAsStream("/static/images/marakame.jpeg")) {
+            if (input == null) {
+                return null;
+            }
+
+            byte[] bytes = input.readAllBytes();
+            if (bytes.length == 0) {
+                return null;
+            }
+
+            return PDImageXObject.createFromByteArray(document, bytes, "marakame-logo");
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
     private String limpiarTextoPdf(String texto) {
         if (texto == null) {
             return "";
@@ -913,10 +1015,15 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         private static final float TOP_MARGIN = 742f;
         private static final float BOTTOM_MARGIN = 52f;
         private static final float LINE_STEP = 13f;
-        private static final float SECTION_SPACING = 8f;
+        private static final float SECTION_SPACING = 16f;
+        private static final float FIELD_STEP = 19f;
         private static final float CONTENT_WIDTH = PDRectangle.LETTER.getWidth() - LEFT_MARGIN - RIGHT_MARGIN;
         private static final float CONTENT_RIGHT = PDRectangle.LETTER.getWidth() - RIGHT_MARGIN;
         private static final float MIDDLE_X = LEFT_MARGIN + (CONTENT_WIDTH / 2f);
+        // Maroon #7E1D3B → RGB 0.494, 0.114, 0.231
+        private static final float COLOR_R = 0.494f;
+        private static final float COLOR_G = 0.114f;
+        private static final float COLOR_B = 0.231f;
 
         private final PDDocument document;
         private PDPageContentStream contentStream;
@@ -925,6 +1032,299 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         private PdfLayoutState(PDDocument document) throws IOException {
             this.document = document;
             abrirNuevaPagina();
+        }
+
+        private void escribirFormatoCompacto(
+            Paciente paciente,
+            Solicitante solicitante,
+            LocalDateTime generadoEn,
+            Map<?, ?> estudioRaw,
+            Map<String, String> formulario,
+            PDFont bold,
+            PDFont regular
+        ) throws IOException {
+            escribirCabeceraCompacta(paciente, generadoEn, bold, regular);
+            escribirTarjetasInicialesCompactas(paciente, solicitante, formulario, bold, regular);
+            escribirTarjetaEntornoFamiliar(estudioRaw, formulario, bold, regular);
+
+            abrirNuevaPagina();
+            escribirCabeceraCompactaSecundaria(generadoEn, bold);
+            escribirTarjetasEconomicasCompactas(formulario, bold, regular);
+            escribirTarjetaAlimentacionCompacta(formulario, bold, regular);
+            escribirTarjetaObservacionesCompacta(formulario, bold, regular);
+            escribirTarjetaFirmasCompacta(bold, regular);
+        }
+
+        private void escribirCabeceraCompacta(Paciente paciente, LocalDateTime generadoEn, PDFont bold, PDFont regular) throws IOException {
+            asegurarEspacio(145f);
+
+            float photoX = LEFT_MARGIN;
+            float photoY = cursorY;
+            float photoSize = 92f;
+            rellenarRectanguloGris(photoX, photoY - photoSize + 6f, photoSize, photoSize);
+            dibujarCaja(photoX, photoY - photoSize + 6f, photoSize, photoSize);
+            escribirTextoAlineadoDerecha("FOTO", bold, 14, photoX + photoSize / 2f + 18f, photoY - 42f);
+
+            PDImageXObject logo = PacienteService.this.cargarLogoMarakame(document);
+            if (logo != null) {
+                float logoX = photoX + photoSize + 12f;
+                float logoY = photoY - 18f;
+                contentStream.drawImage(logo, logoX, logoY - 18f, 52f, 18f);
+            }
+
+            float titleX = photoX + photoSize + 14f;
+            float titleY = photoY;
+            escribirTexto("INSTITUTO MARAKAME", bold, 10f, titleX, titleY - 6f);
+            escribirTexto("ESTUDIO SOCIOECONOMICO", bold, 18f, titleX, titleY - 26f);
+            escribirTextoRecortado("Documento de valoración social, familiar y económica", regular, 9f, titleX, titleY - 42f, CONTENT_WIDTH - photoSize - 20f);
+
+            float badgeW = 108f;
+            float badgeH = 30f;
+            float badgeX = CONTENT_RIGHT - badgeW;
+            float badgeY = titleY - 6f;
+            contentStream.setNonStrokingColor(COLOR_R, COLOR_G, COLOR_B);
+            contentStream.addRect(badgeX, badgeY - badgeH, badgeW, badgeH);
+            contentStream.fill();
+            contentStream.setNonStrokingColor(1f, 1f, 1f);
+            escribirTexto("Folio", bold, 8f, badgeX + 8f, badgeY - 10f);
+            escribirTextoRecortado(construirFolio(paciente), bold, 8.5f, badgeX + 8f, badgeY - 21f, badgeW - 16f);
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+
+            cursorY = photoY - photoSize - 4f;
+
+            float barH = 20f;
+            contentStream.setNonStrokingColor(COLOR_R, COLOR_G, COLOR_B);
+            contentStream.addRect(LEFT_MARGIN, cursorY - barH, CONTENT_WIDTH, barH);
+            contentStream.fill();
+            contentStream.setNonStrokingColor(1f, 1f, 1f);
+
+            float colW = CONTENT_WIDTH / 3f;
+            escribirTexto("Folio: " + construirFolio(paciente), bold, 8.5f, LEFT_MARGIN + 6f, cursorY - 13f);
+            escribirTexto("Fecha: " + formatearFechaHora(generadoEn), bold, 8.5f, LEFT_MARGIN + colW + 6f, cursorY - 13f);
+            escribirTextoRecortado("Paciente: " + valorDisponible(paciente.getNombreCompleto(), paciente.getNombres()), bold, 8.5f, LEFT_MARGIN + (2f * colW) + 6f, cursorY - 13f, colW - 12f);
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+
+            cursorY -= barH + 10f;
+        }
+
+        private void escribirCabeceraCompactaSecundaria(LocalDateTime generadoEn, PDFont bold) throws IOException {
+            asegurarEspacio(34f);
+            contentStream.setNonStrokingColor(COLOR_R, COLOR_G, COLOR_B);
+            contentStream.addRect(LEFT_MARGIN, cursorY - 18f, CONTENT_WIDTH, 18f);
+            contentStream.fill();
+            contentStream.setNonStrokingColor(1f, 1f, 1f);
+            escribirTexto("ESTUDIO SOCIOECONOMICO", bold, 11f, LEFT_MARGIN + 6f, cursorY - 12f);
+            escribirTextoAlineadoDerecha(formatearFechaHora(generadoEn), bold, 8.5f, CONTENT_RIGHT - 6f, cursorY - 12f);
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+            cursorY -= 26f;
+        }
+
+        private void escribirTarjetasInicialesCompactas(Paciente paciente, Solicitante solicitante, Map<String, String> form, PDFont bold, PDFont regular) throws IOException {
+            asegurarEspacio(170f);
+            float topY = cursorY;
+            float gap = 8f;
+            float cardW = (CONTENT_WIDTH - gap) / 2f;
+            float cardH = 128f;
+            float leftX = LEFT_MARGIN;
+            float rightX = LEFT_MARGIN + cardW + gap;
+
+            dibujarTarjetaCompacta(leftX, topY, cardW, cardH, "Datos Generales", bold);
+            dibujarTarjetaCompacta(rightX, topY, cardW, cardH, "Salud y Adicciones", bold);
+
+            float yLeft = topY - 28f;
+            escribirCampoEnTarjeta(leftX + 6f, yLeft, cardW - 12f, "Nombre", valorDisponible(solicitante == null ? "" : solicitante.getNombre(), paciente.getNombreCompleto()), regular);
+            escribirCampoEnTarjeta(leftX + 6f, yLeft - 16f, cardW - 12f, "Parentesco", valorDisponible(buscarValorFormulario(form, "parentescopaciente"), solicitante == null ? "" : solicitante.getParentescoPaciente()), regular);
+            escribirCampoEnTarjeta(leftX + 6f, yLeft - 32f, cardW - 12f, "Escolaridad", valorDisponible(buscarValorFormulario(form, "escolaridadsolicitante"), solicitante == null ? "" : solicitante.getEscolaridad()), regular);
+            escribirCampoEnTarjeta(leftX + 6f, yLeft - 48f, cardW - 12f, "Ocupación", valorDisponible(buscarValorFormulario(form, "ocupacionsolicitante"), solicitante == null ? "" : solicitante.getOcupacion()), regular);
+            escribirCampoEnTarjeta(leftX + 6f, yLeft - 64f, cardW - 12f, "Teléfono", valorDisponible(buscarValorFormulario(form, "telefonocelularsolicitante"), solicitante == null ? "" : solicitante.getCelular()), regular);
+            escribirCampoEnTarjeta(leftX + 6f, yLeft - 80f, cardW - 12f, "Domicilio", valorDisponible(buscarValorFormulario(form, "direccionactualsolicitante"), solicitante == null ? "" : solicitante.getDomicilioParticular()), regular);
+
+            escribirCampoEnTarjeta(rightX + 6f, yLeft, cardW - 12f, "Aseguramiento", buscarValorFormulario(form, "asistenciamedica", "seguro"), regular);
+            escribirCampoEnTarjeta(rightX + 6f, yLeft - 16f, cardW - 12f, "Adicción", buscarValorFormulario(form, "drogadiccion", "alcoholismo", "tca"), regular);
+            escribirCampoEnTarjeta(rightX + 6f, yLeft - 32f, cardW - 12f, "Discapacidad", buscarValorFormulario(form, "discapacidad", "saluddiscapacidad"), regular);
+            escribirCampoEnTarjeta(rightX + 6f, yLeft - 48f, cardW - 12f, "Tratamiento", buscarValorFormulario(form, "tratamiento", "saludtratamiento"), regular);
+            escribirCampoEnTarjeta(rightX + 6f, yLeft - 64f, cardW - 12f, "Observación", buscarValorFormulario(form, "observacionesmedicas", "saludadiccionesobservacion"), regular);
+
+            cursorY = topY - cardH - 10f;
+        }
+
+        private void escribirTarjetaEntornoFamiliar(Map<?, ?> estudioRaw, Map<String, String> form, PDFont bold, PDFont regular) throws IOException {
+            List<String[]> filasFamilia = extraerFilasFamiliaDesdeRaw(estudioRaw, 5);
+            if (filasFamilia.isEmpty()) {
+                filasFamilia = extraerFilasIndexadas(
+                    form,
+                    new String[] {"householdmembers", "estructurafamiliar", "familiar", "integrante", "personashabitan"},
+                    new String[] {"nombre", "parentesco", "edad", "sexo", "estadocivil", "ocupacion"},
+                    5
+                );
+            }
+
+            float tableHeight = 24f + (Math.max(filasFamilia.size(), 1) * 14f) + 10f;
+            asegurarEspacio(tableHeight + 14f);
+            float topY = cursorY;
+            dibujarTarjetaCompacta(LEFT_MARGIN, topY, CONTENT_WIDTH, tableHeight, "Entorno Familiar", bold);
+            float tableTop = topY - 22f;
+            dibujarTablaCompacta(LEFT_MARGIN + 6f, tableTop, CONTENT_WIDTH - 12f, new String[] {"Nombre", "Parentesco", "Edad", "Sexo", "Escolaridad", "Ocupación"}, new float[] {150f, 70f, 35f, 35f, 80f, 180f}, filasFamilia, bold, regular);
+            cursorY = topY - tableHeight - 10f;
+        }
+
+        private void escribirTarjetasEconomicasCompactas(Map<String, String> form, PDFont bold, PDFont regular) throws IOException {
+            asegurarEspacio(180f);
+            float topY = cursorY;
+            float gap = 8f;
+            float cardW = (CONTENT_WIDTH - gap) / 2f;
+            float cardH = 148f;
+            float leftX = LEFT_MARGIN;
+            float rightX = LEFT_MARGIN + cardW + gap;
+
+            dibujarTarjetaCompacta(leftX, topY, cardW, cardH, "Ingresos y Egresos", bold);
+            dibujarTarjetaCompacta(rightX, topY, cardW, cardH, "Vivienda", bold);
+
+            List<String[]> ingresos = construirFilasEconomicas(form, true);
+            List<String[]> egresos = construirFilasEconomicas(form, false);
+            dibujarTablaCompacta(leftX + 6f, topY - 22f, cardW - 12f, new String[] {"Ingreso", "Monto"}, new float[] {120f, 90f}, ingresos, bold, regular);
+            dibujarTablaCompacta(leftX + 6f, topY - 84f, cardW - 12f, new String[] {"Egreso", "Monto"}, new float[] {120f, 90f}, egresos, bold, regular);
+
+            List<String[]> filasVivienda = new ArrayList<>();
+            filasVivienda.add(new String[] {"Régimen", buscarValorFormulario(form, "viviendaregimen", "formdata_viviendaregimen")});
+            filasVivienda.add(new String[] {"Tipo", buscarValorFormulario(form, "viviendatipo", "formdata_viviendatipo")});
+            filasVivienda.add(new String[] {"Habitaciones", buscarValorFormulario(form, "viviendatotalhabitaciones", "formdata_viviendatotalhabitaciones")});
+            filasVivienda.add(new String[] {"Material", buscarValorFormulario(form, "viviendamaterialpiso", "formdata_viviendamaterialpiso")});
+            filasVivienda.add(new String[] {"Servicios", buscarValorFormulario(form, "viviendaconformacion", "formdata_viviendaconformacion")});
+            dibujarTablaCompacta(rightX + 6f, topY - 22f, cardW - 12f, new String[] {"Campo", "Valor"}, new float[] {95f, 135f}, filasVivienda, bold, regular);
+
+            cursorY = topY - cardH - 10f;
+        }
+
+        private void escribirTarjetaAlimentacionCompacta(Map<String, String> form, PDFont bold, PDFont regular) throws IOException {
+            List<String[]> filasAlimentacion = construirFilasAlimentacionDesdeFrecuencia(form, 6);
+            float height = 24f + (Math.max(filasAlimentacion.size(), 1) * 14f) + 10f;
+            asegurarEspacio(height + 10f);
+            float topY = cursorY;
+            dibujarTarjetaCompacta(LEFT_MARGIN, topY, CONTENT_WIDTH, height, "Alimentación", bold);
+            dibujarTablaCompacta(LEFT_MARGIN + 6f, topY - 22f, CONTENT_WIDTH - 12f, new String[] {"Alimento", "Frecuencia"}, new float[] {220f, 280f}, filasAlimentacion, bold, regular);
+            cursorY = topY - height - 8f;
+        }
+
+        private void escribirTarjetaObservacionesCompacta(Map<String, String> form, PDFont bold, PDFont regular) throws IOException {
+            String observacion = valorDisponible(
+                buscarValorFormulario(form, "observacionestrabajadorsocial", "observaciones", "familiarobservacionestrabajosocial"),
+                buscarValorFormulario(form, "familiarobservacionesvisitadomiciliaria", "visitadomiciliaria")
+            );
+
+            float height = 80f;
+            asegurarEspacio(height + 10f);
+            float topY = cursorY;
+            dibujarTarjetaCompacta(LEFT_MARGIN, topY, CONTENT_WIDTH, height, "Observaciones", bold);
+            escribirTextoAjustado(observacion.isBlank() ? "Sin observaciones adicionales." : observacion, regular, 9f, LEFT_MARGIN + 8f, CONTENT_WIDTH - 16f);
+            cursorY = topY - height - 8f;
+        }
+
+        private void escribirTarjetaFirmasCompacta(PDFont bold, PDFont regular) throws IOException {
+            asegurarEspacio(58f);
+            float topY = cursorY;
+            float height = 48f;
+            dibujarTarjetaCompacta(LEFT_MARGIN, topY, CONTENT_WIDTH, height, "Firmas", bold);
+
+            float gap = 16f;
+            float innerW = (CONTENT_WIDTH - gap - 20f) / 2f;
+            float leftX = LEFT_MARGIN + 10f;
+            float rightX = leftX + innerW + gap;
+            float lineY = topY - 28f;
+            dibujarLinea(leftX, lineY, leftX + innerW);
+            dibujarLinea(rightX, lineY, rightX + innerW);
+            escribirTexto("Firma del Solicitante", regular, 9f, leftX, lineY - 12f);
+            escribirTexto("Firma del Trabajador Social", regular, 9f, rightX, lineY - 12f);
+            cursorY = topY - height - 4f;
+        }
+
+        private void dibujarTarjetaCompacta(float x, float yTop, float w, float h, String titulo, PDFont bold) throws IOException {
+            float titleH = 16f;
+            dibujarCaja(x, yTop - h, w, h);
+            contentStream.setNonStrokingColor(0.956f, 0.973f, 1f);
+            contentStream.addRect(x, yTop - titleH, w, titleH);
+            contentStream.fill();
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+            contentStream.moveTo(x, yTop - titleH);
+            contentStream.lineTo(x + w, yTop - titleH);
+            contentStream.stroke();
+            escribirTexto(titulo, bold, 9f, x + 6f, yTop - 12f);
+        }
+
+        private void escribirCampoEnTarjeta(float x, float y, float maxWidth, String label, String value, PDFont regular) throws IOException {
+            escribirTexto(label + ":", regular, 8.3f, x, y);
+            float labelW = anchoTexto(label + ":", regular, 8.3f);
+            float lineStart = x + labelW + 4f;
+            float lineEnd = x + maxWidth;
+            dibujarLinea(lineStart, y - 1.5f, lineEnd);
+            if (value != null && !value.isBlank()) {
+                escribirTextoRecortado(value, regular, 8.1f, lineStart + 2f, y + 1f, lineEnd - lineStart - 2f);
+            }
+        }
+
+        private void dibujarTablaCompacta(float x, float yTop, float w, String[] headers, float[] colWidths, List<String[]> rowsData, PDFont bold, PDFont regular) throws IOException {
+            float rowH = 13f;
+            int bodyRows = rowsData == null ? 0 : rowsData.size();
+            float totalH = rowH + Math.max(bodyRows, 1) * rowH;
+            contentStream.setNonStrokingColor(COLOR_R, COLOR_G, COLOR_B);
+            contentStream.addRect(x, yTop - rowH, w, rowH);
+            contentStream.fill();
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+            dibujarCaja(x, yTop - totalH, w, totalH);
+
+            float currentX = x;
+            for (int i = 0; i < headers.length && i < colWidths.length; i++) {
+                if (i > 0) {
+                    dibujarLineaVertical(currentX, yTop, yTop - totalH);
+                }
+                escribirTextoRecortado(headers[i], bold, 8f, currentX + 3f, yTop - 9f, colWidths[i] - 6f);
+                currentX += colWidths[i];
+            }
+
+            for (int row = 0; row < Math.max(bodyRows, 1); row++) {
+                float rowTop = yTop - rowH - (row * rowH);
+                if (row % 2 == 0) {
+                    contentStream.setNonStrokingColor(0.976f, 0.98f, 0.984f);
+                } else {
+                    contentStream.setNonStrokingColor(1f, 1f, 1f);
+                }
+                contentStream.addRect(x + 0.5f, rowTop - rowH + 0.5f, w - 1f, rowH);
+                contentStream.fill();
+                contentStream.setNonStrokingColor(0f, 0f, 0f);
+                contentStream.moveTo(x, rowTop - rowH);
+                contentStream.lineTo(x + w, rowTop - rowH);
+                contentStream.stroke();
+
+                if (rowsData != null && row < rowsData.size()) {
+                    String[] cells = rowsData.get(row);
+                    float cellX = x;
+                    for (int col = 0; col < colWidths.length; col++) {
+                        String cell = col < cells.length ? cells[col] : "";
+                        if (cell != null && !cell.isBlank()) {
+                            escribirTextoRecortado(cell, regular, 7.8f, cellX + 3f, rowTop - 9.5f, colWidths[col] - 6f);
+                        }
+                        cellX += colWidths[col];
+                    }
+                }
+            }
+        }
+
+        private List<String[]> construirFilasEconomicas(Map<String, String> form, boolean ingresos) {
+            List<String[]> filas = new ArrayList<>();
+            if (ingresos) {
+                filas.add(new String[] {"Solicitante", buscarValorFormulario(form, "formdata_laboralingresomensual", "ingresomensual", "solicitanteingreso")});
+                filas.add(new String[] {"Cónyuge", buscarValorFormulario(form, "formdata_conyugeingresomensual", "conyugeingresomensual")});
+                filas.add(new String[] {"Otros", buscarValorFormulario(form, "formdata_laboralotrosingresos", "otrosingresos")});
+                filas.add(new String[] {"Total", buscarValorFormulario(form, "totalingreso", "ingresototal")});
+            } else {
+                filas.add(new String[] {"Alimentación", buscarValorFormulario(form, "monthlyExpenses_alimentacion", "alimentacion")});
+                filas.add(new String[] {"Renta", buscarValorFormulario(form, "monthlyExpenses_renta", "renta")});
+                filas.add(new String[] {"Servicios", buscarValorFormulario(form, "monthlyExpenses_luz", "monthlyExpenses_agua", "servicios")});
+                filas.add(new String[] {"Transporte", buscarValorFormulario(form, "monthlyExpenses_transporte", "transporte")});
+                filas.add(new String[] {"Otros", buscarValorFormulario(form, "monthlyExpenses_otros", "otros")});
+                filas.add(new String[] {"Total", buscarValorFormulario(form, "totalegresos", "egresototal")});
+            }
+            return filas;
         }
 
         private void abrirNuevaPagina() throws IOException {
@@ -943,11 +1343,11 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 
         private void abrirNuevaPaginaConCabecera(LocalDateTime fecha, PDFont regular) throws IOException {
             abrirNuevaPagina();
-            escribirTexto("Marakame - Estudio Socioeconomico", regular, 10, LEFT_MARGIN, cursorY);
-            escribirTextoAlineadoDerecha(formatearFechaHora(fecha), regular, 10, CONTENT_RIGHT, cursorY);
-            cursorY -= 6;
-            dibujarLinea(LEFT_MARGIN, cursorY, CONTENT_RIGHT);
-            cursorY -= 12;
+            float bandH = 18f;
+            rellenarRectangulo(LEFT_MARGIN, cursorY - bandH + 5f, CONTENT_WIDTH, bandH);
+            escribirTextoBlanco("Instituto Marakame  —  Estudio Socioeconomico", regular, 9, LEFT_MARGIN + 6, cursorY - 1);
+            escribirTextoBlanco(formatearFechaHora(fecha), regular, 9, CONTENT_RIGHT - anchoTexto(formatearFechaHora(fecha), regular, 9) - 6, cursorY - 1);
+            cursorY -= bandH + 10;
         }
 
         private void escribirFormatoEstructurado(
@@ -977,25 +1377,77 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
             escribirNotaYFirmas(bold, regular);
         }
 
+        private void rellenarRectangulo(float x, float y, float w, float h) throws IOException {
+            contentStream.setNonStrokingColor(COLOR_R, COLOR_G, COLOR_B);
+            contentStream.addRect(x, y, w, h);
+            contentStream.fill();
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+        }
+
+        private void rellenarRectanguloGris(float x, float y, float w, float h) throws IOException {
+            contentStream.setNonStrokingColor(0.93f, 0.93f, 0.93f);
+            contentStream.addRect(x, y, w, h);
+            contentStream.fill();
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+        }
+
+        private void escribirTextoBlanco(String text, PDFont font, float size, float x, float y) throws IOException {
+            contentStream.beginText();
+            contentStream.setFont(font, size);
+            contentStream.setNonStrokingColor(1f, 1f, 1f);
+            contentStream.newLineAtOffset(x, y);
+            contentStream.showText(limpiarTextoPdf(text));
+            contentStream.endText();
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+        }
+
         private void escribirEncabezadoPrincipal(LocalDateTime generadoEn, Paciente paciente, PDFont bold, PDFont regular) throws IOException {
-            asegurarEspacio(84f);
-            escribirTextoCentrado("ESTUDIO SOCIOECONOMICO", bold, 15, cursorY - 6);
-            cursorY -= 30;
-            escribirLineaDoble("FECHA", formatearFechaHora(generadoEn), "FOLIO", construirFolio(paciente), regular);
-            cursorY -= 4;
+            float photoSize = 68f;
+            asegurarEspacio(photoSize + 30f);
+
+            // Foto placeholder (esquina superior derecha)
+            float photoX = CONTENT_RIGHT - photoSize;
+            float photoTopY = cursorY;
+            rellenarRectanguloGris(photoX, photoTopY - photoSize, photoSize, photoSize);
+            dibujarCaja(photoX, photoTopY - photoSize, photoSize, photoSize);
+            escribirTexto("FOTO", bold, 10f, photoX + 22f, photoTopY - photoSize / 2f + 4f);
+
+            // Banda maroon (ancho hasta la foto)
+            float bandH = 36f;
+            float bandW = CONTENT_WIDTH - photoSize - 6f;
+            rellenarRectangulo(LEFT_MARGIN, cursorY - bandH + 6f, bandW, bandH);
+            escribirTextoBlanco("INSTITUTO MARAKAME", bold, 10, LEFT_MARGIN + 6, cursorY - 8);
+            escribirTextoBlanco("ESTUDIO SOCIOECONOMICO", bold, 16, LEFT_MARGIN + 6, cursorY - 24);
+
+            cursorY -= Math.max(bandH + 2f, photoSize + 4f);
+
+            // Fila de fecha y folio con fondo gris claro
+            float filaH = 18f;
+            rellenarRectanguloGris(LEFT_MARGIN, cursorY - filaH + 4f, CONTENT_WIDTH, filaH);
+            escribirTexto("Fecha: " + formatearFechaHora(generadoEn), regular, 9, LEFT_MARGIN + 6, cursorY - 2);
+            escribirTextoAlineadoDerecha("Folio: " + construirFolio(paciente), regular, 9, CONTENT_RIGHT - 6, cursorY - 2);
+            cursorY -= filaH + 8;
         }
 
         private void escribirBloqueSolicitante(Solicitante solicitante, Map<String, String> form, PDFont bold, PDFont regular) throws IOException {
-            String domicilioSolicitante = valorDisponible(
-                buscarValorFormulario(form, "direccionactualsolicitante", "domicilioparticularsolicitante", "direccionactual"),
-                solicitante == null ? "" : solicitante.getDomicilioParticular()
-            );
+            // Construir domicilio desde partes del formulario
+            String calleSol    = buscarValorFormulario(form, "formdata_direccioncalle",    "direccioncalle");
+            String noExtSol    = buscarValorFormulario(form, "formdata_direccionnoext",    "direccionnoext");
+            String coloniaSol  = buscarValorFormulario(form, "formdata_direccioncolonia",  "direccioncolonia");
+            String ciudadSol   = buscarValorFormulario(form, "formdata_direccionciudadestado", "direccionciudadestado");
+            StringBuilder domSolBuilder = new StringBuilder();
+            if (!calleSol.isBlank())  { domSolBuilder.append(calleSol); }
+            if (!noExtSol.isBlank())  { domSolBuilder.append(domSolBuilder.length() > 0 ? " No. " : "No. ").append(noExtSol); }
+            if (!coloniaSol.isBlank()){ domSolBuilder.append(domSolBuilder.length() > 0 ? ", Col. " : "Col. ").append(coloniaSol); }
+            if (!ciudadSol.isBlank()) { domSolBuilder.append(domSolBuilder.length() > 0 ? ", " : "").append(ciudadSol); }
+            String domicilioSolicitante = domSolBuilder.length() > 0 ? domSolBuilder.toString()
+                : (solicitante == null ? "" : valorTexto(solicitante.getDomicilioParticular()));
             String telefonoSolicitante = valorDisponible(
-                buscarValorFormulario(form, "telefonocasasolicitante"),
+                buscarValorFormulario(form, "formdata_telefonocasa", "telefonocasasolicitante", "telefonocasa"),
                 solicitante == null ? "" : solicitante.getTelefono()
             );
             String celularSolicitante = valorDisponible(
-                buscarValorFormulario(form, "telefonocelularsolicitante"),
+                buscarValorFormulario(form, "formdata_telefonocelular", "telefonocelularsolicitante", "telefonocelular"),
                 solicitante == null ? "" : solicitante.getCelular()
             );
 
@@ -1006,22 +1458,22 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
             ), regular);
             escribirLineaDoble(
                 "Fecha de nacimiento",
-                valorDisponible(buscarValorFormulario(form, "fechanacimientosolicitante"), solicitante == null ? "" : solicitante.getFechaNacimiento()),
+                valorDisponible(buscarValorFormulario(form, "formdata_fechanacimiento", "fechanacimientosolicitante", "fechanacimiento"), solicitante == null ? "" : solicitante.getFechaNacimiento()),
                 "Lugar",
-                buscarValorFormulario(form, "lugarnacimientosolicitante", "lugar") ,
+                valorDisponible(buscarValorFormulario(form, "formdata_lugarnacimiento", "lugarnacimientosolicitante", "lugar"), ""),
                 regular
             );
             escribirLineaTriple(
-                "Edad", valorDisponible(buscarValorFormulario(form, "edadsolicitante"), solicitante == null ? "" : solicitante.getEdad()),
-                "Sexo", valorDisponible(buscarValorFormulario(form, "sexosolicitante"), solicitante == null ? "" : solicitante.getSexo()),
-                "Escolaridad", valorDisponible(buscarValorFormulario(form, "escolaridadsolicitante"), solicitante == null ? "" : solicitante.getEscolaridad()),
+                "Edad", valorDisponible(buscarValorFormulario(form, "formdata_edad", "edadsolicitante"), solicitante == null ? "" : solicitante.getEdad()),
+                "Sexo", valorDisponible(buscarValorFormulario(form, "formdata_sexo", "sexosolicitante"), solicitante == null ? "" : solicitante.getSexo()),
+                "Escolaridad", valorDisponible(buscarValorFormulario(form, "formdata_escolaridad", "escolaridadsolicitante"), solicitante == null ? "" : solicitante.getEscolaridad()),
                 regular
             );
             escribirLineaDoble(
                 "Ocupacion",
-                valorDisponible(buscarValorFormulario(form, "ocupacionsolicitante"), solicitante == null ? "" : solicitante.getOcupacion()),
+                valorDisponible(buscarValorFormulario(form, "formdata_ocupacion", "ocupacionsolicitante"), solicitante == null ? "" : solicitante.getOcupacion()),
                 "Estado civil",
-                valorDisponible(buscarValorFormulario(form, "estadocivilsolicitante"), solicitante == null ? "" : solicitante.getEstadoCivil()),
+                valorDisponible(buscarValorFormulario(form, "formdata_estadocivil", "estadocivilsolicitante"), solicitante == null ? "" : solicitante.getEstadoCivil()),
                 regular
             );
 
@@ -1063,33 +1515,44 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
             PDFont regular
         ) throws IOException {
             escribirTituloSeccion("DATOS GENERALES DEL BENEFICIARIO", bold);
-            escribirLineaSimple("Nombre", valorDisponible(buscarValorFormulario(form, "nombrepaciente", "beneficiarionombre"), paciente.getNombreCompleto()), regular);
+            escribirLineaSimple("Nombre", valorDisponible(buscarValorFormulario(form, "formdata_pacientenombre", "nombrepaciente", "beneficiarionombre"), paciente.getNombreCompleto()), regular);
             escribirLineaDoble(
                 "Fecha de nacimiento",
-                valorDisponible(buscarValorFormulario(form, "fechanacimientopaciente"), paciente.getFechaNacimiento()),
+                valorDisponible(buscarValorFormulario(form, "formdata_pacientefechanacimiento", "fechanacimientopaciente"), paciente.getFechaNacimiento()),
                 "Lugar",
-                valorDisponible(buscarValorFormulario(form, "lugarnacimientopaciente", "lugarnacimiento"), paciente.getOrigen()),
+                valorDisponible(buscarValorFormulario(form, "formdata_pacientelugarnacimiento", "lugarnacimientopaciente", "lugarnacimiento"), paciente.getOrigen()),
                 regular
             );
             escribirLineaTriple(
-                "Edad", valorDisponible(buscarValorFormulario(form, "edadpaciente"), paciente.getEdad()),
-                "Sexo", valorDisponible(buscarValorFormulario(form, "sexopaciente"), paciente.getSexo()),
-                "Escolaridad", valorDisponible(buscarValorFormulario(form, "escolaridadpaciente"), paciente.getEscolaridad()),
+                "Edad", valorDisponible(buscarValorFormulario(form, "formdata_pacienteedad", "edadpaciente"), paciente.getEdad()),
+                "Sexo", valorDisponible(buscarValorFormulario(form, "formdata_pacientesexo", "sexopaciente"), paciente.getSexo()),
+                "Escolaridad", valorDisponible(buscarValorFormulario(form, "formdata_pacienteescolaridad", "escolaridadpaciente"), paciente.getEscolaridad()),
                 regular
             );
             escribirLineaDoble(
                 "Ocupacion",
-                valorDisponible(buscarValorFormulario(form, "ocupacionpaciente"), paciente.getOcupacion()),
+                valorDisponible(buscarValorFormulario(form, "formdata_pacienteocupacion", "ocupacionpaciente"), paciente.getOcupacion()),
                 "Estado civil",
-                valorDisponible(buscarValorFormulario(form, "estadocivilpaciente"), paciente.getEstadoCivil()),
+                valorDisponible(buscarValorFormulario(form, "formdata_pacienteestadocivil", "estadocivilpaciente"), paciente.getEstadoCivil()),
                 regular
             );
-            escribirLineaSimple("Direccion actual", valorDisponible(buscarValorFormulario(form, "direccionpaciente"), paciente.getDomicilioParticular()), regular);
+            // Construir domicilio del paciente desde partes del formulario
+            String callePac   = buscarValorFormulario(form, "formdata_pacientedireccioncalle",   "pacientedireccioncalle");
+            String noExtPac   = buscarValorFormulario(form, "formdata_pacientedireccionnoext",   "pacientedireccionnoext");
+            String coloniaPac = buscarValorFormulario(form, "formdata_pacientedireccioncolonia", "pacientedireccioncolonia");
+            String ciudadPac  = buscarValorFormulario(form, "formdata_pacientedireccionciudadestado", "pacientedireccionciudadestado");
+            StringBuilder domPacBuilder = new StringBuilder();
+            if (!callePac.isBlank())   { domPacBuilder.append(callePac); }
+            if (!noExtPac.isBlank())   { domPacBuilder.append(domPacBuilder.length() > 0 ? " No. " : "No. ").append(noExtPac); }
+            if (!coloniaPac.isBlank()) { domPacBuilder.append(domPacBuilder.length() > 0 ? ", Col. " : "Col. ").append(coloniaPac); }
+            if (!ciudadPac.isBlank())  { domPacBuilder.append(domPacBuilder.length() > 0 ? ", " : "").append(ciudadPac); }
+            String domPac = domPacBuilder.length() > 0 ? domPacBuilder.toString() : valorDisponible("", paciente.getDomicilioParticular());
+            escribirLineaSimple("Direccion actual", domPac, regular);
             escribirLineaDoble(
                 "No. Telefonico",
-                valorDisponible(buscarValorFormulario(form, "telefonocasapaciente"), paciente.getTelefonoCasa()),
+                valorDisponible(buscarValorFormulario(form, "formdata_pacientetelefonocasa", "telefonocasapaciente"), paciente.getTelefonoCasa()),
                 "Telefono Celular",
-                valorDisponible(buscarValorFormulario(form, "telefonocelularpaciente"), paciente.getTelefonoContacto()),
+                valorDisponible(buscarValorFormulario(form, "formdata_pacientetelefonocelular", "telefonocelularpaciente"), paciente.getTelefonoContacto()),
                 regular
             );
 
@@ -1231,14 +1694,14 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         private void escribirBloqueSaludAdicciones(Map<String, String> form, PDFont bold, PDFont regular) throws IOException {
             escribirTituloSeccion("III. SALUD Y ADICCIONES", bold);
             escribirSubtituloSimple("ASISTENCIA MEDICA", bold);
-            escribirLineaDoble("ISSSTE / IMSS / Seguro Popular", buscarValorFormulario(form, "asistenciamedica", "seguro"), "Consulta particular", buscarValorFormulario(form, "consultaparticular"), regular);
-            escribirLineaDoble("Monto en consultas", buscarValorFormulario(form, "montoenconsultas"), "Otros", buscarValorFormulario(form, "asistenciaotros"), regular);
-            escribirLineaSimple("Miembros con asistencia medica", buscarValorFormulario(form, "miembrosasistenciamedica"), regular);
+            escribirLineaDoble("ISSSTE / IMSS / Seguro Popular", buscarValorFormulario(form, "formdata_sauldasistenciaopciones", "formdata_sauldasistencia", "asistenciamedica", "seguro"), "Consulta particular", buscarValorFormulario(form, "formdata_sauldotrosservicios", "consultaparticular"), regular);
+            escribirLineaDoble("Monto en consultas", buscarValorFormulario(form, "formdata_sauldmontoconsultas", "montoconsultas", "montoenconsultas"), "Otros", buscarValorFormulario(form, "asistenciaotros"), regular);
+            escribirLineaSimple("Miembros con asistencia medica", buscarValorFormulario(form, "formdata_sauldmiembrosconasistencia", "miembrosasistenciamedica"), regular);
 
             escribirSubtituloSimple("ADICCIONES", bold);
             escribirLineaDoble("Alcoholismo", buscarValorFormulario(form, "alcoholismo"), "TCA/Ludopatia", buscarValorFormulario(form, "tca", "ludopatia"), regular);
             escribirLineaDoble("Drogadiccion", buscarValorFormulario(form, "drogadiccion"), "Otros", buscarValorFormulario(form, "adiccionesotros"), regular);
-            escribirLineaSimple("Relacion familiar", buscarValorFormulario(form, "relacionfamiliar"), regular);
+            escribirLineaSimple("Relacion familiar", buscarValorFormulario(form, "formdata_sauldrelacionfamiliar", "formdata_saludrelacionfamiliar", "relacionfamiliar"), regular);
             cursorY -= SECTION_SPACING;
         }
 
@@ -1393,38 +1856,43 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         }
 
         private void escribirTituloSeccion(String titulo, PDFont bold) throws IOException {
-            asegurarEspacio(22f);
-            escribirTexto(titulo, bold, 12, LEFT_MARGIN, cursorY);
-            cursorY -= 12;
+            asegurarEspacio(32f);
+            cursorY -= 6;
+            float boxH = 20f;
+            rellenarRectangulo(LEFT_MARGIN, cursorY - boxH + 5f, CONTENT_WIDTH, boxH);
+            escribirTextoBlanco(titulo, bold, 10, LEFT_MARGIN + 6, cursorY - 1);
+            cursorY -= boxH + 6;
         }
 
         private void escribirSubtituloSimple(String titulo, PDFont font) throws IOException {
-            asegurarEspacio(16f);
-            escribirTexto(titulo, font, 10, LEFT_MARGIN, cursorY);
-            cursorY -= 12;
+            asegurarEspacio(22f);
+            cursorY -= 4;
+            rellenarRectanguloGris(LEFT_MARGIN, cursorY - 14f + 4f, CONTENT_WIDTH, 14f);
+            escribirTexto(titulo, font, 9, LEFT_MARGIN + 4, cursorY - 1);
+            cursorY -= 16;
         }
 
         private void escribirLineaSimple(String etiqueta, String valor, PDFont regular) throws IOException {
-            asegurarEspacio(16f);
+            asegurarEspacio(20f);
             float y = cursorY;
             String label = etiqueta + ":";
-            escribirTexto(label, regular, 10, LEFT_MARGIN, y);
-            float labelWidth = anchoTexto(label, regular, 10);
+            escribirTexto(label, regular, 9.5f, LEFT_MARGIN, y);
+            float labelWidth = anchoTexto(label, regular, 9.5f);
             float lineStart = LEFT_MARGIN + labelWidth + 5;
             dibujarLinea(lineStart, y - 2, CONTENT_RIGHT);
             if (valor != null && !valor.isBlank()) {
                 escribirTextoRecortado(valor, regular, 9, lineStart + 2, y + 1, CONTENT_RIGHT - lineStart - 4);
             }
-            cursorY -= 15;
+            cursorY -= FIELD_STEP;
         }
 
         private void escribirLineaDoble(String etiqueta1, String valor1, String etiqueta2, String valor2, PDFont regular) throws IOException {
-            asegurarEspacio(16f);
+            asegurarEspacio(20f);
             float y = cursorY;
 
             String leftLabel = etiqueta1 + ":";
-            escribirTexto(leftLabel, regular, 10, LEFT_MARGIN, y);
-            float leftLabelW = anchoTexto(leftLabel, regular, 10);
+            escribirTexto(leftLabel, regular, 9.5f, LEFT_MARGIN, y);
+            float leftLabelW = anchoTexto(leftLabel, regular, 9.5f);
             float leftLineStart = LEFT_MARGIN + leftLabelW + 5;
             float leftLineEnd = MIDDLE_X - 10;
             dibujarLinea(leftLineStart, y - 2, leftLineEnd);
@@ -1434,8 +1902,8 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 
             String rightLabel = etiqueta2 + ":";
             float rightLabelX = MIDDLE_X + 4;
-            escribirTexto(rightLabel, regular, 10, rightLabelX, y);
-            float rightLabelW = anchoTexto(rightLabel, regular, 10);
+            escribirTexto(rightLabel, regular, 9.5f, rightLabelX, y);
+            float rightLabelW = anchoTexto(rightLabel, regular, 9.5f);
             float rightLineStart = rightLabelX + rightLabelW + 5;
             float rightLineEnd = CONTENT_RIGHT;
             dibujarLinea(rightLineStart, y - 2, rightLineEnd);
@@ -1443,7 +1911,7 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
                 escribirTextoRecortado(valor2, regular, 9, rightLineStart + 2, y + 1, rightLineEnd - rightLineStart - 4);
             }
 
-            cursorY -= 15;
+            cursorY -= FIELD_STEP;
         }
 
         private void escribirLineaTriple(
@@ -1462,7 +1930,7 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
             escribirLineaEnColumna(LEFT_MARGIN, colW, y, etiqueta1, valor1, regular);
             escribirLineaEnColumna(LEFT_MARGIN + colW, colW, y, etiqueta2, valor2, regular);
             escribirLineaEnColumna(LEFT_MARGIN + (2f * colW), colW, y, etiqueta3, valor3, regular);
-            cursorY -= 15;
+            cursorY -= FIELD_STEP;
         }
 
         private void escribirLineaEnColumna(float x, float width, float y, String etiqueta, String valor, PDFont regular) throws IOException {
@@ -1495,6 +1963,8 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
             asegurarEspacio(totalH + 8);
             float topY = cursorY;
 
+            // Fondo gris en la fila de encabezado
+            rellenarRectanguloGris(LEFT_MARGIN, topY - rowHeight, totalW, rowHeight);
             dibujarCaja(LEFT_MARGIN, topY - totalH, totalW, totalH);
             float x = LEFT_MARGIN;
             for (int i = 0; i < colWidths.length - 1; i++) {
@@ -1847,11 +2317,6 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
             escribirTexto(text, font, size, rightX - width, y);
         }
 
-        private void escribirTextoCentrado(String text, PDFont font, float size, float y) throws IOException {
-            float width = anchoTexto(text, font, size);
-            float x = LEFT_MARGIN + ((CONTENT_WIDTH - width) / 2f);
-            escribirTexto(text, font, size, x, y);
-        }
 
         private void escribirTextoRecortado(String text, PDFont font, float size, float x, float y, float maxWidth) throws IOException {
             String limpio = limpiarTextoPdf(text);
@@ -2015,6 +2480,10 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 
     @Transactional
     public Paciente cambiarEstadoPaciente(Long pacienteId, String nuevoEstado) {
+        return cambiarEstadoPaciente(pacienteId, nuevoEstado, null, null);
+    }
+
+    public Paciente cambiarEstadoPaciente(Long pacienteId, String nuevoEstado, String motivoDenegacion, String medicoRechazo) {
         Paciente paciente = pacienteRepository.findById(pacienteId)
             .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
 
@@ -2022,8 +2491,13 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
             EstadoPaciente estado = EstadoPaciente.valueOf(nuevoEstado.toUpperCase());
             paciente.setEstadoPaciente(estado);
 
-            if (estado == EstadoPaciente.EGRESO) {
-                // Aquí puedes agregar lógica adicional para egreso si es necesario
+            if (estado == EstadoPaciente.DENEGADO) {
+                if (motivoDenegacion != null && !motivoDenegacion.isBlank()) {
+                    paciente.setMotivoDenegacion(motivoDenegacion.trim());
+                }
+                if (medicoRechazo != null && !medicoRechazo.isBlank()) {
+                    paciente.setMedicoRechazo(medicoRechazo.trim());
+                }
             }
 
             return pacienteRepository.save(paciente);
@@ -2051,8 +2525,8 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 
         recibo.setPaciente(paciente);
         recibo.setNumeroRecibo(numeroRecibo);
-        recibo.setMontoPago(toDoubleValue(payload.getOrDefault("montoPago", recibo.getMontoPago() != null ? recibo.getMontoPago() : 0), 0));
-        recibo.setMontoPrograma(toDoubleValue(payload.getOrDefault("montoPrograma", recibo.getMontoPrograma() != null ? recibo.getMontoPrograma() : 0), 0));
+        recibo.setMontoPago(toDoubleValue(payload.getOrDefault("montoPago", recibo.getMontoPago() != null ? recibo.getMontoPago() : Double.valueOf(0)), 0));
+        recibo.setMontoPrograma(toDoubleValue(payload.getOrDefault("montoPrograma", recibo.getMontoPrograma() != null ? recibo.getMontoPrograma() : Double.valueOf(0)), 0));
         recibo.setConcepto((String) payload.getOrDefault("concepto", recibo.getConcepto() != null ? recibo.getConcepto() : "Tratamiento de desintoxicación"));
         recibo.setNombrePagador((String) payload.getOrDefault("nombrePagador", recibo.getNombrePagador() != null ? recibo.getNombrePagador() : ""));
         recibo.setRfcPagador((String) payload.getOrDefault("rfc", recibo.getRfcPagador() != null ? recibo.getRfcPagador() : ""));

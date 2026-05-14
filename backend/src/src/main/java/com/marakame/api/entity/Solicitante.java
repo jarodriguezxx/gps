@@ -50,6 +50,12 @@ public class Solicitante {
     @Column(name = "cuenta_con_tarjeta")
     private String cuentaConTarjeta;
 
+    @Column(name = "fuente_referencia")
+    private String fuenteReferencia;
+
+    @Column(name = "fuente_referencia_otro")
+    private String fuenteReferenciaOtro;
+
     // Getters y Setters...
     // Getter para leer el ID
     public Long getId() {
@@ -259,6 +265,22 @@ public class Solicitante {
 
     public void setCuentaConTarjeta(String cuentaConTarjeta) {
         this.cuentaConTarjeta = cuentaConTarjeta;
+    }
+
+    public String getFuenteReferencia() {
+        return fuenteReferencia;
+    }
+
+    public void setFuenteReferencia(String fuenteReferencia) {
+        this.fuenteReferencia = fuenteReferencia;
+    }
+
+    public String getFuenteReferenciaOtro() {
+        return fuenteReferenciaOtro;
+    }
+
+    public void setFuenteReferenciaOtro(String fuenteReferenciaOtro) {
+        this.fuenteReferenciaOtro = fuenteReferenciaOtro;
     }
 
 }

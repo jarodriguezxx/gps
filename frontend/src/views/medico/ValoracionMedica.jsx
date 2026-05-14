@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Stethoscope, Users, ClipboardList, Activity, FileBarChart,
-  UserCheck, AlertTriangle, Search, Save, FileSignature, CheckCircle2, XCircle, ShoppingCart
+  UserCheck, AlertTriangle, Save, FileSignature, CheckCircle2, XCircle, ShoppingCart,
+  RotateCcw, ExternalLink, MapPin, Phone, Pencil, X
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -21,16 +22,27 @@ const navItems = [
 const ValoracionMedica = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const session = JSON.parse(localStorage.getItem('marakame_user') || '{}');
   const [activeNav, setActiveNav] = useState('valoracion');
   const [prospecto, setProspecto] = useState(null);
   const [cargandoPaciente, setCargandoPaciente] = useState(true);
   const [errorPaciente, setErrorPaciente] = useState('');
   
-  // Nuevos estados para control de guardado
   const [yaValorado, setYaValorado] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [modalRechazo, setModalRechazo] = useState(false);
+  const [rechazo, setRechazo] = useState({
+    tipoRechazo: '',
+    motivoClinico: '',
+    institucion: '',
+    direccion: '',
+    telefono: '',
+  });
 
   useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     const cargarPaciente = async () => {
       if (!id) {
         setErrorPaciente('No se recibió el identificador del paciente.');
@@ -41,15 +53,18 @@ const ValoracionMedica = () => {
       setCargandoPaciente(true);
       try {
         // 1. Cargar datos del prospecto
-        const response = await fetch(`http://localhost:4000/api/pacientes/${id}`);
+        const response = await fetch(`http://localhost:4000/api/pacientes/${id}`, { signal });
         if (!response.ok) throw new Error('No se pudo cargar el paciente.');
         const data = await response.json();
         setProspecto(data);
 
         // 2. PREGUNTAR SI YA ESTÁ VALORADO
-        const valRes = await fetch(`http://localhost:4000/api/valoraciones/paciente/${id}`);
+        const valRes = await fetch(`http://localhost:4000/api/valoraciones/paciente/${id}`, { signal });
         if (valRes.ok) {
           setYaValorado(true); // ¡Ya tiene valoración!
+        } else if (valRes.status !== 404) {
+          // Solo loguear errores distintos a 404 (404 significa 'no valorado' y es esperado)
+          console.error('Error obteniendo valoración:', valRes.status);
         }
         
         setErrorPaciente('');
@@ -61,6 +76,8 @@ const ValoracionMedica = () => {
     };
 
     cargarPaciente();
+
+    return () => controller.abort();
   }, [id]);
 
   const [formulario, setFormulario] = useState({
@@ -77,7 +94,9 @@ const ValoracionMedica = () => {
     tratamientoSugerido: '',
     observaciones: '',
     dictamen: null,
-    motivoRechazo: ''
+    motivoRechazo: '',
+    nombreMedico: session.nombreCompleto || '',
+    recomendacionExterna: ''
   });
 
   const handleNavClick = (item) => { 
@@ -94,17 +113,79 @@ const ValoracionMedica = () => {
   };
 
   const seleccionarDictamen = (dictamen) => {
-    setFormulario((prev) => ({
-      ...prev,
-      dictamen,
-      motivoRechazo: dictamen === 'RECHAZADO' ? prev.motivoRechazo : '',
-    }));
+    if (dictamen === 'RECHAZADO') {
+      setModalRechazo(true);
+    } else {
+      setFormulario((prev) => ({ ...prev, dictamen: 'APTO' }));
+      setRechazo({ tipoRechazo: '', motivoClinico: '', institucion: '', direccion: '', telefono: '' });
+    }
+  };
+
+  const confirmarRechazo = () => {
+    if (!rechazo.tipoRechazo) { alert('Selecciona el tipo de rechazo.'); return; }
+    if (!rechazo.motivoClinico.trim()) { alert('Captura el motivo clínico.'); return; }
+    if (!rechazo.institucion.trim()) { alert('Indica la institución de derivación.'); return; }
+    if (!rechazo.direccion.trim()) { alert('Indica la dirección de la institución.'); return; }
+    setFormulario((prev) => ({ ...prev, dictamen: 'RECHAZADO' }));
+    setModalRechazo(false);
+  };
+
+  const cancelarRechazo = () => {
+    setModalRechazo(false);
+    if (formulario.dictamen !== 'RECHAZADO') {
+      setRechazo({ tipoRechazo: '', motivoClinico: '', institucion: '', direccion: '', telefono: '' });
+    }
+  };
+
+  const validateVitals = () => {
+    const errors = [];
+
+    if (formulario.temp && (isNaN(formulario.temp) || parseFloat(formulario.temp) < 35.0 || parseFloat(formulario.temp) > 42.0)) {
+      errors.push(`Temperatura debe estar entre 35.0°C y 42.0°C`);
+    }
+
+    if (formulario.fc && (isNaN(formulario.fc) || parseInt(formulario.fc) < 40 || parseInt(formulario.fc) > 180)) {
+      errors.push(`F.C debe estar entre 40 y 180 bpm`);
+    }
+
+    if (formulario.fr && (isNaN(formulario.fr) || parseInt(formulario.fr) < 8 || parseInt(formulario.fr) > 40)) {
+      errors.push(`F.R debe estar entre 8 y 40 rpm`);
+    }
+
+    if (formulario.ta) {
+      const taRegex = /^\d{2,3}\/\d{2}$/;
+      if (!taRegex.test(formulario.ta)) {
+        errors.push(`T.A debe tener formato XXX/XX (ej: 120/80)`);
+      } else {
+        const [sistolica, diastolica] = formulario.ta.split('/').map(Number);
+        if (sistolica < 50 || sistolica > 250) errors.push(`Sistólica debe estar entre 50 y 250`);
+        if (diastolica < 20 || diastolica > 150) errors.push(`Diastólica debe estar entre 20 y 150`);
+        if (sistolica < diastolica) errors.push(`Sistólica debe ser mayor o igual a diastólica`);
+      }
+    }
+
+    if (formulario.peso && (isNaN(formulario.peso) || parseFloat(formulario.peso) < 1 || parseFloat(formulario.peso) > 300)) {
+      errors.push(`Peso debe estar entre 1 y 300 kg`);
+    }
+
+    if (formulario.talla && (isNaN(formulario.talla) || parseFloat(formulario.talla) < 50 || parseFloat(formulario.talla) > 250)) {
+      errors.push(`Talla debe estar entre 50 y 250 cm`);
+    }
+
+    return errors;
   };
 
   const handleGuardar = async (e) => {
     e.preventDefault();
 
-    // 1. Validaciones básicas antes de enviar
+    // 1. Validaciones de signos vitales
+    const validationErrors = validateVitals();
+    if (validationErrors.length > 0) {
+      alert("Errores en signos vitales:\n" + validationErrors.join("\n"));
+      return;
+    }
+
+    // 2. Validaciones básicas antes de enviar
     if (!formulario.motivoConsulta || !formulario.padecimientoActual || !formulario.diagnostico) {
       alert("Por favor, llena los campos obligatorios: Motivo de consulta, Padecimiento y Diagnóstico.");
       return;
@@ -115,18 +196,27 @@ const ValoracionMedica = () => {
       return;
     }
 
-    if (formulario.dictamen === 'RECHAZADO' && !formulario.motivoRechazo.trim()) {
-      alert('Captura el motivo del rechazo clínico para continuar.');
-      return;
+    if (formulario.dictamen === 'RECHAZADO') {
+      if (!rechazo.tipoRechazo || !rechazo.motivoClinico.trim() || !rechazo.institucion.trim()) {
+        alert('Completa los datos del rechazo antes de guardar.');
+        setModalRechazo(true);
+        return;
+      }
     }
 
     try {
       setIsSaving(true);
       const esRechazo = formulario.dictamen === 'RECHAZADO';
-      const observacionesCompletas = [
-        formulario.observaciones?.trim(),
-        esRechazo ? `Motivo del rechazo clínico: ${formulario.motivoRechazo.trim()}` : '',
-      ].filter(Boolean).join('\n\n');
+
+      const tipoTexto = rechazo.tipoRechazo === 'tratamiento_previo'
+        ? 'REQUIERE TRATAMIENTO PREVIO (puede regresar)'
+        : 'NO APLICA PARA ESTA INSTITUCIÓN';
+
+      const textoCondicionado = esRechazo
+        ? `PACIENTE NO APTO. Tipo: ${tipoTexto}. Motivo clínico: ${rechazo.motivoClinico.trim()}. Se deriva a: ${rechazo.institucion.trim()}, ${rechazo.direccion.trim()}${rechazo.telefono ? `. Tel: ${rechazo.telefono}` : ''}.`
+        : `PACIENTE APTO. ${formulario.observaciones?.trim() || ''}`;
+
+      const observacionesFormateadas = `NOMBRE DEL MEDICO QUE LO VALORO: ${formulario.nombreMedico}\n31) CONCLUSIÓN MEDICA: ${textoCondicionado}`;
 
       // 2. Preparamos los datos tal como los espera la entidad ValoracionMedica
       const payload = {
@@ -146,9 +236,14 @@ const ValoracionMedica = () => {
         diagnostico: formulario.diagnostico,
         pronostico: formulario.pronostico,
         tratamientoSugerido: formulario.tratamientoSugerido,
-        observaciones: observacionesCompletas,
+        observaciones: observacionesFormateadas,
         esAptoParaIngreso: formulario.dictamen === 'APTO',
-        medicoAsignado: "Jefe Médico", 
+        medicoAsignado: formulario.nombreMedico || "Jefe Médico",
+        tipoRechazo: esRechazo ? rechazo.tipoRechazo : null,
+        motivoRechazo: esRechazo ? rechazo.motivoClinico : null,
+        institucionDerivacion: esRechazo ? rechazo.institucion : null,
+        direccionDerivacion: esRechazo ? rechazo.direccion : null,
+        telefonoDerivacion: esRechazo ? (rechazo.telefono || null) : null,
       };
 
       // 3. Enviamos la petición POST
@@ -168,7 +263,11 @@ const ValoracionMedica = () => {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ estado: 'DENEGADO' }),
+            body: JSON.stringify({
+              estado: 'DENEGADO',
+              motivoDenegacion: `Rechazo médico. ${rechazo.motivoClinico?.trim() || ''}`.trim(),
+              medicoRechazo: formulario.nombreMedico || 'Jefe Médico',
+            }),
           });
 
           if (!estadoResponse.ok) {
@@ -196,8 +295,123 @@ const ValoracionMedica = () => {
                       focus:outline-none focus:ring-2 focus:ring-[#7E1D3B]/30 focus:border-[#7E1D3B]/50
                       placeholder:text-slate-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed`;
 
+  const inputRechazo = `w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800
+                        focus:outline-none focus:ring-2 focus:ring-rose-300 focus:border-rose-400
+                        placeholder:text-slate-300 transition-all`;
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
+
+      {/* ── Modal de Rechazo ── */}
+      {modalRechazo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-rose-100 flex flex-col max-h-[90vh]">
+
+            <div className="flex items-center justify-between px-6 py-4 bg-rose-50 border-b border-rose-100">
+              <div className="flex items-center gap-2">
+                <XCircle size={20} className="text-rose-600" />
+                <h3 className="text-base font-black text-rose-900 uppercase tracking-wide">Dictamen de Rechazo</h3>
+              </div>
+              <button type="button" onClick={cancelarRechazo} className="rounded-lg p-1 hover:bg-rose-100 text-rose-400 hover:text-rose-700 transition">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
+
+              {/* Tipo de rechazo */}
+              <div>
+                <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Tipo de rechazo *</p>
+                <div className="grid gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRechazo(p => ({ ...p, tipoRechazo: 'tratamiento_previo' }))}
+                    className={`flex items-start gap-3 rounded-xl border p-3.5 text-left transition-all ${rechazo.tipoRechazo === 'tratamiento_previo' ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}
+                  >
+                    <span className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${rechazo.tipoRechazo === 'tratamiento_previo' ? 'bg-amber-100 text-amber-700' : 'bg-white text-slate-400 border border-slate-200'}`}>
+                      <RotateCcw size={17} />
+                    </span>
+                    <span>
+                      <span className="block text-xs font-black text-slate-800">Requiere tratamiento previo</span>
+                      <span className="block text-[11px] text-slate-500 mt-0.5">El paciente necesita atenderse antes de ingresar. Puede regresar cuando esté listo.</span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRechazo(p => ({ ...p, tipoRechazo: 'no_aplica' }))}
+                    className={`flex items-start gap-3 rounded-xl border p-3.5 text-left transition-all ${rechazo.tipoRechazo === 'no_aplica' ? 'border-rose-300 bg-rose-50' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}
+                  >
+                    <span className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${rechazo.tipoRechazo === 'no_aplica' ? 'bg-rose-100 text-rose-700' : 'bg-white text-slate-400 border border-slate-200'}`}>
+                      <ExternalLink size={17} />
+                    </span>
+                    <span>
+                      <span className="block text-xs font-black text-slate-800">No aplica para esta institución</span>
+                      <span className="block text-[11px] text-slate-500 mt-0.5">El caso no puede ser atendido aquí. Se deriva de forma permanente a otro servicio.</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Motivo clínico */}
+              <div>
+                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Motivo clínico *</label>
+                <textarea
+                  rows="3"
+                  value={rechazo.motivoClinico}
+                  onChange={e => setRechazo(p => ({ ...p, motivoClinico: e.target.value }))}
+                  className={`${inputRechazo} resize-none`}
+                  placeholder="Explique clínicamente el motivo del rechazo..."
+                />
+              </div>
+
+              {/* Derivación */}
+              <div className="space-y-3">
+                <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Derivación *</p>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Institución o servicio</label>
+                  <input
+                    type="text"
+                    value={rechazo.institucion}
+                    onChange={e => setRechazo(p => ({ ...p, institucion: e.target.value }))}
+                    className={inputRechazo}
+                    placeholder="Ej. Hospital General de Tepic, CAPA..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Dirección</label>
+                  <input
+                    type="text"
+                    value={rechazo.direccion}
+                    onChange={e => setRechazo(p => ({ ...p, direccion: e.target.value }))}
+                    className={inputRechazo}
+                    placeholder="Calle, colonia, ciudad..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Teléfono <span className="text-slate-400 font-normal">(opcional)</span></label>
+                  <input
+                    type="text"
+                    value={rechazo.telefono}
+                    onChange={e => setRechazo(p => ({ ...p, telefono: e.target.value }))}
+                    className={inputRechazo}
+                    placeholder="311 000 0000"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50">
+              <button type="button" onClick={cancelarRechazo} className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">
+                Cancelar
+              </button>
+              <button type="button" onClick={confirmarRechazo} className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-rose-700 transition shadow-sm">
+                Confirmar rechazo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
 
         {/* ── Header ── */}
@@ -391,6 +605,12 @@ const ValoracionMedica = () => {
                         <UserCheck size={18} className="text-[#7E1D3B]" />
                         <h2 className="text-base font-black uppercase tracking-[0.2em] text-slate-700">Conclusión (1era Consulta)</h2>
                       </div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Médico que valora</label>
+                      <div className="flex items-center gap-2 mb-3 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-700">
+                        <UserCheck size={14} className="text-[#7E1D3B] shrink-0" />
+                        {formulario.nombreMedico || <span className="text-slate-400 font-normal">Sin sesión activa</span>}
+                      </div>
+
                       <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Observaciones Finales</label>
                       <textarea disabled={yaValorado} rows="2" name="observaciones" value={formulario.observaciones} onChange={handleChange} className={`${inputClass} resize-none`} />
                     </div>
@@ -415,7 +635,7 @@ const ValoracionMedica = () => {
                         <button
                           type="button"
                           disabled={yaValorado}
-                          onClick={() => seleccionarDictamen('RECHAZADO')}
+                          onClick={() => formulario.dictamen === 'RECHAZADO' ? setModalRechazo(true) : seleccionarDictamen('RECHAZADO')}
                           className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${formulario.dictamen === 'RECHAZADO' ? 'bg-rose-50 border-rose-200 text-rose-800 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'} ${yaValorado ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                         >
                           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/80 text-rose-600 border border-rose-100 shrink-0">
@@ -423,23 +643,31 @@ const ValoracionMedica = () => {
                           </span>
                           <span className="flex flex-col">
                             <span className="text-xs font-black uppercase tracking-wider">Rechazo Médico</span>
-                            <span className="text-[10px] font-semibold opacity-70">Bloquear ingreso y registrar motivo</span>
+                            <span className="text-[10px] font-semibold opacity-70">
+                              {formulario.dictamen === 'RECHAZADO' && rechazo.tipoRechazo ? 'Datos capturados — clic para editar' : 'Registrar motivo y derivación'}
+                            </span>
                           </span>
                         </button>
                       </div>
 
-                      <div className={`overflow-hidden transition-all duration-300 ${formulario.dictamen === 'RECHAZADO' ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
-                        <label className="mt-1 block text-[11px] font-bold text-rose-700 uppercase tracking-widest mb-1.5">Motivo del Rechazo Clínico *</label>
-                        <textarea
-                          disabled={yaValorado}
-                          rows="4"
-                          name="motivoRechazo"
-                          value={formulario.motivoRechazo}
-                          onChange={handleChange}
-                          className={`${inputClass} resize-none border-rose-200 bg-rose-50/40 focus:ring-2 focus:ring-rose-200`}
-                          placeholder="Explique de forma clínica y clara el motivo del rechazo..."
-                        />
-                      </div>
+                      {formulario.dictamen === 'RECHAZADO' && rechazo.tipoRechazo && (
+                        <div className="mt-1 rounded-xl border border-rose-200 bg-rose-50 p-3 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${rechazo.tipoRechazo === 'tratamiento_previo' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                              {rechazo.tipoRechazo === 'tratamiento_previo' ? <RotateCcw size={10}/> : <ExternalLink size={10}/>}
+                              {rechazo.tipoRechazo === 'tratamiento_previo' ? 'Tratamiento previo' : 'No aplica aquí'}
+                            </span>
+                            {!yaValorado && (
+                              <button type="button" onClick={() => setModalRechazo(true)} className="flex items-center gap-1 text-[10px] font-bold text-rose-600 hover:text-rose-800">
+                                <Pencil size={11}/> Editar
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-xs text-rose-800 font-semibold line-clamp-2">{rechazo.motivoClinico}</p>
+                          <p className="flex items-center gap-1 text-[11px] text-rose-700"><MapPin size={11}/>{rechazo.institucion}</p>
+                          {rechazo.telefono && <p className="flex items-center gap-1 text-[11px] text-rose-600"><Phone size={11}/>{rechazo.telefono}</p>}
+                        </div>
+                      )}
 
                       <button type="submit" disabled={isSaving || yaValorado} className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#7E1D3B] px-5 py-3.5 text-sm font-bold text-white shadow-md hover:bg-[#63162e] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         <Save size={18} />
