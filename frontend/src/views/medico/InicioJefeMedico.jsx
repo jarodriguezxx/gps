@@ -3,19 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import {
   Stethoscope, Users, ClipboardList, Activity, FileBarChart, UserPlus,
   AlertCircle, Clock, FileText, CheckCircle2, ChevronRight,
-  ActivitySquare, ShieldAlert, BarChart3, ShoppingCart, Pill
+  ActivitySquare, ShieldAlert, BarChart3, ShoppingCart, Pill, AlertTriangle
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
-  { label: 'Inicio Jefatura',         icon: Activity,      key: 'inicio',        path: '/medico/inicio-jefe-medico' },
-  { label: 'Prospectos',              icon: UserPlus,      key: 'prospectos',    path: '/medico/prospectos' },
-  { label: 'Pacientes Activos',       icon: Users,         key: 'pacientes',     path: '/medico/pacientes' },
-  { label: 'Expedientes Clínicos',    icon: ClipboardList, key: 'expedientes',   path: '/medico/expedientes' },
-  { label: 'Requisiciones',           icon: ShoppingCart,  key: 'requisiciones', path: '/medico/requisiciones' },
-  { label: 'Farmacia / Enfermería',   icon: Pill,          key: 'farmacia',      path: '/medico/farmacia' },
-  { label: 'Personal Médico',         icon: Stethoscope,   key: 'personal',      path: '/medico/personal' },
-  { label: 'Reportes y Estadísticas', icon: FileBarChart,  key: 'reportes',      path: '/medico/reportes' },
+  { label: 'Inicio Jefatura',         icon: Activity,       key: 'inicio',        path: '/medico/inicio-jefe-medico' },
+  { label: 'Prospectos',              icon: UserPlus,       key: 'prospectos',    path: '/medico/prospectos' },
+  { label: 'Pacientes Activos',       icon: Users,          key: 'pacientes',     path: '/medico/pacientes' },
+  { label: 'Expedientes Clínicos',    icon: ClipboardList,  key: 'expedientes',   path: '/medico/expedientes' },
+  { label: 'Requisiciones',           icon: ShoppingCart,   key: 'requisiciones', path: '/medico/requisiciones' },
+  { label: 'Farmacia / Enfermería',   icon: Pill,           key: 'farmacia',      path: '/medico/farmacia' },
+  { label: 'Personal Médico',         icon: Stethoscope,    key: 'personal',      path: '/medico/personal' },
+  { label: 'Reportes y Estadísticas', icon: FileBarChart,   key: 'reportes',      path: '/medico/reportes' },
+  { label: 'Incidencias de mi Área',  icon: AlertTriangle,  key: 'incidencias',   path: '/incidencias/departamento' },
 ];
 
 const InicioJefeMedico = () => {

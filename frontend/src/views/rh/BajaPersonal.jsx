@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, UserPlus, UserMinus, Tag, ShieldCheck, User, Wallet } from 'lucide-react';
+import { Search, UserPlus, UserMinus, Tag, ShieldCheck, User, Wallet, AlertTriangle, ClipboardList } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
-  { label: 'Alta de Personal',    icon: UserPlus,    key: 'alta',       path: '/rh/alta-personal' },
-  { label: 'Baja de Personal',    icon: UserMinus,   key: 'baja',       path: '/rh/baja-personal' },
-  { label: 'Catálogo de Roles',   icon: Tag,         key: 'catalogo',   path: '/rh/catalogo-roles' },
-  { label: 'Asignación de Roles', icon: ShieldCheck, key: 'asignacion', path: '/rh/asignacion-roles' },
-  { label: 'Nómina',              icon: Wallet,      key: 'nomina',     path: '/rh/nomina' },
+  { label: 'Alta de Personal',     icon: UserPlus,      key: 'alta',              path: '/rh/alta-personal' },
+  { label: 'Baja de Personal',     icon: UserMinus,     key: 'baja',              path: '/rh/baja-personal' },
+  { label: 'Catálogo de Roles',    icon: Tag,           key: 'catalogo',          path: '/rh/catalogo-roles' },
+  { label: 'Asignación de Roles',  icon: ShieldCheck,   key: 'asignacion',        path: '/rh/asignacion-roles' },
+  { label: 'Nómina',               icon: Wallet,        key: 'nomina',            path: '/rh/nomina' },
+  { label: 'Registrar Incidencia', icon: AlertTriangle, key: 'incidencias',       path: '/rh/registrar-incidencia' },
+  { label: 'Tabla de Incidencias', icon: ClipboardList, key: 'tabla-incidencias', path: '/rh/tabla-incidencias' },
 ];
 
 // Empleados mock para simular búsqueda

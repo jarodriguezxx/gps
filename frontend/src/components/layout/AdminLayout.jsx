@@ -4,7 +4,7 @@ import { API_BASE } from '../../config/api';
 import {
   Activity, BadgeCheck, BrainCircuit, CalendarDays, ClipboardList, FileBarChart, Folder,
   Inbox, LayoutDashboard, MessageSquare, PhoneCall, ShoppingCart,
-  Stethoscope, UserPlus, Users, Users2,
+  Stethoscope, UserPlus, Users, Users2, AlertTriangle,
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -64,14 +64,16 @@ export const AdminSidebar = ({ navItems, activeKey }) => {
 };
 
 const admisionesNavItems = [
-  { label: 'Dashboard de Inicio',    icon: LayoutDashboard, key: 'dashboard',           path: '/admisiones' },
-  { label: 'Bandeja Operativa',      icon: Inbox,           key: 'bandeja',             path: '/admisiones/bandeja-operativa' },
-  { label: 'Expediente',             icon: Folder,          key: 'expediente',          path: '/admisiones/expediente' },
-  { label: 'Requisiciones',          icon: ClipboardList,   key: 'requisiciones',       path: '/admisiones/requisiciones' },
-  { label: 'Validar Requisiciones',  icon: BadgeCheck,      key: 'validar-requisiciones',path: '/admisiones/validar-requisiciones',
+  { label: 'Dashboard de Inicio',    icon: LayoutDashboard, key: 'dashboard',            path: '/admisiones' },
+  { label: 'Bandeja Operativa',      icon: Inbox,           key: 'bandeja',              path: '/admisiones/bandeja-operativa' },
+  { label: 'Expediente',             icon: Folder,          key: 'expediente',           path: '/admisiones/expediente' },
+  { label: 'Requisiciones',          icon: ClipboardList,   key: 'requisiciones',        path: '/admisiones/requisiciones' },
+  { label: 'Validar Requisiciones',  icon: BadgeCheck,      key: 'validar-requisiciones', path: '/admisiones/validar-requisiciones',
     soloParaPuesto: ['JEFE DE ADMISIONES', 'ENCARGADO DE ADMISIONES'] },
-  { label: 'Agenda de Citas',        icon: CalendarDays,    key: 'agenda',              path: '/admisiones/agenda-citas' },
-  { label: 'Seguimiento Telefónico', icon: PhoneCall,       key: 'seguimiento',         path: '/admisiones/seguimiento-telefonico' },
+  { label: 'Agenda de Citas',        icon: CalendarDays,    key: 'agenda',               path: '/admisiones/agenda-citas' },
+  { label: 'Seguimiento Telefónico', icon: PhoneCall,       key: 'seguimiento',          path: '/admisiones/seguimiento-telefonico' },
+  { label: 'Incidencias de mi Área', icon: AlertTriangle,   key: 'incidencias-area',     path: '/incidencias/departamento',
+    soloParaPuesto: ['JEFA (E) DEP. ADMISIONES'] },
   // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
 ];
 

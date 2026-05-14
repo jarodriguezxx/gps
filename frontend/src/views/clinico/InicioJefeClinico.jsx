@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, ClipboardCheck, UserCog, Activity,
-  TrendingUp, Clock, UserX, ChevronRight, CalendarClock
+  TrendingUp, Clock, UserX, ChevronRight, CalendarClock, AlertTriangle
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
@@ -11,6 +11,7 @@ const navItems = [
   { label: 'Auditoría Clínica',      icon: Users,           path: '/clinico/directorio' },
   { label: 'Asignación Terapéutica', icon: UserCog,         path: '/clinico/asignaciones' },
   { label: 'Validación Terapéutica', icon: ClipboardCheck,  path: '/clinico/calendario' },
+  { label: 'Incidencias de mi Área', icon: AlertTriangle,   path: '/incidencias/departamento' },
 ];
 
 const InicioJefeClinico = () => {

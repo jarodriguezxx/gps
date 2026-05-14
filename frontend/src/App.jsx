@@ -61,6 +61,9 @@ import BajaPersonal from './views/rh/BajaPersonal';
 import CatalogoRoles from './views/rh/CatalogoRoles';
 import AsignacionRoles from './views/rh/AsignacionRoles';
 import NominaRH from './views/rh/NominaRH';
+import RegistrarIncidencia from './views/rh/RegistrarIncidencia';
+import TablaIncidencias from './views/rh/TablaIncidencias';
+import IncidenciasDepartamento from './views/rh/IncidenciasDepartamento';
 
 // Financiero
 import ArchivoContable from './views/financiero/ArchivoContable';
@@ -129,6 +132,8 @@ const QUICK_VIEWS = [
   { label: 'RH - Baja',              path: '/rh/baja-personal' },
   { label: 'RH - Catálogo',          path: '/rh/catalogo-roles' },
   { label: 'RH - Asignación',        path: '/rh/asignacion-roles' },
+  { label: 'RH - Incidencias',       path: '/rh/registrar-incidencia' },
+  { label: 'RH - Tabla Incid.',      path: '/rh/tabla-incidencias' },
   { label: 'Fin - Archivo',          path: '/financiero/archivo-contable' },
   { label: 'Fin - Digitalizar',      path: '/financiero/digitalizar-comprobantes' },
   { label: 'Fin - Correcciones',     path: '/financiero/gestionar-correcciones' },
@@ -252,6 +257,9 @@ function App() {
         <Route path="/rh/catalogo-roles"                       element={<PrivateRoute><CatalogoRoles /></PrivateRoute>} />
         <Route path="/rh/asignacion-roles"                     element={<PrivateRoute><AsignacionRoles /></PrivateRoute>} />
         <Route path="/rh/nomina"                               element={<PrivateRoute><NominaRH /></PrivateRoute>} />
+        <Route path="/rh/registrar-incidencia"                 element={<PrivateRoute><RegistrarIncidencia /></PrivateRoute>} />
+        <Route path="/rh/tabla-incidencias"                    element={<PrivateRoute><TablaIncidencias /></PrivateRoute>} />
+        <Route path="/incidencias/departamento"                element={<PrivateRoute><IncidenciasDepartamento /></PrivateRoute>} />
 
         {/* Financiero */}
         <Route path="/financiero/archivo-contable"             element={<PrivateRoute><ArchivoContable /></PrivateRoute>} />
