@@ -137,10 +137,55 @@ const ValoracionMedica = () => {
     }
   };
 
+  const validateVitals = () => {
+    const errors = [];
+
+    if (formulario.temp && (isNaN(formulario.temp) || parseFloat(formulario.temp) < 35.0 || parseFloat(formulario.temp) > 42.0)) {
+      errors.push(`Temperatura debe estar entre 35.0°C y 42.0°C`);
+    }
+
+    if (formulario.fc && (isNaN(formulario.fc) || parseInt(formulario.fc) < 40 || parseInt(formulario.fc) > 180)) {
+      errors.push(`F.C debe estar entre 40 y 180 bpm`);
+    }
+
+    if (formulario.fr && (isNaN(formulario.fr) || parseInt(formulario.fr) < 8 || parseInt(formulario.fr) > 40)) {
+      errors.push(`F.R debe estar entre 8 y 40 rpm`);
+    }
+
+    if (formulario.ta) {
+      const taRegex = /^\d{2,3}\/\d{2}$/;
+      if (!taRegex.test(formulario.ta)) {
+        errors.push(`T.A debe tener formato XXX/XX (ej: 120/80)`);
+      } else {
+        const [sistolica, diastolica] = formulario.ta.split('/').map(Number);
+        if (sistolica < 50 || sistolica > 250) errors.push(`Sistólica debe estar entre 50 y 250`);
+        if (diastolica < 20 || diastolica > 150) errors.push(`Diastólica debe estar entre 20 y 150`);
+        if (sistolica < diastolica) errors.push(`Sistólica debe ser mayor o igual a diastólica`);
+      }
+    }
+
+    if (formulario.peso && (isNaN(formulario.peso) || parseFloat(formulario.peso) < 1 || parseFloat(formulario.peso) > 300)) {
+      errors.push(`Peso debe estar entre 1 y 300 kg`);
+    }
+
+    if (formulario.talla && (isNaN(formulario.talla) || parseFloat(formulario.talla) < 50 || parseFloat(formulario.talla) > 250)) {
+      errors.push(`Talla debe estar entre 50 y 250 cm`);
+    }
+
+    return errors;
+  };
+
   const handleGuardar = async (e) => {
     e.preventDefault();
 
-    // 1. Validaciones básicas antes de enviar
+    // 1. Validaciones de signos vitales
+    const validationErrors = validateVitals();
+    if (validationErrors.length > 0) {
+      alert("Errores en signos vitales:\n" + validationErrors.join("\n"));
+      return;
+    }
+
+    // 2. Validaciones básicas antes de enviar
     if (!formulario.motivoConsulta || !formulario.padecimientoActual || !formulario.diagnostico) {
       alert("Por favor, llena los campos obligatorios: Motivo de consulta, Padecimiento y Diagnóstico.");
       return;

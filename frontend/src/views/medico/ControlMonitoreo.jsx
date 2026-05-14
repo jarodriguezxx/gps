@@ -15,6 +15,8 @@ const ControlMonitoreo = () => {
   const navigate = useNavigate();
   const [paciente, setPaciente] = useState(null);
   const [pestañaActiva, setPestañaActiva] = useState('glucosa');
+  const [glucosaError, setGlucosaError] = useState('');
+  const [taError, setTaError] = useState('');
 
   // --- ESTADOS PARA GLUCOSA ---
   const [planGlucosa, setPlanGlucosa] = useState({ id: null, fechaInicio: '', fechaFin: '', hora: '', dias: [], ayuno: true, configurado: false });
@@ -80,6 +82,43 @@ useEffect(() => {
     setPlan({ ...plan, dias: nuevosDias });
   };
 
+  const handleGlucosaChange = (e) => {
+    const value = e.target.value;
+    setNuevaGlucosa({ ...nuevaGlucosa, resultado: value });
+    
+    if (value) {
+      const num = parseInt(value, 10);
+      if (isNaN(num) || num < 20 || num > 500) {
+        setGlucosaError(`Glucosa debe estar entre 20-500 mg/dL`);
+      } else {
+        setGlucosaError('');
+      }
+    } else {
+      setGlucosaError('');
+    }
+  };
+
+  const handleTAChange = (e) => {
+    const value = e.target.value;
+    setNuevaTA({ ...nuevaTA, resultado: value });
+    
+    if (value) {
+      const taRegex = /^\d{2,3}\/\d{2}$/;
+      if (!taRegex.test(value)) {
+        setTaError(`Formato: XXX/XX (ej: 120/80)`);
+      } else {
+        const [sistolica, diastolica] = value.split('/').map(Number);
+        if (sistolica < 50 || sistolica > 250 || diastolica < 20 || diastolica > 150 || sistolica < diastolica) {
+          setTaError(`Valores inválidos`);
+        } else {
+          setTaError('');
+        }
+      }
+    } else {
+      setTaError('');
+    }
+  };
+
   // ==========================================
   // CONEXIÓN A BASE DE DATOS: PLANES
   // ==========================================
@@ -120,10 +159,41 @@ useEffect(() => {
   };
 
   // ==========================================
+  // VALIDACIONES
+  // ==========================================
+  const validateGlucosa = (value) => {
+    if (!value) return { valid: true };
+    const num = parseInt(value, 10);
+    if (isNaN(num) || num < 20 || num > 500) {
+      return { valid: false, error: `Glucosa debe estar entre 20 y 500 mg/dL (recibido: ${num})` };
+    }
+    return { valid: true };
+  };
+
+  const validateTA = (value) => {
+    if (!value) return { valid: true };
+    const taRegex = /^\d{2,3}\/\d{2}$/;
+    if (!taRegex.test(value)) {
+      return { valid: false, error: `T.A debe tener formato XXX/XX (ej: 120/80)` };
+    }
+    const [sistolica, diastolica] = value.split('/').map(Number);
+    if (sistolica < 50 || sistolica > 250) return { valid: false, error: `Sistólica debe estar entre 50 y 250` };
+    if (diastolica < 20 || diastolica > 150) return { valid: false, error: `Diastólica debe estar entre 20 y 150` };
+    if (sistolica < diastolica) return { valid: false, error: `Sistólica debe ser mayor o igual a diastólica` };
+    return { valid: true };
+  };
+
+  // ==========================================
   // CONEXIÓN A BASE DE DATOS: REGISTROS (TOMAS)
   // ==========================================
   const agregarRegistroGlucosa = async () => {
     if (!nuevaGlucosa.fecha || !nuevaGlucosa.resultado) return alert("Faltan datos");
+    
+    const glucosaValidation = validateGlucosa(nuevaGlucosa.resultado);
+    if (!glucosaValidation.valid) {
+      return alert(glucosaValidation.error);
+    }
+
     try {
       const res = await fetch('http://localhost:4000/api/monitoreo/registro', {
         method: 'POST',
@@ -140,6 +210,12 @@ useEffect(() => {
 
   const agregarRegistroTA = async () => {
     if (!nuevaTA.fecha || !nuevaTA.resultado) return alert("Faltan datos");
+    
+    const taValidation = validateTA(nuevaTA.resultado);
+    if (!taValidation.valid) {
+      return alert(taValidation.error);
+    }
+
     try {
       const res = await fetch('http://localhost:4000/api/monitoreo/registro', {
         method: 'POST',
@@ -289,9 +365,10 @@ useEffect(() => {
                     </div>
                     <div className="w-32">
                       <label className={labelClass}>Resultado</label>
-                      <input type="text" placeholder="Ej. 95" value={nuevaGlucosa.resultado} onChange={e => setNuevaGlucosa({...nuevaGlucosa, resultado: e.target.value})} className={inputClass} />
+                      <input type="number" placeholder="Ej. 95" value={nuevaGlucosa.resultado} onChange={handleGlucosaChange} className={`${inputClass} ${glucosaError ? 'border-red-500 bg-red-50' : ''}`} min="20" max="500" />
+                      {glucosaError && <p className="text-[9px] text-red-600 mt-0.5">{glucosaError}</p>}
                     </div>
-                    <button onClick={agregarRegistroGlucosa} className="bg-[#7E1D3B] text-white p-3 rounded-lg hover:bg-[#63162e] transition-colors"><Plus size={20}/></button>
+                    <button onClick={agregarRegistroGlucosa} disabled={!!glucosaError} className={`p-3 rounded-lg transition-colors ${glucosaError ? 'bg-slate-300 cursor-not-allowed' : 'bg-[#7E1D3B] text-white hover:bg-[#63162e]'}`}><Plus size={20}/></button>
                   </div>
 
                   <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
@@ -391,9 +468,10 @@ useEffect(() => {
                     </div>
                     <div className="w-32">
                       <label className={labelClass}>Resultado</label>
-                      <input type="text" placeholder="Ej. 120/80" value={nuevaTA.resultado} onChange={e => setNuevaTA({...nuevaTA, resultado: e.target.value})} className={inputClass} />
+                      <input type="text" placeholder="Ej. 120/80" value={nuevaTA.resultado} onChange={handleTAChange} className={`${inputClass} ${taError ? 'border-red-500 bg-red-50' : ''}`} />
+                      {taError && <p className="text-[9px] text-red-600 mt-0.5">{taError}</p>}
                     </div>
-                    <button onClick={agregarRegistroTA} className="bg-slate-800 text-white p-3 rounded-lg hover:bg-slate-700 transition-colors"><Plus size={20}/></button>
+                    <button onClick={agregarRegistroTA} disabled={!!taError} className={`p-3 rounded-lg transition-colors ${taError ? 'bg-slate-300 cursor-not-allowed' : 'bg-slate-800 text-white hover:bg-slate-700'}`}><Plus size={20}/></button>
                   </div>
 
                   <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
