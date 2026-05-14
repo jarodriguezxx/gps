@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE } from '../../config/api';
 import {
-  Activity, BadgeCheck, BrainCircuit, CalendarDays, CalendarPlus, ClipboardCheck,
+  Activity, AlertTriangle, BadgeCheck, BrainCircuit, CalendarDays, CalendarPlus, ClipboardCheck,
   ClipboardList, FileBarChart, Folder, Inbox, LayoutDashboard, MessageSquare,
   PhoneCall, ShoppingCart, Stethoscope, UserCog, UserPlus, Users, Users2,
 } from 'lucide-react';
@@ -58,15 +58,15 @@ export const AdminSidebar = ({ navItems, activeKey }) => {
   
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {navItems.map(({ label, icon, key, path }) => {
+      {navItems.map(({ label, icon, key: navKey, path }) => {
         const NavIcon = icon;
 
         return (
         <button 
-          key={key} 
+          key={`${label}-${path}`} 
           onClick={() => navigate(path)}
           className={`mb-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition flex items-center gap-2.5 ${
-            key === activeKey
+            navKey === activeKey
               ? 'bg-[#7E1D3B] text-white shadow-md hover:bg-[#63162e]'
               : 'border border-[#7E1D3B]/20 bg-[#7E1D3B]/8 text-[#7E1D3B] hover:bg-[#7E1D3B]/12'
           }`}
@@ -81,14 +81,16 @@ export const AdminSidebar = ({ navItems, activeKey }) => {
 };
 
 const admisionesNavItems = [
-  { label: 'Dashboard de Inicio',    icon: LayoutDashboard, key: 'dashboard',           path: '/admisiones' },
-  { label: 'Bandeja Operativa',      icon: Inbox,           key: 'bandeja',             path: '/admisiones/bandeja-operativa' },
-  { label: 'Expediente',             icon: Folder,          key: 'expediente',          path: '/admisiones/expediente' },
-  { label: 'Requisiciones',          icon: ClipboardList,   key: 'requisiciones',       path: '/admisiones/requisiciones' },
-  { label: 'Validar Requisiciones',  icon: BadgeCheck,      key: 'validar-requisiciones',path: '/admisiones/validar-requisiciones',
+  { label: 'Dashboard de Inicio',    icon: LayoutDashboard, key: 'dashboard',              path: '/admisiones' },
+  { label: 'Bandeja Operativa',      icon: Inbox,           key: 'bandeja',                path: '/admisiones/bandeja-operativa' },
+  { label: 'Expediente',             icon: Folder,          key: 'expediente',             path: '/admisiones/expediente' },
+  { label: 'Requisiciones',          icon: ClipboardList,   key: 'requisiciones',          path: '/admisiones/requisiciones' },
+  { label: 'Validar Requisiciones',  icon: BadgeCheck,      key: 'validar-requisiciones',  path: '/admisiones/validar-requisiciones',
     soloParaPuesto: ['jefe de admisiones', 'jefa de admisiones', 'encargado de admisiones', 'encargada de admisiones', 'dep. admisiones'] },
-  { label: 'Agenda de Citas',        icon: CalendarDays,    key: 'agenda',              path: '/admisiones/agenda-citas' },
-  { label: 'Llamada Inicial ', icon: PhoneCall,       key: 'seguimiento',         path: '/admisiones/seguimiento-telefonico' },
+  { label: 'Agenda de Citas',        icon: CalendarDays,    key: 'agenda',                 path: '/admisiones/agenda-citas' },
+  { label: 'Seguimiento Telefónico', icon: PhoneCall,       key: 'seguimiento',            path: '/admisiones/seguimiento-telefonico' },
+  { label: 'Incidencias de mi Área', icon: AlertTriangle,   key: 'incidencias-area',       path: '/incidencias/departamento',
+    soloParaPuesto: ['dep. admisiones', 'jefe de admisiones', 'jefa de admisiones', 'jefa (e) dep. admisiones'] },
   // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
 ];
 
@@ -137,13 +139,13 @@ export const AdmisionesSidebar = () => {
 
   return (
     <aside className="rounded-2xl bg-gradient-to-b from-slate-100 to-white p-3 shadow-inner self-start">
-      {itemsVisibles.map(({ label, icon, key, path }) => {
+      {itemsVisibles.map(({ label, icon, path }) => {
         const active = location.pathname === path || location.pathname.startsWith(`${path}/`);
         const NavIcon = icon;
 
         return (
           <button
-            key={key}
+            key={`${label}-${path}`}
             type="button"
             onClick={() => navigate(path)}
             className={`mb-2 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold transition flex items-center gap-2.5 ${

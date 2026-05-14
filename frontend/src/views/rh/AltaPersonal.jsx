@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, UserPlus, UserMinus, Tag, ShieldCheck, Eye, EyeOff, CheckCircle, KeyRound, RefreshCw } from 'lucide-react';
+import { Save, X, UserPlus, UserMinus, Tag, ShieldCheck, Eye, EyeOff, CheckCircle, KeyRound, RefreshCw, Wallet, AlertTriangle, ClipboardList, Calculator } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
-  { label: 'Alta de Personal',    icon: UserPlus,    key: 'alta',       path: '/rh/alta-personal' },
-  { label: 'Baja de Personal',    icon: UserMinus,   key: 'baja',       path: '/rh/baja-personal' },
-  { label: 'Catálogo de Roles',   icon: Tag,         key: 'catalogo',   path: '/rh/catalogo-roles' },
-  { label: 'Asignación de Roles', icon: ShieldCheck, key: 'asignacion', path: '/rh/asignacion-roles' },
+  { label: 'Alta de Personal',     icon: UserPlus,      key: 'alta',              path: '/rh/alta-personal' },
+  { label: 'Baja de Personal',     icon: UserMinus,     key: 'baja',              path: '/rh/baja-personal' },
+  { label: 'Catálogo de Roles',    icon: Tag,           key: 'catalogo',          path: '/rh/catalogo-roles' },
+  { label: 'Asignación de Roles',  icon: ShieldCheck,   key: 'asignacion',        path: '/rh/asignacion-roles' },
+  { label: 'Nómina',               icon: Wallet,        key: 'nomina',            path: '/rh/nomina' },
+  { label: 'Registrar Incidencia', icon: AlertTriangle, key: 'incidencias',       path: '/rh/registrar-incidencia' },
+  { label: 'Tabla de Incidencias', icon: ClipboardList, key: 'tabla-incidencias', path: '/rh/tabla-incidencias' },
+  { label: 'Cálculo de Quincena',  icon: Calculator,    key: 'quincena',          path: '/rh/calculo-quincena' },
 ];
 
 const PUESTOS_POR_DEPARTAMENTO = {
