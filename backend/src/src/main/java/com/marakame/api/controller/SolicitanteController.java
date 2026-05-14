@@ -59,7 +59,9 @@ public class SolicitanteController {
         nuevo.setParentescoPaciente(dto.parentescoPaciente());
         nuevo.setTelefono(dto.telefono());
         nuevo.setCelular(dto.celular());
-        
+        nuevo.setFuenteReferencia(dto.fuenteReferencia());
+        nuevo.setFuenteReferenciaOtro(dto.fuenteReferenciaOtro());
+
         return solicitanteRepository.save(nuevo); // Se guarda en PostgreSQL
     }
 

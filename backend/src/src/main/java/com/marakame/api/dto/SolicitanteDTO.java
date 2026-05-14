@@ -18,5 +18,7 @@ public record SolicitanteDTO(
     String domicilioParticular,
     String parentescoPaciente,
     String telefono,
-    String celular
+    String celular,
+    String fuenteReferencia,
+    String fuenteReferenciaOtro
 ) {}

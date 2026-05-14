@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowRight, FileText, FileX, AlertTriangle, Search, Sparkles, X, Download, Upload, CheckCircle2, Paperclip, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileText, FileX, AlertTriangle, Search, Sparkles, X, Download, Upload, CheckCircle2, Paperclip, Briefcase, Phone, User, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { AdminHeader, AdmisionesSidebar } from '../../components/layout/AdminLayout';
 import AdmisionesToast from '../../components/admisiones/AdmisionesToast';
@@ -276,7 +276,7 @@ const buildDiagnosticoReadOnlyData = (prospecto, detalleExpediente) => {
 	}
 
 	const llamadaInicial = detalleExpediente?.llamadaInicial || {};
-	const tieneSnapshot = Object.keys(llamadaInicial).length > 0;
+	const tieneSnapshot = Boolean(prospecto?.solicitante?.id || Object.keys(llamadaInicial).length > 0);
 	const ultimoSeguimiento = Array.isArray(detalleExpediente?.seguimientos) && detalleExpediente.seguimientos.length > 0
 		? detalleExpediente.seguimientos[0]
 		: null;
@@ -1331,10 +1331,11 @@ const ExpedienteAdmisiones = () => {
 			];
 		}
 
+		const esPropspecto = !prospectoSeleccionado.clavePaciente;
 		return [
-			{ label: 'Paciente', value: getNombreProspecto(prospectoSeleccionado) || 'Sin nombre' },
-			{ label: 'Clave', value: prospectoSeleccionado.clavePaciente || '--' },
-			{ label: 'Ingreso', value: formatDateValue(prospectoSeleccionado.fechaIngreso || prospectoSeleccionado.createdAt || prospectoSeleccionado.fechaAtencion || prospectoSeleccionado.fechaRegistro) },
+			{ label: 'Paciente', value: getNombreProspecto(prospectoSeleccionado) || 'Sin nombre', valueClass: 'capitalize' },
+			{ label: 'Clave', value: prospectoSeleccionado.clavePaciente || 'Sin asignar', muted: esPropspecto },
+			{ label: 'Ingreso', value: formatDateValue(prospectoSeleccionado.fechaIngreso || prospectoSeleccionado.createdAt || prospectoSeleccionado.fechaAtencion || prospectoSeleccionado.fechaRegistro) || 'Pendiente de ingreso', muted: !prospectoSeleccionado.fechaIngreso },
 			{ label: 'Estado', value: formatEstadoPacienteDisplay(prospectoSeleccionado.estadoPaciente) },
 		];
 	}, [prospectoSeleccionado]);
@@ -1380,11 +1381,14 @@ const ExpedienteAdmisiones = () => {
 				<div className="grid gap-4 md:grid-cols-[220px_1fr]">
 					<AdmisionesSidebar />
 					<div className="space-y-5">
-						<PrimarySidebarActionButton
-							label="Volver a admisiones"
+						<button
+							type="button"
 							onClick={() => navigate('/admisiones')}
-							icon={<ArrowRight size={18} />}
-						/>
+							className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+						>
+							<ArrowLeft size={15} />
+							Volver a admisiones
+						</button>
 							
 						
 						<section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
@@ -1407,7 +1411,7 @@ const ExpedienteAdmisiones = () => {
 									{tarjetasGeneral.map((item) => (
 										<article key={item.label} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
 											<p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{item.label}</p>
-											<p className="mt-3 text-2xl font-black text-slate-900">{item.value}</p>
+											<p className={`mt-3 text-2xl font-black ${item.muted ? 'text-slate-300' : 'text-slate-900'} ${item.valueClass || ''}`}>{item.value}</p>
 										</article>
 									))}
 								</section>
@@ -1729,40 +1733,39 @@ const ExpedienteAdmisiones = () => {
 							<div className="mb-4 flex items-center justify-between gap-3">
 								<div>
 									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Línea de tiempo</p>
-									<h3 className="text-2xl font-black text-slate-900">Seguimientos y notas del expediente</h3>
+									<h3 className="text-xl font-black text-slate-900">Seguimientos y notas</h3>
 								</div>
-								<Sparkles className="text-[#7E1D3B]" size={22} />
+								<Sparkles className="text-[#7E1D3B]" size={20} />
 							</div>
 							{!prospectoSeleccionado ? (
-								<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
-									Selecciona un prospecto para ver su línea de tiempo.
-								</div>
+								<p className="text-sm text-slate-400">Selecciona un prospecto para ver su línea de tiempo.</p>
 							) : timelineProspecto.length === 0 ? (
-								<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
-									Este expediente todavía no tiene seguimientos registrados.
-								</div>
+								<p className="text-sm text-slate-400">Sin seguimientos registrados aún.</p>
 							) : (
-								<div className="relative space-y-4 pl-4 before:absolute before:left-[10px] before:top-1 before:h-full before:w-px before:bg-slate-200">
+								<div className="relative space-y-3 pl-4 before:absolute before:left-[10px] before:top-1 before:h-[calc(100%-8px)] before:w-px before:bg-slate-200">
 									{timelineProspecto.map((item) => (
-										<article key={item.id} className="relative rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-											<span className={`absolute -left-[18px] top-5 h-4 w-4 rounded-full border-4 border-white ${item.tone === 'emerald' ? 'bg-emerald-500' : item.tone === 'rose' ? 'bg-rose-500' : item.tone === 'amber' ? 'bg-amber-500' : 'bg-slate-400'}`}></span>
-											<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+										<article key={item.id} className="relative rounded-xl border border-slate-100 bg-slate-50/80 p-3 shadow-sm">
+											<span className={`absolute -left-[18px] top-4 h-3.5 w-3.5 rounded-full border-4 border-white ${item.tone === 'emerald' ? 'bg-emerald-500' : item.tone === 'rose' ? 'bg-rose-500' : item.tone === 'amber' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+											<div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
 												<div>
-													<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{formatDateValue(item.fecha)} • {formatTimeValue(item.fecha)}</p>
-													<h4 className="mt-1 text-lg font-black text-slate-900">{item.titulo}</h4>
+													<p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{formatDateValue(item.fecha)} · {formatTimeValue(item.fecha)}</p>
+													<p className="mt-0.5 text-sm font-bold text-slate-900">{item.titulo}</p>
 												</div>
-												<span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.tone === 'emerald' ? 'bg-emerald-100 text-emerald-800' : item.tone === 'rose' ? 'bg-rose-100 text-rose-800' : item.tone === 'amber' ? 'bg-amber-100 text-amber-900' : 'bg-slate-200 text-slate-700'}`}>
+												<span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${item.tone === 'emerald' ? 'bg-emerald-100 text-emerald-800' : item.tone === 'rose' ? 'bg-rose-100 text-rose-800' : item.tone === 'amber' ? 'bg-amber-100 text-amber-900' : 'bg-slate-200 text-slate-700'}`}>
 													{item.estado}
 												</span>
 											</div>
-											<p className="mt-2 text-sm leading-6 text-slate-600">{item.detalle}</p>
+											{item.detalle && <p className="mt-1 text-xs leading-5 text-slate-500">{item.detalle}</p>}
 											{item.diagnosticoVisual ? (
-												<p className="mt-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+												<p className="mt-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-900">
 													Diagnóstico visual: {item.diagnosticoVisual}
 												</p>
 											) : null}
 										</article>
 									))}
+									{timelineProspecto.length < 3 && (
+										<p className="pl-1 pt-1 text-xs text-slate-400">El historial se irá completando conforme avance el expediente.</p>
+									)}
 								</div>
 							)}
 						</section>
@@ -1770,8 +1773,8 @@ const ExpedienteAdmisiones = () => {
 						<section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
 							<div className="mb-4 flex items-center justify-between gap-3">
 								<div>
-									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Acción rápida</p>
-									<h3 className="text-2xl font-black text-slate-900">Abrir módulos del expediente</h3>
+									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Acciones</p>
+									<h3 className="text-xl font-black text-slate-900">Módulos del expediente</h3>
 								</div>
 								<Sparkles className="text-[#7E1D3B]" size={22} />
 							</div>

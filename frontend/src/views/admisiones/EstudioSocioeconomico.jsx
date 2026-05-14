@@ -1065,8 +1065,8 @@ const EstudioSocioeconomico = () => {
         if (pacienteSeleccionadoId === Number(navState.pacienteId)) return;
 
         // Prioridad: siempre usar el pacienteId recibido para obtener el registro canónico
-        if (cargandoCitasRegistradas) return;
-        if (errorCitasRegistradas) return;
+        // No bloquear la sincronización por el estado de citas: permitimos
+        // continuar aunque las citas tarden en cargar o fallen.
 
         const pacienteId = Number(navState.pacienteId);
         if (!Number.isFinite(pacienteId) || pacienteId <= 0) {
@@ -1245,9 +1245,9 @@ const EstudioSocioeconomico = () => {
     if (!tieneCitaRegistrada) {
       setFeedback({
         type: 'warning',
-        message: 'Este paciente no tiene cita registrada. Primero agenda una cita para continuar con el estudio socioeconómico.',
+        message: 'No se encontró cita registrada. Puedes continuar con el estudio si lo deseas.',
       });
-      return;
+      // No retornamos: permitimos continuar aunque no exista cita registrada.
     }
 
     // Establecer ID seleccionada inmediatamente (estrictamente paciente.id)
@@ -2148,21 +2148,21 @@ const EstudioSocioeconomico = () => {
       return;
     }
 
-    if (cargandoCitasRegistradas || errorCitasRegistradas) {
-      setFeedback({
-        type: 'warning',
-        message: 'No se puede validar la cita registrada del paciente en este momento.',
-      });
-      return;
+    // Si las citas aún se están cargando o fallaron, no bloqueamos el guardado.
+    if (cargandoCitasRegistradas) {
+      setFeedback({ type: 'info', message: 'Validando citas registradas, continúa cuando se complete la validación.' });
+    }
+    if (errorCitasRegistradas) {
+      setFeedback({ type: 'warning', message: 'No se pudo validar la cita registrada del paciente; continuarás con una advertencia.' });
     }
 
     const pacienteTieneCita = citasRegistradas.some((item) => item.pacienteId === pacienteSeleccionadoId);
     if (!pacienteTieneCita) {
       setFeedback({
         type: 'warning',
-        message: 'Para guardar estudio socioeconómico, el paciente debe tener una cita registrada.',
+        message: 'No se encontró cita registrada. Se generará el estudio igualmente.',
       });
-      return;
+      // No retornamos: permitimos continuar aunque no exista cita registrada.
     }
 
     const checklist = buildValidationChecklist();

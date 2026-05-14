@@ -8,33 +8,44 @@ import {
 } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
-export const AdminHeader = ({ submodule = 'Módulo de Admisiones' }) => (
-  <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
-    <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
-      <div className="flex items-center gap-3">
-        <img 
-          src={marakameLogo} 
-          alt="Logo Marakame"
-          className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm" 
-        />
-        <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
-          <h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema Integral Marakame</h1>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">{submodule}</p>
+const getUsuarioHeader = () => {
+  try { return JSON.parse(localStorage.getItem('marakame_user') || '{}'); } catch { return {}; }
+};
+
+export const AdminHeader = ({ submodule = 'Módulo de Admisiones' }) => {
+  const usuario = getUsuarioHeader();
+  const nombre = usuario.nombre || usuario.nombreCompleto || 'Usuario';
+  const puesto = usuario.puesto || usuario.rol || '';
+  const iniciales = nombre.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+  return (
+    <header className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm mb-5">
+      <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="flex items-center gap-3">
+          <img
+            src={marakameLogo}
+            alt="Logo Marakame"
+            className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
+          />
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-[#7E1D3B]">Instituto Marakame</p>
+            <h1 className="text-xl font-black md:text-2xl text-slate-800">Sistema Integral Marakame</h1>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">{submodule}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 self-end md:self-auto">
+          <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center">
+            <span className="text-sm font-black text-[#7E1D3B]">{iniciales}</span>
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800 leading-tight">{nombre}</p>
+            {puesto && <p className="text-xs text-slate-500 uppercase tracking-wide">{puesto}</p>}
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-3 self-end md:self-auto">
-        <div className="h-10 w-10 rounded-full border-2 border-[#7E1D3B]/30 bg-[#7E1D3B]/10 flex items-center justify-center">
-          <span className="text-sm font-black text-[#7E1D3B]">ADM</span>
-        </div>
-        <div>
-          <p className="text-xs text-slate-500">Sesión activa</p>
-          <p className="font-semibold text-slate-700">{submodule}</p>
-        </div>
-      </div>
-    </div>
-  </header>
-);
+    </header>
+  );
+};
 
 export const AdminSidebar = ({ navItems, activeKey }) => {
   const navigate = useNavigate();
@@ -71,7 +82,7 @@ const admisionesNavItems = [
   { label: 'Validar Requisiciones',  icon: BadgeCheck,      key: 'validar-requisiciones',path: '/admisiones/validar-requisiciones',
     soloParaPuesto: ['JEFE DE ADMISIONES', 'ENCARGADO DE ADMISIONES'] },
   { label: 'Agenda de Citas',        icon: CalendarDays,    key: 'agenda',              path: '/admisiones/agenda-citas' },
-  { label: 'Seguimiento Telefónico', icon: PhoneCall,       key: 'seguimiento',         path: '/admisiones/seguimiento-telefonico' },
+  { label: 'Llamada Inicial ', icon: PhoneCall,       key: 'seguimiento',         path: '/admisiones/seguimiento-telefonico' },
   // Estudio Socioeconómico removido del sidebar: acceso controlado desde expediente
 ];
 

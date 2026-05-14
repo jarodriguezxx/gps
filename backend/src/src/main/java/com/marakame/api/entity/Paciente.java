@@ -112,6 +112,24 @@ public class Paciente {
     @Column(name = "fecha_registro_recibo")
     private LocalDateTime fechaRegistroRecibo;
 
+    @Column(name = "sustancia_consumo_especifica")
+    private String sustanciaConsumoEspecifica;
+
+    @Column(name = "internamiento")
+    private String internamiento;
+
+    @Column(name = "criterio_internamiento")
+    private String criterioInternamiento;
+
+    @Column(name = "conclusion_intervencion", columnDefinition = "TEXT")
+    private String conclusionIntervencion;
+
+    @Column(name = "tratamiento_anterior")
+    private String tratamientoAnterior;
+
+    @Column(name = "posibilidades_economicas")
+    private String posibilidadesEconomicas;
+
     @ManyToOne
     @JoinColumn(name = "solicitante_id")
     private Solicitante solicitante;
@@ -306,6 +324,54 @@ public class Paciente {
 
     public void setSustanciaConsumo(String sustanciaConsumo) {
         this.sustanciaConsumo = sustanciaConsumo;
+    }
+
+    public String getSustanciaConsumoEspecifica() {
+        return sustanciaConsumoEspecifica;
+    }
+
+    public void setSustanciaConsumoEspecifica(String sustanciaConsumoEspecifica) {
+        this.sustanciaConsumoEspecifica = sustanciaConsumoEspecifica;
+    }
+
+    public String getInternamiento() {
+        return internamiento;
+    }
+
+    public void setInternamiento(String internamiento) {
+        this.internamiento = internamiento;
+    }
+
+    public String getCriterioInternamiento() {
+        return criterioInternamiento;
+    }
+
+    public void setCriterioInternamiento(String criterioInternamiento) {
+        this.criterioInternamiento = criterioInternamiento;
+    }
+
+    public String getConclusionIntervencion() {
+        return conclusionIntervencion;
+    }
+
+    public void setConclusionIntervencion(String conclusionIntervencion) {
+        this.conclusionIntervencion = conclusionIntervencion;
+    }
+
+    public String getTratamientoAnterior() {
+        return tratamientoAnterior;
+    }
+
+    public void setTratamientoAnterior(String tratamientoAnterior) {
+        this.tratamientoAnterior = tratamientoAnterior;
+    }
+
+    public String getPosibilidadesEconomicas() {
+        return posibilidadesEconomicas;
+    }
+
+    public void setPosibilidadesEconomicas(String posibilidadesEconomicas) {
+        this.posibilidadesEconomicas = posibilidadesEconomicas;
     }
 
     public Solicitante getSolicitante() {

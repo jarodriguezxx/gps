@@ -1,0 +1,29 @@
+@page { size: A4; margin: 20mm; }
+body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color: #0f172a; background: #f8fafc; }
+.page { max-width: 794px; margin: 12px auto; background: #ffffff; padding: 28px; box-shadow: 0 6px 18px rgba(15,23,42,0.06); border-radius: 12px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.logo { height: 56px; }
+.title-wrap { flex: 1; text-align: center; }
+.title-wrap h1 { margin: 0; font-size: 20px; letter-spacing: 2px; background: #fff4f5; display: inline-block; padding: 10px 18px; border-radius: 12px; color: #7E1D3B; font-weight: 800; }
+.small { font-size: 12px; color: #475569; }
+.top-row { display: flex; gap: 18px; }
+.photo { width: 26%; }
+.photo-label { font-weight: 700; color: #7E1D3B; font-size: 12px; margin-bottom: 6px; }
+.photo-box { width: 100%; padding-top: 100%; background: #ffffff; border: 2px dashed #d1d5db; border-radius: 8px; position: relative; }
+.photo-help { font-size: 12px; color: #64748b; margin-top: 6px; }
+.person-data { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.card { background: #f8fafc; border: 1px solid #e6eef0; padding: 12px; border-radius: 10px; }
+.card label { font-size: 12px; color: #475569; font-weight: 700; display: block; margin-bottom: 6px; }
+.field { height: 28px; background: #fff; border-radius: 6px; padding: 6px 8px; border: 1px solid #e2e8f0; margin-bottom: 8px; }
+.small-cards { display: flex; gap: 8px; justify-content: space-between; }
+.inline-field { display: inline-block; margin-top: 6px; background: #fff; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
+.two-col { display: flex; gap: 12px; }
+.section { margin-top: 12px; }
+.section h2 { margin: 0 0 8px 0; font-size: 14px; color: #0f172a; }
+.table-like { border-top: 1px solid #e6eef0; margin-top: 8px; }
+.table-like .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #e6eef0; }
+.muted { color: #64748b; font-size: 13px; }
+.observations { width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; padding: 8px; font-size: 13px; }
+.footer { margin-top: 18px; display: flex; justify-content: space-between; align-items: center; }
+.sign-box { width: 220px; height: 56px; border-bottom: 2px solid #94a3b8; }
+@media print { body { background: white; } .page { box-shadow: none; border-radius: 0; } }
