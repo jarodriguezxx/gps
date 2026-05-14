@@ -73,7 +73,23 @@ public class ValoracionMedica {
     private String cedulaMedico;
 
     // ESTADO DE LA VALORACIÓN
-    private Boolean esAptoParaIngreso; 
+    private Boolean esAptoParaIngreso;
+
+    // RECHAZO MÉDICO (solo cuando esAptoParaIngreso = false)
+    @Column(name = "tipo_rechazo")
+    private String tipoRechazo; // "tratamiento_previo" | "no_aplica"
+
+    @Column(name = "motivo_rechazo", columnDefinition = "TEXT")
+    private String motivoRechazo;
+
+    @Column(name = "institucion_derivacion")
+    private String institucionDerivacion;
+
+    @Column(name = "direccion_derivacion")
+    private String direccionDerivacion;
+
+    @Column(name = "telefono_derivacion")
+    private String telefonoDerivacion;
 
     // Relación con los seguimientos posteriores
     @OneToMany(mappedBy = "valoracion", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -271,4 +287,19 @@ public class ValoracionMedica {
     public void setSeguimientos(List<SeguimientoValoracion> seguimientos) {
         this.seguimientos = seguimientos;
     }
+
+    public String getTipoRechazo() { return tipoRechazo; }
+    public void setTipoRechazo(String tipoRechazo) { this.tipoRechazo = tipoRechazo; }
+
+    public String getMotivoRechazo() { return motivoRechazo; }
+    public void setMotivoRechazo(String motivoRechazo) { this.motivoRechazo = motivoRechazo; }
+
+    public String getInstitucionDerivacion() { return institucionDerivacion; }
+    public void setInstitucionDerivacion(String institucionDerivacion) { this.institucionDerivacion = institucionDerivacion; }
+
+    public String getDireccionDerivacion() { return direccionDerivacion; }
+    public void setDireccionDerivacion(String direccionDerivacion) { this.direccionDerivacion = direccionDerivacion; }
+
+    public String getTelefonoDerivacion() { return telefonoDerivacion; }
+    public void setTelefonoDerivacion(String telefonoDerivacion) { this.telefonoDerivacion = telefonoDerivacion; }
 }

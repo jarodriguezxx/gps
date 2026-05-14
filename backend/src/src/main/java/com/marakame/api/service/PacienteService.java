@@ -284,6 +284,8 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         String estadoAnterior = paciente.getEstadoPaciente() != null ? paciente.getEstadoPaciente().name() : EstadoPaciente.PROSPECTO.name();
 
         paciente.setEstadoPaciente(EstadoPaciente.DENEGADO);
+        paciente.setMotivoDenegacion(observaciones.trim());
+        paciente.setMedicoRechazo("Trabajo Social");
         pacienteRepository.save(paciente);
 
         expediente.setEstado(EstadoPaciente.DENEGADO.name());
@@ -536,6 +538,20 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 
         byte[] contenidoPdf = construirPdfEstudio(paciente, payload);
 
+        // Extraer y guardar costo de tratamiento en el paciente
+        try {
+            Object estudio = payload.get("estudio");
+            Map<?, ?> estudioMap = estudio instanceof Map<?, ?> m ? m : payload;
+            Object diagObj = estudioMap.get("diagnosticoEconomico");
+            if (diagObj instanceof Map<?, ?> diag) {
+                Object costo = diag.get("costoTotal");
+                if (costo != null && !String.valueOf(costo).isBlank()) {
+                    paciente.setCostoTratamiento(String.valueOf(costo));
+                    pacienteRepository.save(paciente);
+                }
+            }
+        } catch (Exception ignored) {}
+
         EstudioSocioeconomicoPdf pdf = new EstudioSocioeconomicoPdf();
         pdf.setPaciente(paciente);
         pdf.setNombreArchivo(construirNombreArchivo(paciente));
@@ -549,8 +565,8 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
     @Autowired
     private ExpedienteClinicoRepository expedienteRepository;
 
-    @Transactional 
-    public void guardarNuevoExpediente(PacienteDTO dto) {
+    @Transactional
+    public Long guardarNuevoExpediente(PacienteDTO dto) {
         // 1. Crear y mapear el Paciente desde el DTO
         Paciente paciente = new Paciente();
         paciente.setNombres(dto.nombres());
@@ -614,8 +630,9 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
         seguimiento.setEstadoSeguimiento(dto.estadoSeguimiento());
         seguimiento.setFechaHoraProgramada(dto.fechaCita());
         seguimiento.setMotivo(dto.motivoAccion());
-        
+
         seguimientoRepository.save(seguimiento);
+        return pacienteGuardado.getId();
     }
 
 
@@ -2463,6 +2480,10 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
 
     @Transactional
     public Paciente cambiarEstadoPaciente(Long pacienteId, String nuevoEstado) {
+        return cambiarEstadoPaciente(pacienteId, nuevoEstado, null, null);
+    }
+
+    public Paciente cambiarEstadoPaciente(Long pacienteId, String nuevoEstado, String motivoDenegacion, String medicoRechazo) {
         Paciente paciente = pacienteRepository.findById(pacienteId)
             .orElseThrow(() -> new IllegalArgumentException("Paciente no encontrado"));
 
@@ -2470,8 +2491,13 @@ public Map<String, Object> obtenerDetalleExpediente(Long pacienteId) {
             EstadoPaciente estado = EstadoPaciente.valueOf(nuevoEstado.toUpperCase());
             paciente.setEstadoPaciente(estado);
 
-            if (estado == EstadoPaciente.EGRESO) {
-                // Aquí puedes agregar lógica adicional para egreso si es necesario
+            if (estado == EstadoPaciente.DENEGADO) {
+                if (motivoDenegacion != null && !motivoDenegacion.isBlank()) {
+                    paciente.setMotivoDenegacion(motivoDenegacion.trim());
+                }
+                if (medicoRechazo != null && !medicoRechazo.isBlank()) {
+                    paciente.setMedicoRechazo(medicoRechazo.trim());
+                }
             }
 
             return pacienteRepository.save(paciente);

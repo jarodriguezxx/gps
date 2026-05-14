@@ -246,7 +246,7 @@ const requiredTextFields = {
     { name: 'internamiento', label: '¿Está dispuesto a internarse?' },
     { name: 'tratamientoAnterior', label: '¿Ha estado en tratamiento anteriormente?' },
     { name: 'posibilidadesEconomicas', label: 'Posibilidades económicas' },
-    { name: 'llamarPaciente', label: 'Tipo de llamada inicial' },
+    // 'llamarPaciente' se valida condicionalmente más abajo según el modo de contacto
     { name: 'acuerdo', label: 'Acuerdo' },
   ],
 };
@@ -679,6 +679,31 @@ const ValoracionDiagnostica = () => {
         }
 
         setNotification({ type: 'success', message: 'Valoración diagnóstica actualizada correctamente.' });
+
+        // Si se guardó una fecha para visita o posible ingreso, crear una cita en seguimientos
+        try {
+          const fecha = fechaCitaProgramada;
+          const estado = String(formData.estadoSeguimiento || '').trim();
+          const esVisita = estado === 'espera_visita';
+          const esPosibleIngreso = estado === 'Posible_Ingreso';
+          const pacienteIdToUse = incomingState.pacienteId;
+
+          if (fecha && (esVisita || esPosibleIngreso) && pacienteIdToUse) {
+            const fechaConSegundos = fecha.length === 16 ? `${fecha}:00` : fecha;
+            await fetch(`${API_BASE}/seguimientos/citas`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pacienteId: pacienteIdToUse,
+                fechaHoraProgramada: fechaConSegundos,
+                tipoCita: esVisita ? 'Visita' : 'Posible ingreso',
+                motivo: 'Programada desde Valoración Diagnóstica',
+              }),
+            }).catch((err) => console.error('No se pudo crear cita tras actualizar paciente:', err));
+          }
+        } catch (err) {
+          console.error('Error creando cita tras actualización:', err);
+        }
       } else {
         const solicitanteResponse = await fetch(`${API_BASE}/solicitantes`, {
           method: 'POST',
@@ -708,7 +733,34 @@ const ValoracionDiagnostica = () => {
           throw new Error(errorText || 'No se pudo guardar el paciente.');
         }
 
+        const pacienteGuardado = await pacienteResponse.json().catch(() => ({}));
+
         setNotification({ type: 'success', message: 'Valoración diagnóstica guardada correctamente.' });
+
+        // Crear cita si corresponde (espera visita / posible ingreso)
+        try {
+          const fecha = fechaCitaProgramada;
+          const estado = String(formData.estadoSeguimiento || '').trim();
+          const esVisita = estado === 'espera_visita';
+          const esPosibleIngreso = estado === 'Posible_Ingreso';
+          const pacienteIdToUse = pacienteGuardado.id || null;
+
+          if (fecha && (esVisita || esPosibleIngreso) && pacienteIdToUse) {
+            const fechaConSegundos = fecha.length === 16 ? `${fecha}:00` : fecha;
+            await fetch(`${API_BASE}/seguimientos/citas`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pacienteId: pacienteIdToUse,
+                fechaHoraProgramada: fechaConSegundos,
+                tipoCita: esVisita ? 'Visita' : 'Posible ingreso',
+                motivo: 'Programada desde Valoración Diagnóstica',
+              }),
+            }).catch((err) => console.error('No se pudo crear cita tras crear paciente:', err));
+          }
+        } catch (err) {
+          console.error('Error creando cita tras guardado:', err);
+        }
       }
 
       setTimeout(() => {

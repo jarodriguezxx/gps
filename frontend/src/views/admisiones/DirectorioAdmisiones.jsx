@@ -291,15 +291,30 @@ const DirectorioAdmisiones = () => {
 																	<span className="font-medium text-slate-700">{getResponsableName(paciente)}</span>
 																</div>
 																{getEstadoPaciente(paciente) === 'DENEGADO' ? (
-																	<div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
+																	<div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900 space-y-1">
 																		<p className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-700">Motivo de rechazo</p>
-																		<p className="mt-1 leading-6">El paciente fue denegado por insuficiencia económica. Revisa el expediente digital para ver las notas administrativas.</p>
+																		{paciente.medicoRechazo && (
+																			<p className="text-xs text-rose-500 font-semibold">
+																				Responsable: <span className="text-rose-800 font-bold">{paciente.medicoRechazo}</span>
+																			</p>
+																		)}
+																		<p className="mt-0.5 leading-relaxed">
+																			{paciente.motivoDenegacion || 'Ver expediente para el detalle del rechazo.'}
+																		</p>
 																	</div>
 																) : null}
 																{paciente.clavePaciente && (
 																	<div className="mt-2 text-sm">
 																		<span className="mr-2 text-slate-500">Clave paciente:</span>
 																		<span className="font-medium text-slate-700">{paciente.clavePaciente}</span>
+																	</div>
+																)}
+																{paciente.costoTratamiento && (
+																	<div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+																		<p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Costo de tratamiento</p>
+																		<p className="mt-0.5 text-sm font-bold text-emerald-900">
+																			${Number(paciente.costoTratamiento).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+																		</p>
 																	</div>
 																)}
 														</div>

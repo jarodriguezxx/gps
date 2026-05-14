@@ -130,6 +130,15 @@ public class Paciente {
     @Column(name = "posibilidades_economicas")
     private String posibilidadesEconomicas;
 
+    @Column(name = "motivo_denegacion", columnDefinition = "TEXT")
+    private String motivoDenegacion;
+
+    @Column(name = "medico_rechazo")
+    private String medicoRechazo;
+
+    @Column(name = "costo_tratamiento")
+    private String costoTratamiento;
+
     @ManyToOne
     @JoinColumn(name = "solicitante_id")
     private Solicitante solicitante;
@@ -437,4 +446,13 @@ public class Paciente {
     public void setFechaRegistroRecibo(LocalDateTime fechaRegistroRecibo) {
         this.fechaRegistroRecibo = fechaRegistroRecibo;
     }
+
+    public String getMotivoDenegacion() { return motivoDenegacion; }
+    public void setMotivoDenegacion(String motivoDenegacion) { this.motivoDenegacion = motivoDenegacion; }
+
+    public String getMedicoRechazo() { return medicoRechazo; }
+    public void setMedicoRechazo(String medicoRechazo) { this.medicoRechazo = medicoRechazo; }
+
+    public String getCostoTratamiento() { return costoTratamiento; }
+    public void setCostoTratamiento(String costoTratamiento) { this.costoTratamiento = costoTratamiento; }
 }

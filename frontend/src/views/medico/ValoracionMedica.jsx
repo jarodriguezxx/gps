@@ -22,10 +22,11 @@ const navItems = [
 const ValoracionMedica = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const session = JSON.parse(localStorage.getItem('marakame_user') || '{}');
   const [activeNav, setActiveNav] = useState('valoracion');
   const [prospecto, setProspecto] = useState(null);
-  const [, setCargandoPaciente] = useState(true);
-  const [, setErrorPaciente] = useState('');
+  const [cargandoPaciente, setCargandoPaciente] = useState(true);
+  const [errorPaciente, setErrorPaciente] = useState('');
   
   const [yaValorado, setYaValorado] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -94,7 +95,7 @@ const ValoracionMedica = () => {
     observaciones: '',
     dictamen: null,
     motivoRechazo: '',
-    nombreMedico: '',
+    nombreMedico: session.nombreCompleto || '',
     recomendacionExterna: ''
   });
 
@@ -193,6 +194,11 @@ const ValoracionMedica = () => {
         observaciones: observacionesFormateadas,
         esAptoParaIngreso: formulario.dictamen === 'APTO',
         medicoAsignado: formulario.nombreMedico || "Jefe Médico",
+        tipoRechazo: esRechazo ? rechazo.tipoRechazo : null,
+        motivoRechazo: esRechazo ? rechazo.motivoClinico : null,
+        institucionDerivacion: esRechazo ? rechazo.institucion : null,
+        direccionDerivacion: esRechazo ? rechazo.direccion : null,
+        telefonoDerivacion: esRechazo ? (rechazo.telefono || null) : null,
       };
 
       // 3. Enviamos la petición POST
@@ -212,7 +218,11 @@ const ValoracionMedica = () => {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ estado: 'DENEGADO' }),
+            body: JSON.stringify({
+              estado: 'DENEGADO',
+              motivoDenegacion: `Rechazo médico. ${rechazo.motivoClinico?.trim() || ''}`.trim(),
+              medicoRechazo: formulario.nombreMedico || 'Jefe Médico',
+            }),
           });
 
           if (!estadoResponse.ok) {
@@ -250,7 +260,7 @@ const ValoracionMedica = () => {
       {/* ── Modal de Rechazo ── */}
       {modalRechazo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-rose-100 overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-rose-100 flex flex-col max-h-[90vh]">
 
             <div className="flex items-center justify-between px-6 py-4 bg-rose-50 border-b border-rose-100">
               <div className="flex items-center gap-2">
@@ -543,11 +553,24 @@ const ValoracionMedica = () => {
 
                 {/* ── Dictamen y Guardado ── */}
                 <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <UserCheck size={18} className="text-[#7E1D3B]" />
-                    <h2 className="text-base font-black uppercase tracking-[0.2em] text-slate-700">Dictamen</h2>
-                  </div>
-                  <div className="flex flex-col gap-3 max-w-sm">
+                  <div className="flex flex-col md:flex-row gap-6 items-end">
+                    
+                    <div className="flex-1 w-full">
+                      <div className="flex items-center gap-2 mb-3">
+                        <UserCheck size={18} className="text-[#7E1D3B]" />
+                        <h2 className="text-base font-black uppercase tracking-[0.2em] text-slate-700">Conclusión (1era Consulta)</h2>
+                      </div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Médico que valora</label>
+                      <div className="flex items-center gap-2 mb-3 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-700">
+                        <UserCheck size={14} className="text-[#7E1D3B] shrink-0" />
+                        {formulario.nombreMedico || <span className="text-slate-400 font-normal">Sin sesión activa</span>}
+                      </div>
+
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Observaciones Finales</label>
+                      <textarea disabled={yaValorado} rows="2" name="observaciones" value={formulario.observaciones} onChange={handleChange} className={`${inputClass} resize-none`} />
+                    </div>
+                    
+                    <div className="flex flex-col gap-3 min-w-[280px] w-full md:w-auto">
                       <div className="grid gap-3">
                         <button
                           type="button"
@@ -606,6 +629,8 @@ const ValoracionMedica = () => {
                         GUARDAR VALORACIÓN
                       </button>
                     </div>
+
+                  </div>
                 </section>
 
               </form>
