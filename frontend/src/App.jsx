@@ -60,6 +60,7 @@ import AltaPersonal from './views/rh/AltaPersonal';
 import BajaPersonal from './views/rh/BajaPersonal';
 import CatalogoRoles from './views/rh/CatalogoRoles';
 import AsignacionRoles from './views/rh/AsignacionRoles';
+import NominaRH from './views/rh/NominaRH';
 
 // Financiero
 import ArchivoContable from './views/financiero/ArchivoContable';
@@ -250,6 +251,7 @@ function App() {
         <Route path="/rh/baja-personal"                        element={<PrivateRoute><BajaPersonal /></PrivateRoute>} />
         <Route path="/rh/catalogo-roles"                       element={<PrivateRoute><CatalogoRoles /></PrivateRoute>} />
         <Route path="/rh/asignacion-roles"                     element={<PrivateRoute><AsignacionRoles /></PrivateRoute>} />
+        <Route path="/rh/nomina"                               element={<PrivateRoute><NominaRH /></PrivateRoute>} />
 
         {/* Financiero */}
         <Route path="/financiero/archivo-contable"             element={<PrivateRoute><ArchivoContable /></PrivateRoute>} />

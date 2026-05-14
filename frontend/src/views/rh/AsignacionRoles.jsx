@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, UserMinus, Tag, ShieldCheck, User, Save, X, ArrowRight, Clock, Trash2, Check, Pencil } from 'lucide-react';
+import { UserPlus, UserMinus, Tag, ShieldCheck, User, Save, X, ArrowRight, Clock, Trash2, Check, Pencil, Wallet } from 'lucide-react';
 import marakameLogo from '../../assets/marakame.jpeg';
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { label: 'Baja de Personal',    icon: UserMinus,   key: 'baja',       path: '/rh/baja-personal' },
   { label: 'Catálogo de Roles',   icon: Tag,         key: 'catalogo',   path: '/rh/catalogo-roles' },
   { label: 'Asignación de Roles', icon: ShieldCheck, key: 'asignacion', path: '/rh/asignacion-roles' },
+  { label: 'Nómina',              icon: Wallet,      key: 'nomina',     path: '/rh/nomina' },
 ];
 
 const TIPOS_MOVIMIENTO = ['PROMOCIÓN', 'CAMBIO DE PUESTO', 'CAMBIO DE DEPARTAMENTO', 'REASIGNACIÓN INTERNA'];
